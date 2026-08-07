@@ -15,7 +15,8 @@
     --ink-soft: #5B5C54;
     --red: #C1442D;
     --green: #3E6B4F;
-    --card-shadow: 0 18px 40px -18px rgba(35, 37, 34, 0.35);
+    --navy: #2C4A5E;
+    --card-shadow: 0 14px 32px -16px rgba(35, 37, 34, 0.30);
   }
 
   * { box-sizing: border-box; }
@@ -35,234 +36,538 @@
       linear-gradient(90deg, var(--paper-line) 1px, transparent 1px);
     background-size: 28px 28px;
     background-position: -1px -1px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 24px;
+    padding: 20px 16px 40px;
+    overflow-x: hidden;
   }
 
-  .card {
+  .wrap { max-width: 420px; margin: 0 auto; }
+
+  header { display: flex; align-items: center; gap: 10px; margin-bottom: 18px; }
+  .stamp-mini { width: 34px; height: 34px; flex-shrink: 0; }
+  header h1 { font-family: 'PT Serif', serif; font-size: 18px; font-weight: 700; margin: 0; }
+  header .who { color: var(--red); }
+
+  .crumbs { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; min-height: 32px; }
+
+  .back-btn {
+    background: #FFFDF8; border: 1px solid var(--paper-line); border-radius: 3px;
+    padding: 6px 12px; font-family: 'PT Sans', sans-serif; font-size: 13px; font-weight: 700;
+    color: var(--ink); cursor: pointer; transition: transform 0.1s ease;
+  }
+  .back-btn:focus-visible { outline: 2px solid var(--red); outline-offset: 2px; }
+  .back-btn:active { transform: scale(0.96) translateY(1px); }
+  .crumb-title { font-family: 'PT Serif', serif; font-size: 15px; color: var(--ink-soft); }
+
+  /* --- Экран (контейнер с анимацией смены) --- */
+  .screen {
+    animation: screen-in 0.28s ease both;
+  }
+  .screen.back {
+    animation: screen-in-back 0.28s ease both;
+  }
+  @keyframes screen-in {
+    from { opacity: 0; transform: translateX(14px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+  @keyframes screen-in-back {
+    from { opacity: 0; transform: translateX(-14px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+
+  .list { display: flex; flex-direction: column; gap: 10px; }
+
+  .item-card {
     position: relative;
-    width: 100%;
-    max-width: 380px;
-    background: #FFFDF8;
-    border: 1px solid var(--paper-line);
-    border-radius: 4px;
-    box-shadow: var(--card-shadow);
-    padding: 40px 28px 32px;
-    text-align: center;
-    transform: rotate(-0.6deg);
+    background: #FFFDF8; border: 1px solid var(--paper-line); border-radius: 4px;
+    box-shadow: var(--card-shadow); padding: 14px 16px 14px 46px;
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    cursor: pointer; text-align: left; width: 100%; font-family: 'PT Sans', sans-serif; color: var(--ink);
+    opacity: 0;
+    animation: card-in 0.32s ease both;
+    transition: transform 0.1s ease;
+  }
+  .item-card:nth-child(6n+1) { transform: rotate(-0.4deg); }
+  .item-card:nth-child(6n+2) { transform: rotate(0.3deg); }
+  .item-card:nth-child(6n+3) { transform: rotate(-0.2deg); }
+  .item-card:nth-child(6n+4) { transform: rotate(0.4deg); }
+  .item-card:nth-child(6n+5) { transform: rotate(-0.3deg); }
+  .item-card:nth-child(6n+6) { transform: rotate(0.2deg); }
+
+  @keyframes card-in {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; }
   }
 
-  .card::before {
-    content: "";
+  .item-card:focus-visible { outline: 2px solid var(--red); outline-offset: 2px; }
+  .item-card:active { transform: scale(0.985) translateY(1px) !important; }
+
+  /* Значок уровня слева на карточке — свой для предметов/разделов/тем */
+  .level-icon {
     position: absolute;
-    top: 0; left: 28px; right: 28px;
-    height: 1px;
-    background: var(--paper-line);
+    left: 14px; top: 50%; transform: translateY(-50%);
+    width: 20px; height: 20px;
   }
 
-  .eyebrow {
-    font-family: 'PT Sans', sans-serif;
-    font-size: 12px;
-    letter-spacing: 0.16em;
-    text-transform: uppercase;
-    color: var(--ink-soft);
-    margin: 0 0 18px;
+  .item-title { font-family: 'PT Serif', serif; font-size: 16px; font-weight: 700; }
+  .item-sub { font-size: 12.5px; color: var(--ink-soft); margin-top: 2px; }
+  .item-arrow { color: var(--red); font-size: 18px; flex-shrink: 0; }
+  .badge {
+    display: inline-block; background: var(--paper); border: 1px solid var(--paper-line);
+    border-radius: 3px; padding: 2px 8px; font-size: 12px; color: var(--ink-soft); white-space: nowrap;
   }
 
-  h1 {
-    font-family: 'PT Serif', serif;
-    font-weight: 700;
-    font-size: 26px;
-    line-height: 1.25;
-    margin: 0 0 6px;
+  /* --- Загрузка --- */
+  .state-msg { text-align: center; color: var(--ink-soft); font-size: 14px; padding: 30px 10px; }
+  .state-msg.error { color: var(--red); }
+  .retry-btn {
+    margin-top: 10px; background: var(--ink); color: var(--paper); border: none; border-radius: 3px;
+    padding: 8px 16px; font-family: 'PT Sans', sans-serif; font-size: 13px; font-weight: 700; cursor: pointer;
   }
 
-  .greeting-name {
-    color: var(--red);
+  .loading-row {
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    padding: 30px 10px; color: var(--ink-soft); font-size: 14px;
+  }
+  .pencil-dots span {
+    display: inline-block; width: 5px; height: 5px; border-radius: 50%;
+    background: var(--red); margin: 0 2px;
+    animation: dot-bounce 1s ease-in-out infinite;
+  }
+  .pencil-dots span:nth-child(2) { animation-delay: 0.15s; }
+  .pencil-dots span:nth-child(3) { animation-delay: 0.3s; }
+  @keyframes dot-bounce {
+    0%, 60%, 100% { transform: translateY(0); opacity: 0.5; }
+    30% { transform: translateY(-4px); opacity: 1; }
   }
 
-  .subtitle {
-    font-size: 15px;
-    color: var(--ink-soft);
-    line-height: 1.5;
-    margin: 0 0 28px;
+  /* --- Экран задания --- */
+  .progress-line { font-size: 12.5px; color: var(--ink-soft); margin-bottom: 8px; text-align: center; }
+
+  .task-card {
+    background: #FFFDF8; border: 1px solid var(--paper-line); border-radius: 4px;
+    box-shadow: var(--card-shadow); padding: 18px 16px;
+    animation: card-in 0.32s ease both;
   }
 
-  .seal-wrap {
-    width: 132px;
-    height: 132px;
-    margin: 0 auto 26px;
-    position: relative;
-  }
+  .task-question { font-family: 'PT Serif', serif; font-size: 17px; font-weight: 700; margin: 0 0 8px; }
+  .task-description { font-size: 14.5px; color: var(--ink-soft); line-height: 1.5; margin: 0 0 16px; }
 
-  .seal-svg {
-    width: 100%;
-    height: 100%;
-    transform: rotate(-8deg);
+  .option-btn {
+    display: block; width: 100%; text-align: left; margin-bottom: 8px;
+    background: var(--paper); border: 1px solid var(--paper-line); border-radius: 3px;
+    padding: 11px 14px; font-family: 'PT Sans', sans-serif; font-size: 14.5px; color: var(--ink); cursor: pointer;
+    transition: transform 0.1s ease, background 0.15s ease;
   }
+  .option-btn:focus-visible { outline: 2px solid var(--red); outline-offset: 2px; }
+  .option-btn:active { transform: scale(0.98); background: #F2ECDE; }
 
-  .seal-circle, .seal-inner {
-    fill: none;
-    stroke: var(--green);
-    stroke-width: 2.5;
-    stroke-dasharray: 320;
-    stroke-dashoffset: 320;
-    animation: draw 1.1s ease-out forwards;
+  .text-input {
+    width: 100%; padding: 11px 14px; font-family: 'PT Sans', sans-serif; font-size: 15px;
+    border: 1px solid var(--paper-line); border-radius: 3px; background: var(--paper); color: var(--ink);
+    margin-bottom: 10px;
   }
+  .text-input:focus-visible { outline: 2px solid var(--red); outline-offset: 2px; }
 
-  .seal-inner {
-    stroke-dasharray: 240;
-    stroke-dashoffset: 240;
-    animation-delay: 0.15s;
+  .submit-btn {
+    width: 100%; padding: 12px 16px; background: var(--ink); color: var(--paper); border: none;
+    border-radius: 3px; font-family: 'PT Sans', sans-serif; font-size: 15px; font-weight: 700; cursor: pointer;
+    transition: transform 0.1s ease;
   }
+  .submit-btn:disabled { opacity: 0.4; cursor: default; }
+  .submit-btn:active:not(:disabled) { transform: scale(0.98); }
 
-  .seal-check {
-    fill: none;
-    stroke: var(--red);
-    stroke-width: 5;
-    stroke-linecap: round;
-    stroke-linejoin: round;
-    stroke-dasharray: 60;
-    stroke-dashoffset: 60;
-    animation: draw 0.5s ease-out forwards;
-    animation-delay: 0.9s;
+  .feedback {
+    margin-top: 16px; padding: 14px; border-radius: 4px; border: 1px solid;
+    animation: feedback-in 0.25s ease both;
   }
-
-  .seal-text {
-    font-family: 'PT Serif', serif;
-    font-size: 10.5px;
-    letter-spacing: 0.14em;
-    fill: var(--ink-soft);
+  @keyframes feedback-in {
+    from { opacity: 0; transform: translateY(-4px); }
+    to   { opacity: 1; transform: translateY(0); }
   }
-
-  @keyframes draw {
-    to { stroke-dashoffset: 0; }
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .seal-circle, .seal-inner, .seal-check {
-      animation: none;
-      stroke-dashoffset: 0;
-    }
-  }
-
-  .status-line {
-    font-size: 13px;
-    color: var(--ink-soft);
-    margin: 0 0 22px;
-  }
-
-  .status-dot {
-    display: inline-block;
-    width: 7px;
-    height: 7px;
-    border-radius: 50%;
-    background: var(--green);
-    margin-right: 6px;
-    vertical-align: middle;
-  }
+  .feedback.ok { background: #EEF5EF; border-color: var(--green); }
+  .feedback.bad { background: #FBEDEA; border-color: var(--red); }
+  .feedback-title { font-family: 'PT Serif', serif; font-weight: 700; font-size: 15px; margin: 0 0 6px; }
+  .feedback.ok .feedback-title { color: var(--green); }
+  .feedback.bad .feedback-title { color: var(--red); }
+  .feedback-body { font-size: 13.5px; color: var(--ink); line-height: 1.5; }
+  .feedback-explain { margin-top: 8px; font-size: 13px; color: var(--ink-soft); font-style: italic; }
 
   .next-btn {
-    width: 100%;
-    padding: 13px 18px;
-    background: var(--ink);
-    color: var(--paper);
-    border: none;
-    border-radius: 3px;
-    font-family: 'PT Sans', sans-serif;
-    font-size: 15px;
-    font-weight: 700;
-    letter-spacing: 0.01em;
-    cursor: pointer;
+    width: 100%; margin-top: 14px; padding: 12px 16px; background: var(--red); color: #FFFDF8; border: none;
+    border-radius: 3px; font-family: 'PT Sans', sans-serif; font-size: 15px; font-weight: 700; cursor: pointer;
+    transition: transform 0.1s ease;
   }
+  .next-btn:active { transform: scale(0.98); }
 
-  .next-btn:focus-visible {
-    outline: 2px solid var(--red);
-    outline-offset: 2px;
-  }
-
-  .next-btn:active {
-    transform: translateY(1px);
-  }
-
-  .footnote {
-    margin-top: 18px;
-    font-size: 11.5px;
-    color: var(--ink-soft);
-    line-height: 1.5;
-  }
-
-  .footnote code {
-    background: var(--paper);
-    border: 1px solid var(--paper-line);
-    border-radius: 3px;
-    padding: 1px 5px;
-    font-size: 11px;
+  @media (prefers-reduced-motion: reduce) {
+    .screen, .screen.back, .item-card, .task-card, .feedback {
+      animation: none !important;
+      opacity: 1 !important;
+      transform: none !important;
+    }
+    .item-card:nth-child(6n+1), .item-card:nth-child(6n+2), .item-card:nth-child(6n+3),
+    .item-card:nth-child(6n+4), .item-card:nth-child(6n+5), .item-card:nth-child(6n+6) {
+      transform: none;
+    }
   }
 </style>
 </head>
 <body>
 
-  <main class="card">
-    <p class="eyebrow">Подготовка к экзамену</p>
-
-    <div class="seal-wrap" aria-hidden="true">
-      <svg class="seal-svg" viewBox="0 0 132 132">
-        <circle class="seal-circle" cx="66" cy="66" r="58"></circle>
-        <circle class="seal-inner" cx="66" cy="66" r="48"></circle>
-        <path class="seal-check" d="M44 68 L58 82 L90 46"></path>
-        <text class="seal-text" x="66" y="118" text-anchor="middle">ПОДКЛЮЧЕНО</text>
+  <div class="wrap">
+    <header>
+      <svg class="stamp-mini" viewBox="0 0 132 132" aria-hidden="true">
+        <circle cx="66" cy="66" r="58" fill="none" stroke="#3E6B4F" stroke-width="4"></circle>
+        <path d="M44 68 L58 82 L90 46" fill="none" stroke="#C1442D" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"></path>
       </svg>
+      <h1>Привет, <span class="who" id="userName">гость</span>!</h1>
+    </header>
+
+    <div class="crumbs" id="crumbs"></div>
+    <div id="screenHost">
+      <div class="screen" id="content">
+        <div class="loading-row">
+          Загружаем предметы
+          <span class="pencil-dots"><span></span><span></span><span></span></span>
+        </div>
+      </div>
     </div>
-
-    <h1>Привет, <span class="greeting-name" id="userName">гость</span>!</h1>
-    <p class="subtitle">Это первая страница мини-аппа — фундамент, на котором построим остальное: разделы, задания и тесты.</p>
-
-    <p class="status-line"><span class="status-dot"></span><span id="statusText">Проверяем соединение с Telegram…</span></p>
-
-    <button class="next-btn" id="pingBtn">Проверить связь с ботом</button>
-
-    <p class="footnote" id="debugInfo">Открыто вне Telegram — часть данных недоступна.</p>
-  </main>
+  </div>
 
 <script>
-  const tg = window.Telegram?.WebApp;
-  const nameEl = document.getElementById('userName');
-  const statusEl = document.getElementById('statusText');
-  const debugEl = document.getElementById('debugInfo');
-  const pingBtn = document.getElementById('pingBtn');
+  // Адрес вашего бэкенда на Amvera — заполнить после развёртывания.
+  const API_BASE_URL = 'ВСТАВЬТЕ_СЮДА_АДРЕС_БЭКЕНДА';
 
+  const tg = window.Telegram?.WebApp;
   if (tg) {
     tg.ready();
     tg.expand();
-
     const user = tg.initDataUnsafe?.user;
     if (user?.first_name) {
-      nameEl.textContent = user.first_name;
+      document.getElementById('userName').textContent = user.first_name;
     }
-
-    if (tg.initData) {
-      statusEl.textContent = 'Мини-апп подключен и видит данные Telegram';
-      debugEl.innerHTML = 'ID пользователя: <code>' + (user?.id ?? '—') + '</code>';
-    } else {
-      statusEl.textContent = 'Открыто через Telegram, но initData пуст';
-    }
-
-    // Подхватываем цвета темы Telegram (по желанию можно закомментировать,
-    // чтобы всегда использовать собственную "бумажную" тему выше)
-    // document.body.style.background = tg.themeParams.bg_color || '';
-  } else {
-    statusEl.textContent = 'Telegram WebApp SDK не найден';
   }
 
-  pingBtn.addEventListener('click', () => {
-    if (tg) {
-      tg.HapticFeedback?.impactOccurred('light');
+  const screenHost = document.getElementById('screenHost');
+  const crumbsEl = document.getElementById('crumbs');
+
+  let stack = [{ level: 'subjects', title: 'Предметы' }];
+  let currentTasks = [];
+
+  // --- Значки уровней (свои для предметов / разделов / тем) ---
+  const ICONS = {
+    subjects: `<svg class="level-icon" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <circle cx="10" cy="10" r="8" stroke="#C1442D" stroke-width="1.6"/>
+      <circle cx="10" cy="10" r="4" stroke="#C1442D" stroke-width="1.2"/>
+    </svg>`,
+    sections: `<svg class="level-icon" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <path d="M2 6.5C2 5.67 2.67 5 3.5 5H8L9.5 6.5H16.5C17.33 6.5 18 7.17 18 8V14.5C18 15.33 17.33 16 16.5 16H3.5C2.67 16 2 15.33 2 14.5V6.5Z" stroke="#3E6B4F" stroke-width="1.5" stroke-linejoin="round"/>
+    </svg>`,
+    topics: `<svg class="level-icon" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <path d="M5 3H15V17L10 14.2L5 17V3Z" stroke="#2C4A5E" stroke-width="1.5" stroke-linejoin="round"/>
+    </svg>`
+  };
+
+  async function apiGet(path) {
+    const res = await fetch(API_BASE_URL + path, {
+      headers: { 'X-Telegram-Init-Data': tg?.initData || '' }
+    });
+    if (res.status === 401) throw new Error('Не удалось подтвердить, что это вы — откройте страницу через кнопку в боте.');
+    if (!res.ok) throw new Error('Сервер ответил с ошибкой: ' + res.status);
+    return res.json();
+  }
+
+  async function apiPost(path, body) {
+    const res = await fetch(API_BASE_URL + path, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Telegram-Init-Data': tg?.initData || ''
+      },
+      body: JSON.stringify(body)
+    });
+    if (res.status === 401) throw new Error('Не удалось подтвердить, что это вы — откройте страницу через кнопку в боте.');
+    if (!res.ok) throw new Error('Сервер ответил с ошибкой: ' + res.status);
+    return res.json();
+  }
+
+  function renderCrumbs() {
+    crumbsEl.innerHTML = '';
+    if (stack.length > 1) {
+      const btn = document.createElement('button');
+      btn.className = 'back-btn';
+      btn.textContent = '← Назад';
+      btn.onclick = () => { stack.pop(); render(true); };
+      crumbsEl.appendChild(btn);
     }
-    statusEl.textContent = 'Пока это просто кнопка-заглушка — бэкенд подключим на следующем шаге';
-  });
+    const title = document.createElement('span');
+    title.className = 'crumb-title';
+    title.textContent = stack[stack.length - 1].title;
+    crumbsEl.appendChild(title);
+  }
+
+  // Заменяет содержимое #screenHost новым .screen с анимацией входа.
+  function swapScreen(buildFn, isBack) {
+    const screen = document.createElement('div');
+    screen.className = 'screen' + (isBack ? ' back' : '');
+    screen.id = 'content';
+    buildFn(screen);
+    screenHost.innerHTML = '';
+    screenHost.appendChild(screen);
+    return screen;
+  }
+
+  function showState(message, isError = false, withRetry = false, isBack = false) {
+    swapScreen((screen) => {
+      const p = document.createElement('p');
+      p.className = 'state-msg' + (isError ? ' error' : '');
+      p.textContent = message;
+      screen.appendChild(p);
+      if (withRetry) {
+        const btn = document.createElement('button');
+        btn.className = 'retry-btn';
+        btn.textContent = 'Попробовать снова';
+        btn.onclick = () => render(false);
+        screen.appendChild(btn);
+        screen.style.textAlign = 'center';
+      }
+    }, isBack);
+  }
+
+  function showLoading(text, isBack = false) {
+    swapScreen((screen) => {
+      const row = document.createElement('div');
+      row.className = 'loading-row';
+      row.innerHTML = `${text} <span class="pencil-dots"><span></span><span></span><span></span></span>`;
+      screen.appendChild(row);
+    }, isBack);
+  }
+
+  function renderList(items, onClick, levelKey, isBack) {
+    const screen = swapScreen((screen) => {
+      const list = document.createElement('div');
+      list.className = 'list';
+      list.id = 'listContainer';
+      screen.appendChild(list);
+    }, isBack);
+
+    const list = screen.querySelector('#listContainer');
+    if (!items.length) {
+      showState('Здесь пока пусто.');
+      return;
+    }
+    items.forEach((item, i) => {
+      const card = document.createElement('button');
+      card.className = 'item-card';
+      card.style.animationDelay = (i * 0.045) + 's';
+      card.innerHTML = ICONS[levelKey] || '';
+
+      const left = document.createElement('div');
+      const t = document.createElement('div');
+      t.className = 'item-title';
+      t.textContent = item.title;
+      left.appendChild(t);
+      if (item.sub) {
+        const s = document.createElement('div');
+        s.className = 'item-sub';
+        s.textContent = item.sub;
+        left.appendChild(s);
+      }
+      card.appendChild(left);
+
+      if (item.badge) {
+        const b = document.createElement('span');
+        b.className = 'badge';
+        b.textContent = item.badge;
+        card.appendChild(b);
+      } else {
+        const arrow = document.createElement('span');
+        arrow.className = 'item-arrow';
+        arrow.textContent = '›';
+        card.appendChild(arrow);
+      }
+
+      card.onclick = () => onClick(item);
+      list.appendChild(card);
+    });
+  }
+
+  // --- Экран решения заданий ---
+
+  function findNextUnanswered() {
+    return currentTasks.findIndex(t => !t.answered);
+  }
+
+  function renderTaskScreen(isBack) {
+    const screen = swapScreen(() => {}, isBack);
+    const answeredCount = currentTasks.filter(t => t.answered).length;
+
+    if (answeredCount === currentTasks.length) {
+      const p = document.createElement('p');
+      p.className = 'state-msg';
+      const correctCount = currentTasks.filter(t => t.is_correct).length;
+      p.textContent = `🏁 Все задания решены! Верно: ${correctCount} из ${currentTasks.length}.`;
+      screen.appendChild(p);
+      return;
+    }
+
+    const idx = findNextUnanswered();
+    const task = currentTasks[idx];
+
+    const progressP = document.createElement('p');
+    progressP.className = 'progress-line';
+    progressP.textContent = `Задание ${answeredCount + 1} из ${currentTasks.length}`;
+    screen.appendChild(progressP);
+
+    const card = document.createElement('div');
+    card.className = 'task-card';
+
+    const q = document.createElement('p');
+    q.className = 'task-question';
+    q.textContent = task.question;
+    card.appendChild(q);
+
+    if (task.description) {
+      const d = document.createElement('p');
+      d.className = 'task-description';
+      d.textContent = task.description;
+      card.appendChild(d);
+    }
+
+    const answerArea = document.createElement('div');
+    card.appendChild(answerArea);
+
+    if (task.type === 'buttons' && task.options) {
+      for (const opt of task.options) {
+        const btn = document.createElement('button');
+        btn.className = 'option-btn';
+        btn.textContent = opt;
+        btn.onclick = () => submitAnswer(task.id, opt, card);
+        answerArea.appendChild(btn);
+      }
+    } else {
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.className = 'text-input';
+      input.placeholder = 'Введите ответ…';
+      answerArea.appendChild(input);
+
+      const submitBtn = document.createElement('button');
+      submitBtn.className = 'submit-btn';
+      submitBtn.textContent = 'Ответить';
+      submitBtn.onclick = () => {
+        if (!input.value.trim()) return;
+        submitAnswer(task.id, input.value.trim(), card);
+      };
+      answerArea.appendChild(submitBtn);
+
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') submitBtn.click();
+      });
+    }
+
+    screen.appendChild(card);
+  }
+
+  async function submitAnswer(taskId, answer, cardEl) {
+    try {
+      const result = await apiPost(`/api/tasks/${taskId}/answer`, { answer });
+      tg?.HapticFeedback?.notificationOccurred(result.correct ? 'success' : 'error');
+
+      const task = currentTasks.find(t => t.id === taskId);
+      if (task) {
+        task.answered = true;
+        task.is_correct = result.correct;
+        task.given_answer = answer;
+      }
+
+      const feedback = document.createElement('div');
+      feedback.className = 'feedback ' + (result.correct ? 'ok' : 'bad');
+
+      const title = document.createElement('p');
+      title.className = 'feedback-title';
+      title.textContent = result.correct ? '✅ Верно!' : '❌ Неверно';
+      feedback.appendChild(title);
+
+      if (!result.correct) {
+        const body = document.createElement('p');
+        body.className = 'feedback-body';
+        body.textContent = `Правильный ответ: ${result.correct_answer}`;
+        feedback.appendChild(body);
+      }
+
+      if (result.explanation) {
+        const explain = document.createElement('p');
+        explain.className = 'feedback-explain';
+        explain.textContent = result.explanation;
+        feedback.appendChild(explain);
+      }
+
+      cardEl.appendChild(feedback);
+
+      const nextBtn = document.createElement('button');
+      nextBtn.className = 'next-btn';
+      const remaining = currentTasks.filter(t => !t.answered).length;
+      nextBtn.textContent = remaining > 0 ? 'Далее →' : 'Показать итог';
+      nextBtn.onclick = () => renderTaskScreen(false);
+      cardEl.appendChild(nextBtn);
+
+      cardEl.querySelectorAll('.option-btn, .text-input, .submit-btn').forEach(el => el.disabled = true);
+    } catch (err) {
+      showState('Не получилось отправить ответ. ' + err.message, true, false);
+      console.error(err);
+    }
+  }
+
+  async function render(isBack) {
+    renderCrumbs();
+    const current = stack[stack.length - 1];
+    showLoading('Загружаем', isBack);
+
+    try {
+      if (current.level === 'subjects') {
+        const subjects = await apiGet('/api/subjects');
+        renderList(
+          subjects.map(s => ({ id: s.id, title: s.title })),
+          (item) => { stack.push({ level: 'sections', subjectId: item.id, title: item.title }); render(false); },
+          'subjects', isBack
+        );
+      } else if (current.level === 'sections') {
+        const sections = await apiGet(`/api/subjects/${current.subjectId}/sections`);
+        renderList(
+          sections.map(s => ({ id: s.id, title: s.title })),
+          (item) => { stack.push({ level: 'topics', sectionId: item.id, title: item.title }); render(false); },
+          'sections', isBack
+        );
+      } else if (current.level === 'topics') {
+        const topics = await apiGet(`/api/sections/${current.sectionId}/topics`);
+        renderList(
+          topics.map(t => ({ id: t.id, title: t.title, badge: t.task_count + ' зад.' })),
+          async (item) => {
+            tg?.HapticFeedback?.impactOccurred('light');
+            stack.push({ level: 'tasks', topicId: item.id, title: item.title });
+            renderCrumbs();
+            showLoading('Загружаем задания', false);
+            try {
+              currentTasks = await apiGet(`/api/topics/${item.id}/tasks`);
+              renderTaskScreen(false);
+            } catch (err) {
+              showState('Не получилось загрузить задания. ' + err.message, true, true);
+            }
+          },
+          'topics', isBack
+        );
+      } else if (current.level === 'tasks') {
+        currentTasks = await apiGet(`/api/topics/${current.topicId}/tasks`);
+        renderTaskScreen(isBack);
+      }
+    } catch (err) {
+      showState('Не получилось загрузить данные. ' + err.message, true, true, isBack);
+      console.error(err);
+    }
+  }
+
+  render(false);
 </script>
 
 </body>
