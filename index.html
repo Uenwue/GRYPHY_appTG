@@ -6,209 +6,186 @@
 <title>Экзамен — мини-апп</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=PT+Serif:ital,wght@0,400;0,700;1,400&family=PT+Sans:wght@400;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
 <style>
   :root {
-    --paper: #FAF6EE;
-    --paper-line: #DCD3BE;
-    --ink: #232522;
-    --ink-soft: #5B5C54;
-    --red: #C1442D;
-    --green: #3E6B4F;
-    --navy: #2C4A5E;
-    --card-shadow: 0 14px 32px -16px rgba(35, 37, 34, 0.30);
+    --bg: #FFFFFF;
+    --bg-soft: #F7F7F7;
+    --border: #E5E5E5;
+    --text: #3C3C3C;
+    --text-soft: #777777;
+    --green: #58CC02;
+    --green-dark: #58A700;
+    --green-tint: #D7FFB8;
+    --blue: #1CB0F6;
+    --blue-dark: #1899D6;
+    --blue-tint: #DDF4FF;
+    --red: #FF4B4B;
+    --red-dark: #EA2B2B;
+    --red-tint: #FFDFE0;
+    --yellow: #FFC800;
+    --card-shadow: 0 2px 0 var(--border);
+    --bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
   }
 
   * { box-sizing: border-box; }
 
   html, body {
-    margin: 0;
-    padding: 0;
-    min-height: 100%;
-    background: var(--paper);
-    color: var(--ink);
-    font-family: 'PT Sans', system-ui, sans-serif;
+    margin: 0; padding: 0; min-height: 100%;
+    background: var(--bg-soft); color: var(--text);
+    font-family: 'Nunito', system-ui, sans-serif;
   }
 
   body {
-    background-image:
-      linear-gradient(var(--paper-line) 1px, transparent 1px),
-      linear-gradient(90deg, var(--paper-line) 1px, transparent 1px);
-    background-size: 28px 28px;
-    background-position: -1px -1px;
     padding: 20px 16px 40px;
     overflow-x: hidden;
   }
 
+  .demo-flag {
+    max-width: 420px; margin: 0 auto 14px;
+    background: var(--yellow); border: none; border-radius: 12px;
+    padding: 8px 12px; font-size: 12.5px; font-weight: 700; color: #5B4700; text-align: center;
+  }
+
   .wrap { max-width: 420px; margin: 0 auto; }
 
-  header { display: flex; align-items: center; gap: 10px; margin-bottom: 18px; }
-  .stamp-mini { width: 34px; height: 34px; flex-shrink: 0; }
-  header h1 { font-family: 'PT Serif', serif; font-size: 18px; font-weight: 700; margin: 0; }
-  header .who { color: var(--red); }
+  header { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; }
+  .stamp-mini { width: 40px; height: 40px; flex-shrink: 0; }
+  header h1 { font-family: 'Baloo 2', sans-serif; font-size: 19px; font-weight: 800; margin: 0; color: var(--text); }
+  header .who { color: var(--green-dark); }
 
-  .crumbs { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; min-height: 32px; }
+  .crumbs { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; min-height: 36px; }
 
   .back-btn {
-    background: #FFFDF8; border: 1px solid var(--paper-line); border-radius: 3px;
-    padding: 6px 12px; font-family: 'PT Sans', sans-serif; font-size: 13px; font-weight: 700;
-    color: var(--ink); cursor: pointer; transition: transform 0.1s ease;
+    background: var(--bg); border: 2px solid var(--border); border-bottom: 4px solid var(--border);
+    border-radius: 12px;
+    padding: 6px 14px; font-family: 'Nunito', sans-serif; font-size: 13px; font-weight: 800;
+    color: var(--text-soft); cursor: pointer; transition: transform 0.12s var(--bounce);
+    text-transform: uppercase; letter-spacing: 0.02em;
   }
-  .back-btn:focus-visible { outline: 2px solid var(--red); outline-offset: 2px; }
-  .back-btn:active { transform: scale(0.96) translateY(1px); }
-  .crumb-title { font-family: 'PT Serif', serif; font-size: 15px; color: var(--ink-soft); }
+  .back-btn:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+  .back-btn:active { transform: translateY(3px); border-bottom-width: 1px; }
+  .crumb-title { font-family: 'Baloo 2', sans-serif; font-size: 16px; font-weight: 700; color: var(--text); }
 
-  /* --- Экран (контейнер с анимацией смены) --- */
-  .screen {
-    animation: screen-in 0.28s ease both;
-  }
-  .screen.back {
-    animation: screen-in-back 0.28s ease both;
-  }
-  @keyframes screen-in {
-    from { opacity: 0; transform: translateX(14px); }
-    to   { opacity: 1; transform: translateX(0); }
-  }
-  @keyframes screen-in-back {
-    from { opacity: 0; transform: translateX(-14px); }
-    to   { opacity: 1; transform: translateX(0); }
-  }
+  .screen { animation: screen-in 0.32s var(--bounce) both; }
+  .screen.back { animation: screen-in-back 0.32s var(--bounce) both; }
+  @keyframes screen-in { from { opacity: 0; transform: translateX(18px) scale(0.98); } to { opacity: 1; transform: translateX(0) scale(1); } }
+  @keyframes screen-in-back { from { opacity: 0; transform: translateX(-18px) scale(0.98); } to { opacity: 1; transform: translateX(0) scale(1); } }
 
-  .list { display: flex; flex-direction: column; gap: 10px; }
+  .list { display: flex; flex-direction: column; gap: 12px; }
 
   .item-card {
     position: relative;
-    background: #FFFDF8; border: 1px solid var(--paper-line); border-radius: 4px;
-    box-shadow: var(--card-shadow); padding: 14px 16px 14px 46px;
+    background: var(--bg); border: 2px solid var(--border); border-bottom: 4px solid var(--border);
+    border-radius: 16px; box-shadow: none; padding: 14px 16px 14px 60px;
     display: flex; align-items: center; justify-content: space-between; gap: 10px;
-    cursor: pointer; text-align: left; width: 100%; font-family: 'PT Sans', sans-serif; color: var(--ink);
+    cursor: pointer; text-align: left; width: 100%; font-family: 'Nunito', sans-serif; color: var(--text);
     opacity: 0;
-    animation: card-in 0.32s ease both;
-    transition: transform 0.1s ease;
-  }
-  .item-card:nth-child(6n+1) { transform: rotate(-0.4deg); }
-  .item-card:nth-child(6n+2) { transform: rotate(0.3deg); }
-  .item-card:nth-child(6n+3) { transform: rotate(-0.2deg); }
-  .item-card:nth-child(6n+4) { transform: rotate(0.4deg); }
-  .item-card:nth-child(6n+5) { transform: rotate(-0.3deg); }
-  .item-card:nth-child(6n+6) { transform: rotate(0.2deg); }
-
-  @keyframes card-in {
-    from { opacity: 0; transform: translateY(8px); }
-    to   { opacity: 1; }
+    animation: card-in 0.36s var(--bounce) both;
+    transition: transform 0.12s var(--bounce), border-color 0.15s ease;
   }
 
-  .item-card:focus-visible { outline: 2px solid var(--red); outline-offset: 2px; }
-  .item-card:active { transform: scale(0.985) translateY(1px) !important; }
+  @keyframes card-in { from { opacity: 0; transform: translateY(10px) scale(0.97); } to { opacity: 1; transform: translateY(0) scale(1); } }
 
-  /* Значок уровня слева на карточке — свой для предметов/разделов/тем */
-  .level-icon {
-    position: absolute;
-    left: 14px; top: 50%; transform: translateY(-50%);
-    width: 20px; height: 20px;
+  .item-card:hover { border-color: var(--green); }
+  .item-card:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+  .item-card:active { transform: translateY(3px); border-bottom-width: 2px; }
+
+  .level-icon-wrap {
+    position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
+    width: 36px; height: 36px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
   }
+  .level-icon-wrap.subjects { background: var(--green-tint); }
+  .level-icon-wrap.sections { background: var(--blue-tint); }
+  .level-icon-wrap.topics { background: #FFF1C2; }
+  .level-icon { width: 18px; height: 18px; }
 
-  .item-title { font-family: 'PT Serif', serif; font-size: 16px; font-weight: 700; }
-  .item-sub { font-size: 12.5px; color: var(--ink-soft); margin-top: 2px; }
-  .item-arrow { color: var(--red); font-size: 18px; flex-shrink: 0; }
+  .item-title { font-family: 'Baloo 2', sans-serif; font-size: 16.5px; font-weight: 700; }
+  .item-sub { font-size: 12.5px; color: var(--text-soft); margin-top: 2px; font-weight: 600; }
+  .item-arrow { color: var(--border); font-size: 20px; flex-shrink: 0; font-weight: 800; }
   .badge {
-    display: inline-block; background: var(--paper); border: 1px solid var(--paper-line);
-    border-radius: 3px; padding: 2px 8px; font-size: 12px; color: var(--ink-soft); white-space: nowrap;
+    display: inline-block; background: var(--green-tint); border: none;
+    border-radius: 20px; padding: 4px 12px; font-size: 12px; font-weight: 800; color: var(--green-dark); white-space: nowrap;
   }
 
-  /* --- Загрузка --- */
-  .state-msg { text-align: center; color: var(--ink-soft); font-size: 14px; padding: 30px 10px; }
+  .state-msg { text-align: center; color: var(--text-soft); font-size: 15px; font-weight: 700; padding: 30px 10px; }
   .state-msg.error { color: var(--red); }
   .retry-btn {
-    margin-top: 10px; background: var(--ink); color: var(--paper); border: none; border-radius: 3px;
-    padding: 8px 16px; font-family: 'PT Sans', sans-serif; font-size: 13px; font-weight: 700; cursor: pointer;
+    margin-top: 10px; background: var(--blue); border: none; border-bottom: 4px solid var(--blue-dark); color: white; border-radius: 14px;
+    padding: 10px 20px; font-family: 'Baloo 2', sans-serif; font-size: 14px; font-weight: 800; cursor: pointer;
+    text-transform: uppercase; letter-spacing: 0.02em; transition: transform 0.12s var(--bounce);
   }
+  .retry-btn:active { transform: translateY(3px); border-bottom-width: 1px; }
 
-  .loading-row {
-    display: flex; align-items: center; justify-content: center; gap: 8px;
-    padding: 30px 10px; color: var(--ink-soft); font-size: 14px;
-  }
+  .loading-row { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 30px 10px; color: var(--text-soft); font-size: 15px; font-weight: 700; }
   .pencil-dots span {
-    display: inline-block; width: 5px; height: 5px; border-radius: 50%;
-    background: var(--red); margin: 0 2px;
-    animation: dot-bounce 1s ease-in-out infinite;
+    display: inline-block; width: 7px; height: 7px; border-radius: 50%;
+    background: var(--green); margin: 0 2px; animation: dot-bounce 0.9s var(--bounce) infinite;
   }
-  .pencil-dots span:nth-child(2) { animation-delay: 0.15s; }
-  .pencil-dots span:nth-child(3) { animation-delay: 0.3s; }
-  @keyframes dot-bounce {
-    0%, 60%, 100% { transform: translateY(0); opacity: 0.5; }
-    30% { transform: translateY(-4px); opacity: 1; }
-  }
+  .pencil-dots span:nth-child(2) { animation-delay: 0.13s; }
+  .pencil-dots span:nth-child(3) { animation-delay: 0.26s; }
+  @keyframes dot-bounce { 0%, 60%, 100% { transform: translateY(0); opacity: 0.5; } 30% { transform: translateY(-6px); opacity: 1; } }
 
-  /* --- Экран задания --- */
-  .progress-line { font-size: 12.5px; color: var(--ink-soft); margin-bottom: 8px; text-align: center; }
+  .progress-line { font-size: 13px; font-weight: 800; color: var(--text-soft); margin-bottom: 10px; text-align: center; text-transform: uppercase; letter-spacing: 0.03em; }
 
   .task-card {
-    background: #FFFDF8; border: 1px solid var(--paper-line); border-radius: 4px;
-    box-shadow: var(--card-shadow); padding: 18px 16px;
-    animation: card-in 0.32s ease both;
+    background: var(--bg); border: 2px solid var(--border); border-radius: 20px;
+    box-shadow: none; padding: 20px 18px;
+    animation: card-in 0.36s var(--bounce) both;
   }
 
-  .task-question { font-family: 'PT Serif', serif; font-size: 17px; font-weight: 700; margin: 0 0 8px; }
-  .task-description { font-size: 14.5px; color: var(--ink-soft); line-height: 1.5; margin: 0 0 16px; }
+  .task-question { font-family: 'Baloo 2', sans-serif; font-size: 19px; font-weight: 700; margin: 0 0 8px; }
+  .task-description { font-size: 15px; color: var(--text-soft); font-weight: 600; line-height: 1.5; margin: 0 0 18px; }
 
   .option-btn {
-    display: block; width: 100%; text-align: left; margin-bottom: 8px;
-    background: var(--paper); border: 1px solid var(--paper-line); border-radius: 3px;
-    padding: 11px 14px; font-family: 'PT Sans', sans-serif; font-size: 14.5px; color: var(--ink); cursor: pointer;
-    transition: transform 0.1s ease, background 0.15s ease;
+    display: block; width: 100%; text-align: left; margin-bottom: 10px;
+    background: var(--bg); border: 2px solid var(--border); border-bottom: 4px solid var(--border); border-radius: 14px;
+    padding: 13px 16px; font-family: 'Nunito', sans-serif; font-size: 15.5px; font-weight: 700; color: var(--text); cursor: pointer;
+    transition: transform 0.12s var(--bounce), background 0.15s ease, border-color 0.15s ease;
   }
-  .option-btn:focus-visible { outline: 2px solid var(--red); outline-offset: 2px; }
-  .option-btn:active { transform: scale(0.98); background: #F2ECDE; }
+  .option-btn:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+  .option-btn:hover:not(:disabled) { border-color: var(--blue); background: var(--blue-tint); }
+  .option-btn:active:not(:disabled) { transform: translateY(3px); border-bottom-width: 2px; }
 
   .text-input {
-    width: 100%; padding: 11px 14px; font-family: 'PT Sans', sans-serif; font-size: 15px;
-    border: 1px solid var(--paper-line); border-radius: 3px; background: var(--paper); color: var(--ink);
-    margin-bottom: 10px;
+    width: 100%; padding: 13px 16px; font-family: 'Nunito', sans-serif; font-size: 16px; font-weight: 700;
+    border: 2px solid var(--border); border-radius: 14px; background: var(--bg-soft); color: var(--text);
+    margin-bottom: 12px;
   }
-  .text-input:focus-visible { outline: 2px solid var(--red); outline-offset: 2px; }
+  .text-input:focus-visible { outline: 2px solid var(--blue); border-color: var(--blue); }
 
   .submit-btn {
-    width: 100%; padding: 12px 16px; background: var(--ink); color: var(--paper); border: none;
-    border-radius: 3px; font-family: 'PT Sans', sans-serif; font-size: 15px; font-weight: 700; cursor: pointer;
-    transition: transform 0.1s ease;
+    width: 100%; padding: 14px 16px; background: var(--green); color: white; border: none;
+    border-bottom: 4px solid var(--green-dark);
+    border-radius: 14px; font-family: 'Baloo 2', sans-serif; font-size: 16px; font-weight: 800; cursor: pointer;
+    text-transform: uppercase; letter-spacing: 0.03em;
+    transition: transform 0.12s var(--bounce), border-bottom-width 0.12s ease;
   }
   .submit-btn:disabled { opacity: 0.4; cursor: default; }
-  .submit-btn:active:not(:disabled) { transform: scale(0.98); }
+  .submit-btn:active:not(:disabled) { transform: translateY(4px); border-bottom-width: 0; }
 
-  .feedback {
-    margin-top: 16px; padding: 14px; border-radius: 4px; border: 1px solid;
-    animation: feedback-in 0.25s ease both;
-  }
-  @keyframes feedback-in {
-    from { opacity: 0; transform: translateY(-4px); }
-    to   { opacity: 1; transform: translateY(0); }
-  }
-  .feedback.ok { background: #EEF5EF; border-color: var(--green); }
-  .feedback.bad { background: #FBEDEA; border-color: var(--red); }
-  .feedback-title { font-family: 'PT Serif', serif; font-weight: 700; font-size: 15px; margin: 0 0 6px; }
-  .feedback.ok .feedback-title { color: var(--green); }
-  .feedback.bad .feedback-title { color: var(--red); }
-  .feedback-body { font-size: 13.5px; color: var(--ink); line-height: 1.5; }
-  .feedback-explain { margin-top: 8px; font-size: 13px; color: var(--ink-soft); font-style: italic; }
+  .feedback { margin-top: 18px; padding: 14px 16px; border-radius: 16px; border: 2px solid; animation: feedback-in 0.3s var(--bounce) both; }
+  @keyframes feedback-in { from { opacity: 0; transform: translateY(-6px) scale(0.96); } to { opacity: 1; transform: translateY(0) scale(1); } }
+  .feedback.ok { background: var(--green-tint); border-color: var(--green); }
+  .feedback.bad { background: var(--red-tint); border-color: var(--red); }
+  .feedback-title { font-family: 'Baloo 2', sans-serif; font-weight: 800; font-size: 16px; margin: 0 0 6px; }
+  .feedback.ok .feedback-title { color: var(--green-dark); }
+  .feedback.bad .feedback-title { color: var(--red-dark); }
+  .feedback-body { font-size: 14px; font-weight: 700; color: var(--text); line-height: 1.5; }
+  .feedback-explain { margin-top: 8px; font-size: 13.5px; color: var(--text-soft); font-weight: 600; font-style: normal; }
 
   .next-btn {
-    width: 100%; margin-top: 14px; padding: 12px 16px; background: var(--red); color: #FFFDF8; border: none;
-    border-radius: 3px; font-family: 'PT Sans', sans-serif; font-size: 15px; font-weight: 700; cursor: pointer;
-    transition: transform 0.1s ease;
+    width: 100%; margin-top: 16px; padding: 14px 16px; background: var(--blue); color: white; border: none;
+    border-bottom: 4px solid var(--blue-dark);
+    border-radius: 14px; font-family: 'Baloo 2', sans-serif; font-size: 16px; font-weight: 800; cursor: pointer;
+    text-transform: uppercase; letter-spacing: 0.03em;
+    transition: transform 0.12s var(--bounce), border-bottom-width 0.12s ease;
   }
-  .next-btn:active { transform: scale(0.98); }
+  .next-btn:active { transform: translateY(4px); border-bottom-width: 0; }
 
   @media (prefers-reduced-motion: reduce) {
-    .screen, .screen.back, .item-card, .task-card, .feedback {
-      animation: none !important;
-      opacity: 1 !important;
-      transform: none !important;
-    }
-    .item-card:nth-child(6n+1), .item-card:nth-child(6n+2), .item-card:nth-child(6n+3),
-    .item-card:nth-child(6n+4), .item-card:nth-child(6n+5), .item-card:nth-child(6n+6) {
-      transform: none;
-    }
+    .screen, .screen.back, .item-card, .task-card, .feedback { animation: none !important; opacity: 1 !important; transform: none !important; }
   }
 </style>
 </head>
@@ -216,9 +193,9 @@
 
   <div class="wrap">
     <header>
-      <svg class="stamp-mini" viewBox="0 0 132 132" aria-hidden="true">
-        <circle cx="66" cy="66" r="58" fill="none" stroke="#3E6B4F" stroke-width="4"></circle>
-        <path d="M44 68 L58 82 L90 46" fill="none" stroke="#C1442D" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"></path>
+      <svg class="stamp-mini" viewBox="0 0 40 40" aria-hidden="true">
+        <circle cx="20" cy="20" r="20" fill="#58CC02"/>
+        <path d="M12 21 L17 26 L28 13" fill="none" stroke="white" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>
       </svg>
       <h1>Привет, <span class="who" id="userName">гость</span>!</h1>
     </header>
@@ -257,14 +234,14 @@
   // --- Значки уровней (свои для предметов / разделов / тем) ---
   const ICONS = {
     subjects: `<svg class="level-icon" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-      <circle cx="10" cy="10" r="8" stroke="#C1442D" stroke-width="1.6"/>
-      <circle cx="10" cy="10" r="4" stroke="#C1442D" stroke-width="1.2"/>
+      <circle cx="10" cy="10" r="7.2" stroke="#58A700" stroke-width="1.8"/>
+      <circle cx="10" cy="10" r="3.2" stroke="#58A700" stroke-width="1.4"/>
     </svg>`,
     sections: `<svg class="level-icon" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-      <path d="M2 6.5C2 5.67 2.67 5 3.5 5H8L9.5 6.5H16.5C17.33 6.5 18 7.17 18 8V14.5C18 15.33 17.33 16 16.5 16H3.5C2.67 16 2 15.33 2 14.5V6.5Z" stroke="#3E6B4F" stroke-width="1.5" stroke-linejoin="round"/>
+      <path d="M2 6.5C2 5.67 2.67 5 3.5 5H8L9.5 6.5H16.5C17.33 6.5 18 7.17 18 8V14.5C18 15.33 17.33 16 16.5 16H3.5C2.67 16 2 15.33 2 14.5V6.5Z" stroke="#1899D6" stroke-width="1.7" stroke-linejoin="round"/>
     </svg>`,
     topics: `<svg class="level-icon" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-      <path d="M5 3H15V17L10 14.2L5 17V3Z" stroke="#2C4A5E" stroke-width="1.5" stroke-linejoin="round"/>
+      <path d="M5 3H15V17L10 14.2L5 17V3Z" stroke="#B8860B" stroke-width="1.7" stroke-linejoin="round"/>
     </svg>`
   };
 
@@ -360,7 +337,7 @@
       const card = document.createElement('button');
       card.className = 'item-card';
       card.style.animationDelay = (i * 0.045) + 's';
-      card.innerHTML = ICONS[levelKey] || '';
+      card.innerHTML = `<span class="level-icon-wrap ${levelKey}">${ICONS[levelKey] || ''}</span>`;
 
       const left = document.createElement('div');
       const t = document.createElement('div');
