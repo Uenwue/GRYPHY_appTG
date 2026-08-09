@@ -210,13 +210,15 @@
 
   .feedback { margin-top: 18px; padding: 14px 16px; border-radius: 16px; border: 2px solid; animation: feedback-in 0.3s var(--bounce) both; }
   @keyframes feedback-in { from { opacity: 0; transform: translateY(-6px) scale(0.96); } to { opacity: 1; transform: translateY(0) scale(1); } }
-  .feedback.ok { background: var(--green-tint); border-color: var(--green); }
+  .feedback.ok { background: #F1FBE8; border-color: var(--green); }
+  html[data-theme="dark"] .feedback.ok, html:not([data-theme="light"]) .feedback.ok { background: var(--green-tint); }
+  @media (prefers-color-scheme: dark) { html:not([data-theme="light"]) .feedback.ok { background: var(--green-tint); } }
   .feedback.bad { background: var(--red-tint); border-color: var(--red); }
   .feedback-title { font-family: 'Jost', sans-serif; font-weight: 700; font-size: 16px; margin: 0 0 6px; }
   .feedback.ok .feedback-title { color: var(--green-dark); }
   .feedback.bad .feedback-title { color: var(--red-dark); }
   .feedback-body { font-size: 14px; font-weight: 700; color: var(--text); line-height: 1.5; }
-  .feedback-explain { margin-top: 8px; font-size: 13.5px; color: var(--text-soft); font-weight: 600; font-style: normal; }
+  .feedback-explain { margin-top: 8px; font-size: 13.5px; color: var(--text); font-weight: 600; font-style: normal; line-height: 1.5; }
 
   .next-btn {
     width: 100%; margin-top: 14px; padding: 10px 16px; background: var(--blue); color: white; border: none;
@@ -576,6 +578,17 @@
 
   function findNextUnanswered() { return currentTasks.findIndex(t => !t.answered); }
 
+  function escapeHtml(s) {
+    return (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+  function renderMarkdownText(s) {
+    let out = escapeHtml(s);
+    out = out.replace(/`([^`]+)`/g, '<code>$1</code>');
+    out = out.replace(/\*([^*]+)\*/g, '<b>$1</b>');
+    out = out.replace(/_([^_]+)_/g, '<i>$1</i>');
+    return out.replace(/\n/g, '<br>');
+  }
+
   // Миниатюра фото фиксированного размера + разворот на весь экран по нажатию
   function renderTaskImage(container, imageFileId) {
     const wrap = document.createElement('div');
@@ -605,6 +618,7 @@
   }
 
   async function renderOrderChoice(scope, scopeId, title, isBack) {
+    let chosenOrder = null;
     swapScreen((screen) => {
       const card = document.createElement('div');
       card.className = 'form-card';
@@ -614,21 +628,47 @@
       seqBtn.className = 'submit-btn';
       seqBtn.style.marginTop = '14px';
       seqBtn.textContent = '📋 По порядку';
-      seqBtn.onclick = () => beginSolving(scope, scopeId, title, 'sequential');
+      seqBtn.onclick = () => { chosenOrder = 'sequential'; showFeedbackChoice(); };
       card.appendChild(seqBtn);
 
       const randBtn = document.createElement('button');
       randBtn.className = 'skip-btn';
       randBtn.style.marginTop = '10px';
       randBtn.textContent = '🔀 Вперемешку';
-      randBtn.onclick = () => beginSolving(scope, scopeId, title, 'random');
+      randBtn.onclick = () => { chosenOrder = 'random'; showFeedbackChoice(); };
       card.appendChild(randBtn);
+
+      const feedbackWrap = document.createElement('div');
+      feedbackWrap.style.display = 'none';
+      card.appendChild(feedbackWrap);
+
+      function showFeedbackChoice() {
+        card.querySelector('.field-label').textContent = 'Когда показывать ответы?';
+        seqBtn.style.display = 'none';
+        randBtn.style.display = 'none';
+
+        const immBtn = document.createElement('button');
+        immBtn.className = 'submit-btn';
+        immBtn.style.marginTop = '14px';
+        immBtn.textContent = '⚡ Сразу после каждого';
+        immBtn.onclick = () => beginSolving(scope, scopeId, title, chosenOrder, 'immediate');
+        feedbackWrap.appendChild(immBtn);
+
+        const defBtn = document.createElement('button');
+        defBtn.className = 'skip-btn';
+        defBtn.style.marginTop = '10px';
+        defBtn.textContent = '⏳ С промежутком (каждые 20)';
+        defBtn.onclick = () => beginSolving(scope, scopeId, title, chosenOrder, 'deferred');
+        feedbackWrap.appendChild(defBtn);
+
+        feedbackWrap.style.display = 'block';
+      }
 
       screen.appendChild(card);
     }, isBack);
   }
 
-  async function beginSolving(scope, scopeId, title, order) {
+  async function beginSolving(scope, scopeId, title, order, feedbackMode) {
     stack.push({ level: 'tasks', scope, scopeId, title });
     renderCrumbs();
     showLoading('Загружаем задания', false);
@@ -641,6 +681,7 @@
           [currentTasks[i], currentTasks[j]] = [currentTasks[j], currentTasks[i]];
         }
       }
+      taskFeedbackMode = feedbackMode || 'immediate';
       renderTaskScreen(false);
     } catch (err) {
       showState('Не получилось загрузить задания. ' + err.message, true, true);
@@ -817,12 +858,28 @@
     screen.appendChild(card);
   }
 
+  let taskFeedbackMode = 'immediate';
+
   async function submitAnswer(taskId, answer, cardEl, task, optionEls, correctList) {
     try {
       const result = await apiPost(`/api/tasks/${taskId}/answer`, { answer });
 
       const taskRef = currentTasks.find(t => t.id === taskId);
       if (taskRef) { taskRef.answered = true; taskRef.is_correct = result.correct; taskRef.given_answer = answer; }
+
+      // Режим "с промежутком" — ответ сохраняется, но верно/неверно не
+      // показываем сразу, сразу идём к следующему заданию (итог — только
+      // на чек-поинте каждые 20 или в самом конце).
+      if (taskFeedbackMode === 'deferred') {
+        const remaining = currentTasks.filter(t => !t.answered).length;
+        const answeredSoFar = currentTasks.filter(t => t.answered).length;
+        if (remaining > 0 && answeredSoFar > 0 && answeredSoFar % 20 === 0) {
+          renderCheckpoint();
+        } else {
+          renderTaskScreen(false);
+        }
+        return;
+      }
 
       // Для вариантов с кнопками — красим каждый вариант по отдельности:
       // выбрал и верно → зелёным; выбрал и неверно → красным;
@@ -864,14 +921,14 @@
       if (!result.correct && !optionEls) {
         const body = document.createElement('p');
         body.className = 'feedback-body';
-        body.textContent = `Правильный ответ: ${result.correct_answer}`;
+        body.innerHTML = `Правильный ответ: ${escapeHtml(result.correct_answer)}`;
         feedback.appendChild(body);
       }
 
       if (result.explanation) {
         const explain = document.createElement('p');
         explain.className = 'feedback-explain';
-        explain.textContent = result.explanation;
+        explain.innerHTML = renderMarkdownText(result.explanation);
         feedback.appendChild(explain);
       }
 
@@ -978,7 +1035,7 @@
         if (purpose === 'tasks' && topics.some(t => !t.is_locked && t.task_count > 0) && listScreen) {
           const wholeBtn = document.createElement('button');
           wholeBtn.className = 'add-row-btn';
-          wholeBtn.style.cssText = 'width:100%;margin-bottom:12px;color:var(--blue-dark);border-style:solid;';
+          wholeBtn.style.cssText = 'width:100%;margin-bottom:14px;padding:16px;font-size:15.5px;color:var(--blue-dark);border-style:solid;border-width:2.5px;';
           wholeBtn.textContent = '🎯 Решить весь раздел целиком';
           wholeBtn.onclick = () => {
             stack.push({ level: 'order_choice', scope: 'section', scopeId: current.sectionId, title: current.title });
@@ -998,9 +1055,18 @@
           'rules', isBack);
       } else if (current.level === 'tests') {
         const tests = await apiGet(`/api/subjects/${current.subjectId}/tests`);
-        renderList(tests.map(t => ({ id: t.id, title: t.title })),
-          (item) => { startTest(item.id, item.title); },
+        renderList(tests.map(t => ({
+            id: t.id, title: t.title,
+            sub: t.question_count + ' вопросов' + (t.time_limit_minutes ? ` · ⏱ ${t.time_limit_minutes} мин` : ''),
+          })),
+          (item) => {
+            stack.push({ level: 'test_ready', testId: item.id, title: item.title, timeLimit: item.time_limit_minutes, questionCount: item.question_count });
+            renderCrumbs();
+            render(false);
+          },
           'tests', isBack);
+      } else if (current.level === 'test_ready') {
+        renderTestReadyScreen(current.testId, current.title, current.timeLimit, current.questionCount, isBack);
       } else if (current.level === 'test_taking') {
         renderTestQuestion(isBack);
       } else if (current.level === 'test_results') {
@@ -1101,6 +1167,55 @@
     }
   }
 
+  function renderTestReadyScreen(testId, title, timeLimit, questionCount, isBack) {
+    swapScreen((screen) => {
+      const card = document.createElement('div');
+      card.className = 'result-card';
+      card.style.textAlign = 'center';
+
+      const icon = document.createElement('div');
+      icon.style.cssText = 'font-size:44px;margin-bottom:10px;';
+      icon.textContent = '🧪';
+      card.appendChild(icon);
+
+      const titleEl = document.createElement('div');
+      titleEl.style.cssText = 'font-family:\'Jost\',sans-serif;font-weight:700;font-size:19px;margin-bottom:10px;';
+      titleEl.textContent = title;
+      card.appendChild(titleEl);
+
+      const infoEl = document.createElement('div');
+      infoEl.className = 'field-hint';
+      infoEl.style.cssText = 'font-size:14px;margin-bottom:6px;';
+      infoEl.textContent = 'Вопросов: ' + questionCount;
+      card.appendChild(infoEl);
+
+      if (timeLimit) {
+        const timeEl = document.createElement('div');
+        timeEl.className = 'field-hint';
+        timeEl.style.cssText = 'font-size:14px;font-weight:700;color:var(--red-dark);margin-bottom:16px;';
+        timeEl.textContent = '⏱ На тест даётся ' + timeLimit + ' мин.';
+        card.appendChild(timeEl);
+      } else {
+        const timeEl = document.createElement('div');
+        timeEl.className = 'field-hint';
+        timeEl.style.cssText = 'margin-bottom:16px;';
+        timeEl.textContent = 'Без ограничения по времени.';
+        card.appendChild(timeEl);
+      }
+
+      const readyBtn = document.createElement('button');
+      readyBtn.className = 'submit-btn';
+      readyBtn.textContent = 'Вы готовы? Начать тест';
+      readyBtn.onclick = () => {
+        stack.pop();
+        startTest(testId, title);
+      };
+      card.appendChild(readyBtn);
+
+      screen.appendChild(card);
+    }, isBack);
+  }
+
   function renderTestQuestion(isBack) {
     const screen = swapScreen(() => {}, isBack);
 
@@ -1136,16 +1251,17 @@
       function tick() {
         const msLeft = testDeadline - Date.now();
         if (msLeft <= 0) {
-          timerEl.textContent = '⏱ 00:00';
+          timerEl.textContent = '⏱ 00:00:00';
           stopTestTimer();
           if (tg?.showAlert) tg.showAlert('Время вышло — тест завершается автоматически.');
           finishCurrentTest();
           return;
         }
         const totalSec = Math.floor(msLeft / 1000);
-        const mm = Math.floor(totalSec / 60);
+        const hh = Math.floor(totalSec / 3600);
+        const mm = Math.floor((totalSec % 3600) / 60);
         const ss = totalSec % 60;
-        timerEl.textContent = '⏱ ' + String(mm).padStart(2, '0') + ':' + String(ss).padStart(2, '0');
+        timerEl.textContent = '⏱ ' + String(hh).padStart(2, '0') + ':' + String(mm).padStart(2, '0') + ':' + String(ss).padStart(2, '0');
         if (msLeft < 60000) timerEl.style.color = 'var(--red-dark)';
       }
       stopTestTimer();
@@ -1326,6 +1442,7 @@
               question: detail.question, description: detail.description,
               given_answer: detail.given_answer, correct_answer: detail.correct_answer,
               explanation: detail.explanation, is_correct: detail.is_correct,
+              type: detail.type, options: detail.options,
             }, true);
           } catch (err) {
             showState('Не получилось загрузить. ' + err.message, true, true);
@@ -1365,14 +1482,49 @@
 
       const q = document.createElement('p');
       q.className = 'task-question';
-      q.textContent = detail.question;
+      q.innerHTML = renderMarkdownText(detail.question);
       card.appendChild(q);
 
       if (detail.description) {
         const d = document.createElement('p');
         d.className = 'task-description';
-        d.textContent = detail.description;
+        d.innerHTML = renderMarkdownText(detail.description);
         card.appendChild(d);
+      }
+
+      // Если у задания были варианты (кнопки/несколько верных) — показываем
+      // их так же, как на экране решения: кто что выбрал, что было верно.
+      if ((detail.type === 'buttons' || detail.type === 'multi') && detail.options && detail.options.length) {
+        const correctList = Array.isArray(detail.correct_answer) ? detail.correct_answer
+          : (typeof detail.correct_answer === 'string' && detail.type === 'multi' ? detail.correct_answer.split(',') : [detail.correct_answer]);
+        const givenList = Array.isArray(detail.given_answer) ? detail.given_answer
+          : (typeof detail.given_answer === 'string' ? detail.given_answer.split(',') : []);
+        const selectedSet = new Set(givenList.map(x => (x || '').trim()));
+        const correctSet = new Set(correctList.map(x => (x || '').trim()));
+
+        detail.options.forEach(opt => {
+          const btn = document.createElement('div');
+          btn.className = 'option-btn';
+          btn.style.cursor = 'default';
+          btn.innerHTML = '<span class="option-text"></span>';
+          btn.querySelector('.option-text').textContent = opt;
+          const isSelected = selectedSet.has(opt.trim());
+          const isCorrectOpt = correctSet.has(opt.trim());
+          if (isSelected && isCorrectOpt) {
+            btn.classList.add('correct-selected');
+          } else if (isSelected && !isCorrectOpt) {
+            btn.classList.add('incorrect-selected');
+          } else if (!isSelected && isCorrectOpt) {
+            btn.classList.add('correct-missed');
+            const tag = document.createElement('span');
+            tag.className = 'option-tag';
+            tag.textContent = 'пропущено';
+            btn.appendChild(tag);
+          } else {
+            btn.classList.add('neutral-final');
+          }
+          card.appendChild(btn);
+        });
       }
 
       const feedback = document.createElement('div');
@@ -1381,14 +1533,16 @@
       title.className = 'feedback-title';
       title.textContent = detail.is_correct ? '✅ Верно' : '❌ Неверно';
       feedback.appendChild(title);
-      const body = document.createElement('p');
-      body.className = 'feedback-body';
-      body.textContent = 'Ваш ответ: ' + (detail.given_answer || '—') + (detail.is_correct ? '' : ('. Правильный: ' + detail.correct_answer));
-      feedback.appendChild(body);
+      if (detail.type === 'text' || !detail.options) {
+        const body = document.createElement('p');
+        body.className = 'feedback-body';
+        body.innerHTML = 'Ваш ответ: ' + escapeHtml(detail.given_answer || '—') + (detail.is_correct ? '' : ('. Правильный: ' + escapeHtml(detail.correct_answer)));
+        feedback.appendChild(body);
+      }
       if (detail.explanation) {
         const explain = document.createElement('p');
         explain.className = 'feedback-explain';
-        explain.textContent = detail.explanation;
+        explain.innerHTML = renderMarkdownText(detail.explanation);
         feedback.appendChild(explain);
       }
       card.appendChild(feedback);
