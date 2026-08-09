@@ -1057,6 +1057,7 @@
         const tests = await apiGet(`/api/subjects/${current.subjectId}/tests`);
         renderList(tests.map(t => ({
             id: t.id, title: t.title,
+            time_limit_minutes: t.time_limit_minutes, question_count: t.question_count,
             sub: t.question_count + ' вопросов' + (t.time_limit_minutes ? ` · ⏱ ${t.time_limit_minutes} мин` : ''),
           })),
           (item) => {
@@ -1308,8 +1309,9 @@
       }
     };
 
-    if (q.type === 'buttons' && q.options) {
-      let selected = null;
+    if ((q.type === 'buttons' || q.type === 'multi') && q.options && q.options.length) {
+      const isMulti = q.type === 'multi';
+      let selected = [];
       const nextBtn = document.createElement('button');
       nextBtn.className = 'submit-btn';
       nextBtn.textContent = currentTestIndex === currentTestQuestions.length - 1 ? 'Завершить тест' : 'Далее';
@@ -1321,10 +1323,16 @@
         btn.innerHTML = '<span class="option-text"></span>';
         btn.querySelector('.option-text').textContent = opt;
         btn.onclick = () => {
-          selected = opt;
-          optBtns.forEach(b => b.classList.remove('selected'));
-          btn.classList.add('selected');
-          nextBtn.disabled = false;
+          if (isMulti) {
+            const pos = selected.indexOf(opt);
+            if (pos === -1) { selected.push(opt); btn.classList.add('selected'); }
+            else { selected.splice(pos, 1); btn.classList.remove('selected'); }
+          } else {
+            selected = [opt];
+            optBtns.forEach(b => b.classList.remove('selected'));
+            btn.classList.add('selected');
+          }
+          nextBtn.disabled = selected.length === 0;
         };
         answerArea.appendChild(btn);
         return btn;
@@ -1336,7 +1344,7 @@
       skipBtn.onclick = () => advance(null, true);
       answerArea.appendChild(skipBtn);
 
-      nextBtn.onclick = () => { if (selected === null) return; advance(selected, false); };
+      nextBtn.onclick = () => { if (!selected.length) return; advance(isMulti ? selected : selected[0], false); };
       answerArea.appendChild(nextBtn);
     } else {
       const input = document.createElement('input');
@@ -1394,6 +1402,7 @@
         <div class="result-stat ok"><div class="num">${s.correct}</div><div class="lbl">Верно</div></div>
         <div class="result-stat bad"><div class="num">${s.wrong}</div><div class="lbl">Неверно</div></div>
       </div>
+      ${s.elapsed_str ? `<div class="field-hint" style="text-align:center;margin-top:10px;">⏱ Затрачено времени: ${s.elapsed_str}</div>` : ''}
     `;
 
     const reviewBtn = document.createElement('button');
