@@ -694,28 +694,12 @@
           exportBtn.className = 'add-row-btn';
           exportBtn.style.flex = '1';
           exportBtn.textContent = '⬇️ Экспорт в .docx';
-          exportBtn.onclick = async () => {
-            exportBtn.disabled = true;
-            exportBtn.textContent = 'Готовлю файл…';
-            try {
-              const res = await fetch(API_BASE_URL + `/api/teacher/topics/${current.topicId}/export`, {
-                headers: { 'X-Telegram-Init-Data': tg?.initData || '' },
-              });
-              if (!res.ok) throw new Error('Сервер ответил с ошибкой: ' + res.status);
-              const blob = await res.blob();
-              const url = URL.createObjectURL(blob);
-              const a = document.createElement('a');
-              a.href = url;
-              a.download = 'задания.docx';
-              document.body.appendChild(a);
-              a.click();
-              a.remove();
-              URL.revokeObjectURL(url);
-            } catch (err) {
-              showToast('Не получилось скачать: ' + err.message);
-            }
-            exportBtn.disabled = false;
-            exportBtn.textContent = '⬇️ Экспорт в .docx';
+          exportBtn.onclick = () => {
+            const url = API_BASE_URL + `/api/teacher/topics/${current.topicId}/export?init_data=` + encodeURIComponent(tg?.initData || '');
+            // На iPhone скачивание через fetch+blob не работает (файл
+            // открывается как текст вместо сохранения) — открываем ссылку
+            // в системном браузере, там скачивание работает как положено.
+            if (tg?.openLink) tg.openLink(url); else window.open(url, '_blank');
           };
           ioRow.appendChild(exportBtn);
 
@@ -1141,8 +1125,8 @@
                 headers: { 'X-Telegram-Init-Data': tg?.initData || '' },
                 body: formData,
               });
-              if (!res.ok) throw new Error('Сервер ответил с ошибкой: ' + res.status);
-              const data = await res.json();
+              const data = await res.json().catch(() => ({}));
+              if (!res.ok) throw new Error(data.message || data.detail || ('Сервер ответил с ошибкой: ' + res.status));
               imageFileId = data.file_id;
             } catch (err) {
               showToast('Не получилось загрузить фото: ' + err.message);
