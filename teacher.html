@@ -295,6 +295,7 @@
 <body>
 
   <button class="theme-toggle" id="themeToggle" title="Сменить тему" aria-label="Сменить тему"></button>
+  <button class="theme-toggle" id="debugBtn" title="Диагностика" aria-label="Диагностика" style="right:62px;">🔧</button>
 
   <div class="wrap">
     <header>
@@ -1712,11 +1713,19 @@
     applyIcon();
   })();
 
+  // --- Временная диагностика проверки подлинности — удалить после того, как разберёмся ---
+  document.getElementById('debugBtn').onclick = async () => {
+    try {
+      const res = await fetch(API_BASE_URL + '/api/debug/whoami', { headers: { 'X-Telegram-Init-Data': tg?.initData || '' } });
+      const data = await res.json();
+      alert(JSON.stringify(data, null, 2));
+    } catch (err) {
+      alert('Ошибка запроса: ' + err.message);
+    }
+  };
+
   render(false);
 </script>
-
-</body>
-</html>
 
 </body>
 </html>
