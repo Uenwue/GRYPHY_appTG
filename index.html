@@ -669,6 +669,13 @@
     const card = document.createElement('div');
     card.className = 'task-card';
 
+    if (task.image_file_id) {
+      const img = document.createElement('img');
+      img.src = API_BASE_URL + '/api/image/' + task.image_file_id;
+      img.style.cssText = 'max-width:100%;border-radius:12px;margin-bottom:14px;display:block;';
+      card.appendChild(img);
+    }
+
     const q = document.createElement('p');
     q.className = 'task-question';
     q.textContent = task.question;
