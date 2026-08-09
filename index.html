@@ -87,8 +87,7 @@
 
   header {
     display: flex; align-items: center; gap: 10px; margin-bottom: 20px;
-    position: sticky; top: 0; z-index: 15; background: var(--bg);
-    padding: 12px 0; margin-top: -12px;
+    background: var(--bg);
   }
   .stamp-mini { width: 40px; height: 40px; flex-shrink: 0; }
   header h1 { font-family: 'Jost', sans-serif; font-size: 19px; font-weight: 700; margin: 0; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
@@ -1146,6 +1145,8 @@
   let currentTestFinalSummary = null;
   let testDeadline = null;
   let testTimerInterval = null;
+  let skippedTestQuestions = [];
+  let isSecondPassOfSkipped = false;
 
   function stopTestTimer() {
     if (testTimerInterval) { clearInterval(testTimerInterval); testTimerInterval = null; }
@@ -1160,6 +1161,8 @@
       currentAttemptId = res.attempt_id;
       currentTestQuestions = res.questions;
       currentTestIndex = 0;
+      skippedTestQuestions = [];
+      isSecondPassOfSkipped = false;
       stopTestTimer();
       testDeadline = res.time_limit_minutes ? (Date.now() + res.time_limit_minutes * 60000) : null;
       renderTestQuestion(false);
@@ -1206,7 +1209,7 @@
 
       const readyBtn = document.createElement('button');
       readyBtn.className = 'submit-btn';
-      readyBtn.textContent = 'Вы готовы? Начать тест';
+      readyBtn.textContent = 'Начать тест';
       readyBtn.onclick = () => {
         stack.pop();
         startTest(testId, title);
@@ -1221,6 +1224,16 @@
     const screen = swapScreen(() => {}, isBack);
 
     if (currentTestIndex >= currentTestQuestions.length) {
+      if (skippedTestQuestions.length > 0) {
+        // Пропущенные вопросы нельзя оставить без ответа — возвращаемся к
+        // ним отдельным кругом, и на этот раз пропустить уже нельзя.
+        currentTestQuestions = skippedTestQuestions;
+        skippedTestQuestions = [];
+        currentTestIndex = 0;
+        isSecondPassOfSkipped = true;
+        renderTestQuestion(false);
+        return;
+      }
       stopTestTimer();
       finishCurrentTest();
       return;
@@ -1232,7 +1245,7 @@
     headerRow.className = 'task-header-row';
     const numLabel = document.createElement('span');
     numLabel.className = 'progress-num';
-    numLabel.textContent = 'Вопрос ' + (currentTestIndex + 1) + ' из ' + currentTestQuestions.length;
+    numLabel.textContent = (isSecondPassOfSkipped ? 'Пропущенный вопрос ' : 'Вопрос ') + (currentTestIndex + 1) + ' из ' + currentTestQuestions.length;
     headerRow.appendChild(numLabel);
     const track = document.createElement('div');
     track.className = 'progress-bar-track';
@@ -1298,7 +1311,10 @@
     const advance = async (answer, skip) => {
       try {
         if (skip) {
-          await apiPost(`/api/tests/attempts/${currentAttemptId}/answer`, { question_id: q.id, skip: true });
+          // Не отправляем "пропуск" на сервер — просто откладываем вопрос
+          // на потом, отвечать всё равно придётся, до конца теста его не
+          // обойти. Ответ уйдёт на сервер, когда до него дойдёт очередь.
+          skippedTestQuestions.push(q);
         } else {
           await apiPost(`/api/tests/attempts/${currentAttemptId}/answer`, { question_id: q.id, answer });
         }
@@ -1309,12 +1325,14 @@
       }
     };
 
+    const isLastOverall = currentTestIndex === currentTestQuestions.length - 1 && skippedTestQuestions.length === 0;
+
     if ((q.type === 'buttons' || q.type === 'multi') && q.options && q.options.length) {
       const isMulti = q.type === 'multi';
       let selected = [];
       const nextBtn = document.createElement('button');
       nextBtn.className = 'submit-btn';
-      nextBtn.textContent = currentTestIndex === currentTestQuestions.length - 1 ? 'Завершить тест' : 'Далее';
+      nextBtn.textContent = isLastOverall ? 'Завершить тест' : 'Далее';
       nextBtn.disabled = true;
 
       const optBtns = q.options.map((opt) => {
@@ -1338,11 +1356,13 @@
         return btn;
       });
 
-      const skipBtn = document.createElement('button');
-      skipBtn.className = 'skip-btn';
-      skipBtn.textContent = 'Пропустить';
-      skipBtn.onclick = () => advance(null, true);
-      answerArea.appendChild(skipBtn);
+      if (!isSecondPassOfSkipped) {
+        const skipBtn = document.createElement('button');
+        skipBtn.className = 'skip-btn';
+        skipBtn.textContent = 'Пропустить';
+        skipBtn.onclick = () => advance(null, true);
+        answerArea.appendChild(skipBtn);
+      }
 
       nextBtn.onclick = () => { if (!selected.length) return; advance(isMulti ? selected : selected[0], false); };
       answerArea.appendChild(nextBtn);
@@ -1355,16 +1375,18 @@
 
       const submitBtn = document.createElement('button');
       submitBtn.className = 'submit-btn';
-      submitBtn.textContent = currentTestIndex === currentTestQuestions.length - 1 ? 'Завершить тест' : 'Далее';
+      submitBtn.textContent = isLastOverall ? 'Завершить тест' : 'Далее';
       submitBtn.disabled = true;
       input.addEventListener('input', () => { submitBtn.disabled = !input.value.trim(); });
       submitBtn.onclick = () => { if (!input.value.trim()) return; advance(input.value.trim(), false); };
 
-      const skipBtn = document.createElement('button');
-      skipBtn.className = 'skip-btn';
-      skipBtn.textContent = 'Пропустить';
-      skipBtn.onclick = () => advance(null, true);
-      answerArea.appendChild(skipBtn);
+      if (!isSecondPassOfSkipped) {
+        const skipBtn = document.createElement('button');
+        skipBtn.className = 'skip-btn';
+        skipBtn.textContent = 'Пропустить';
+        skipBtn.onclick = () => advance(null, true);
+        answerArea.appendChild(skipBtn);
+      }
       answerArea.appendChild(submitBtn);
 
       input.addEventListener('keydown', (e) => { if (e.key === 'Enter') submitBtn.click(); });
