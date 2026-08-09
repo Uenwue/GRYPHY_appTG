@@ -511,7 +511,7 @@
     }, isBack);
 
     const list = screen.querySelector('#listContainer');
-    if (!items.length) { showState('Здесь пока пусто.'); return; }
+    if (!items.length) { showState('Здесь пока пусто.'); return screen; }
     items.forEach((item, i) => {
       const card = document.createElement('button');
       card.className = 'item-card';
@@ -543,12 +543,68 @@
         card.appendChild(arrow);
       }
 
-      card.onclick = () => onClick(item);
+      if (item.is_locked) {
+        card.style.opacity = '0.55';
+        const lockBadge = document.createElement('span');
+        lockBadge.textContent = '🔒';
+        lockBadge.style.marginLeft = '6px';
+        card.querySelector('.item-title').appendChild(lockBadge);
+        card.onclick = () => {
+          const msg = item.lock_message || 'Пока недоступно.';
+          if (tg?.showAlert) tg.showAlert(msg); else alert(msg);
+        };
+      } else {
+        card.onclick = () => onClick(item);
+      }
       list.appendChild(card);
     });
+    return screen;
   }
 
   function findNextUnanswered() { return currentTasks.findIndex(t => !t.answered); }
+
+  async function renderOrderChoice(scope, scopeId, title, isBack) {
+    swapScreen((screen) => {
+      const card = document.createElement('div');
+      card.className = 'form-card';
+      card.innerHTML = '<div class="field-label" style="text-align:center;font-size:16px;">Как решать задания?</div>';
+
+      const seqBtn = document.createElement('button');
+      seqBtn.className = 'submit-btn';
+      seqBtn.style.marginTop = '14px';
+      seqBtn.textContent = '📋 По порядку';
+      seqBtn.onclick = () => beginSolving(scope, scopeId, title, 'sequential');
+      card.appendChild(seqBtn);
+
+      const randBtn = document.createElement('button');
+      randBtn.className = 'skip-btn';
+      randBtn.style.marginTop = '10px';
+      randBtn.textContent = '🔀 Вперемешку';
+      randBtn.onclick = () => beginSolving(scope, scopeId, title, 'random');
+      card.appendChild(randBtn);
+
+      screen.appendChild(card);
+    }, isBack);
+  }
+
+  async function beginSolving(scope, scopeId, title, order) {
+    stack.push({ level: 'tasks', scope, scopeId, title });
+    renderCrumbs();
+    showLoading('Загружаем задания', false);
+    try {
+      const path = scope === 'section' ? `/api/sections/${scopeId}/tasks` : `/api/topics/${scopeId}/tasks`;
+      currentTasks = await apiGet(path);
+      if (order === 'random') {
+        for (let i = currentTasks.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [currentTasks[i], currentTasks[j]] = [currentTasks[j], currentTasks[i]];
+        }
+      }
+      renderTaskScreen(false);
+    } catch (err) {
+      showState('Не получилось загрузить задания. ' + err.message, true, true);
+    }
+  }
 
   function renderTaskScreen(isBack) {
     const screen = swapScreen(() => {}, isBack);
@@ -573,15 +629,15 @@
       };
       screen.appendChild(retryBtn);
 
-      const topicId = stack[stack.length - 1]?.topicId;
-      if (topicId) {
+      const currentScope = stack[stack.length - 1];
+      if (currentScope?.scope === 'topic' && currentScope.scopeId) {
         const reviewBtn = document.createElement('button');
         reviewBtn.className = 'skip-btn';
         reviewBtn.style.maxWidth = '260px';
         reviewBtn.style.margin = '0 auto';
         reviewBtn.style.display = 'block';
         reviewBtn.textContent = '🔍 Пересмотреть свои ответы';
-        reviewBtn.onclick = () => { stack.push({ level: 'topic_review', topicId, title: 'Разбор ответов' }); renderCrumbs(); render(false); };
+        reviewBtn.onclick = () => { stack.push({ level: 'topic_review', topicId: currentScope.scopeId, title: 'Разбор ответов' }); renderCrumbs(); render(false); };
         screen.appendChild(reviewBtn);
       }
       return;
@@ -768,12 +824,48 @@
       const nextBtn = document.createElement('button');
       nextBtn.className = 'next-btn';
       const remaining = currentTasks.filter(t => !t.answered).length;
-      nextBtn.textContent = remaining > 0 ? 'Далее →' : 'Показать итог';
-      nextBtn.onclick = () => renderTaskScreen(false);
+      const answeredSoFar = currentTasks.filter(t => t.answered).length;
+      if (remaining > 0 && answeredSoFar > 0 && answeredSoFar % 20 === 0) {
+        nextBtn.textContent = 'Посмотреть промежуточный итог';
+        nextBtn.onclick = () => renderCheckpoint();
+      } else {
+        nextBtn.textContent = remaining > 0 ? 'Далее →' : 'Показать итог';
+        nextBtn.onclick = () => renderTaskScreen(false);
+      }
       cardEl.appendChild(nextBtn);
     } catch (err) {
       showState('Не получилось отправить ответ. ' + err.message, true, false);
     }
+  }
+
+  // Промежуточный итог — показывается после каждых 20 отвеченных заданий,
+  // чтобы не листать длинный раздел вслепую до самого конца.
+  function renderCheckpoint() {
+    swapScreen((screen) => {
+      const answered = currentTasks.filter(t => t.answered);
+      const correct = answered.filter(t => t.is_correct).length;
+      const wrong = answered.length - correct;
+      const remaining = currentTasks.length - answered.length;
+
+      const card = document.createElement('div');
+      card.className = 'result-card';
+      card.innerHTML = `
+        <div class="result-label">Промежуточный итог</div>
+        <div class="result-score">${correct} / ${answered.length}</div>
+        <div class="result-breakdown">
+          <div class="result-stat ok"><div class="num">${correct}</div><div class="lbl">Верно</div></div>
+          <div class="result-stat bad"><div class="num">${wrong}</div><div class="lbl">Неверно</div></div>
+        </div>
+      `;
+      const continueBtn = document.createElement('button');
+      continueBtn.className = 'submit-btn';
+      continueBtn.style.marginTop = '20px';
+      continueBtn.textContent = `Продолжить (осталось ${remaining})`;
+      continueBtn.onclick = () => renderTaskScreen(false);
+      card.appendChild(continueBtn);
+
+      screen.appendChild(card);
+    }, false);
   }
 
   async function render(isBack) {
@@ -792,13 +884,16 @@
       } else if (current.level === 'sections') {
         const sections = await apiGet(`/api/subjects/${current.subjectId}/sections`);
         const purpose = current.purpose;
-        renderList(sections.map(s => ({ id: s.id, title: s.title })),
+        renderList(sections.map(s => ({ id: s.id, title: s.title, is_locked: s.is_locked, lock_message: s.lock_message })),
           (item) => { stack.push({ level: 'topics', sectionId: item.id, purpose, title: item.title }); render(false); },
           'sections', isBack);
       } else if (current.level === 'topics') {
         const topics = await apiGet(`/api/sections/${current.sectionId}/topics`);
         const purpose = current.purpose;
-        renderList(topics.map(t => ({ id: t.id, title: t.title, badge: purpose === 'tasks' ? (t.task_count + ' зад.') : undefined })),
+        const listScreen = renderList(topics.map(t => ({
+            id: t.id, title: t.title, is_locked: t.is_locked, lock_message: t.lock_message,
+            badge: purpose === 'tasks' ? (t.task_count + ' зад.') : undefined,
+          })),
           async (item) => {
             if (purpose === 'rules') {
               stack.push({ level: 'rules', topicId: item.id, title: item.title });
@@ -813,20 +908,27 @@
                 showState('Не получилось загрузить правила.', true, true);
               }
             } else {
-              stack.push({ level: 'tasks', topicId: item.id, title: item.title });
+              stack.push({ level: 'order_choice', scope: 'topic', scopeId: item.id, title: item.title });
               renderCrumbs();
-              showLoading('Загружаем задания', false);
-              try {
-                currentTasks = await apiGet(`/api/topics/${item.id}/tasks`);
-                renderTaskScreen(false);
-              } catch (err) {
-                showState('Не получилось загрузить задания.', true, true);
-              }
+              render(false);
             }
           },
           'topics', isBack);
+        if (purpose === 'tasks' && topics.some(t => !t.is_locked && t.task_count > 0) && listScreen) {
+          const wholeBtn = document.createElement('button');
+          wholeBtn.className = 'add-row-btn';
+          wholeBtn.style.cssText = 'width:100%;margin-bottom:12px;color:var(--blue-dark);border-style:solid;';
+          wholeBtn.textContent = '🎯 Решить весь раздел целиком';
+          wholeBtn.onclick = () => {
+            stack.push({ level: 'order_choice', scope: 'section', scopeId: current.sectionId, title: current.title });
+            renderCrumbs();
+            render(false);
+          };
+          listScreen.insertBefore(wholeBtn, listScreen.firstChild);
+        }
+      } else if (current.level === 'order_choice') {
+        renderOrderChoice(current.scope, current.scopeId, current.title, isBack);
       } else if (current.level === 'tasks') {
-        currentTasks = await apiGet(`/api/topics/${current.topicId}/tasks`);
         renderTaskScreen(isBack);
       } else if (current.level === 'rules') {
         const rules = await apiGet(`/api/topics/${current.topicId}/rules`);
