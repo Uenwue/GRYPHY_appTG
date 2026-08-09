@@ -315,7 +315,7 @@
 
 <script>
   // Адрес вашего бэкенда на Amvera — тот же самый, что и у ученической версии.
-  const API_BASE_URL = 'https://gryphy-bot-uenwue.waw0.amvera.tech';
+  const API_BASE_URL = 'ВСТАВЬТЕ_СЮДА_АДРЕС_БЭКЕНДА';
 
   const tg = window.Telegram?.WebApp;
   if (tg) { tg.ready(); tg.expand(); }
@@ -670,7 +670,7 @@
       showLoadingMenu();
       try {
         const tasks = await apiGet(`/api/teacher/topics/${current.topicId}/tasks`);
-        renderRowList(
+        const listScreen = renderRowList(
           tasks.map((t, i) => Object.assign({}, t, {
             title: '№' + (i + 1) + ': ' + t.question,
             sub: t.type === 'text' ? 'Текстовый ответ' : (t.type === 'multi' ? 'Несколько верных' : 'Один верный (кнопки)'),
@@ -686,6 +686,76 @@
           () => { stack.push({ level: 'task_form', topicId: current.topicId, editId: null, title: 'Новое задание' }); renderCrumbs(); render(false); },
           (item) => { stack.push({ level: 'task_preview', topicId: current.topicId, taskId: item.id, title: 'Предпросмотр' }); renderCrumbs(); render(false); },
         );
+        if (listScreen) {
+          const ioRow = document.createElement('div');
+          ioRow.style.cssText = 'display:flex;gap:8px;margin-bottom:12px;';
+
+          const exportBtn = document.createElement('button');
+          exportBtn.className = 'add-row-btn';
+          exportBtn.style.flex = '1';
+          exportBtn.textContent = '⬇️ Экспорт в .docx';
+          exportBtn.onclick = async () => {
+            exportBtn.disabled = true;
+            exportBtn.textContent = 'Готовлю файл…';
+            try {
+              const res = await fetch(API_BASE_URL + `/api/teacher/topics/${current.topicId}/export`, {
+                headers: { 'X-Telegram-Init-Data': tg?.initData || '' },
+              });
+              if (!res.ok) throw new Error('Сервер ответил с ошибкой: ' + res.status);
+              const blob = await res.blob();
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = url;
+              a.download = 'задания.docx';
+              document.body.appendChild(a);
+              a.click();
+              a.remove();
+              URL.revokeObjectURL(url);
+            } catch (err) {
+              showToast('Не получилось скачать: ' + err.message);
+            }
+            exportBtn.disabled = false;
+            exportBtn.textContent = '⬇️ Экспорт в .docx';
+          };
+          ioRow.appendChild(exportBtn);
+
+          const importBtn = document.createElement('button');
+          importBtn.className = 'add-row-btn';
+          importBtn.style.flex = '1';
+          importBtn.textContent = '⬆️ Импорт из .docx';
+          const importInput = document.createElement('input');
+          importInput.type = 'file';
+          importInput.accept = '.docx';
+          importInput.style.display = 'none';
+          importInput.onchange = async () => {
+            const file = importInput.files[0];
+            if (!file) return;
+            importBtn.disabled = true;
+            importBtn.textContent = 'Загружаю…';
+            try {
+              const formData = new FormData();
+              formData.append('file', file);
+              const res = await fetch(API_BASE_URL + `/api/teacher/topics/${current.topicId}/import`, {
+                method: 'POST',
+                headers: { 'X-Telegram-Init-Data': tg?.initData || '' },
+                body: formData,
+              });
+              if (!res.ok) throw new Error('Сервер ответил с ошибкой: ' + res.status);
+              const data = await res.json();
+              showToast(`Добавлено заданий: ${data.added}` + (data.errors?.length ? `, не распознано: ${data.errors.length}` : ''));
+              render(false);
+            } catch (err) {
+              importBtn.disabled = false;
+              importBtn.textContent = '⬆️ Импорт из .docx';
+              showToast('Не получилось импортировать: ' + err.message);
+            }
+          };
+          importBtn.onclick = () => importInput.click();
+          ioRow.appendChild(importBtn);
+          ioRow.appendChild(importInput);
+
+          listScreen.insertBefore(ioRow, listScreen.firstChild);
+        }
       } catch (err) { showErrorMsg(err, isBack); }
     } else if (current.level === 'task_form') {
       renderTaskForm(current.topicId, current.editId, isBack);
@@ -1016,27 +1086,37 @@
         tableArea.appendChild(field);
       }
 
-      // Фото к заданию (необязательно) — предпросмотр локально в браузере
-      let imageDataUrl = existing ? (existing.image || null) : null;
+      // Фото к заданию (необязательно) — загружается сразу на сервер
+      // (который пересылает его в Telegram-архив), в задании хранится
+      // только file_id, а не сама картинка.
+      let imageFileId = existing ? (existing.image_file_id || null) : null;
+      let imageUploading = false;
       const imageField = document.createElement('div');
       imageField.className = 'field';
       card.appendChild(imageField);
       renderImageField();
 
       function renderImageField() {
-        imageField.innerHTML = '<label class="field-label">Фото к заданию (необязательно)</label><div class="field-hint">Пока сохраняется только в этом окне — подключение к серверу для фото будет добавлено позже.</div>';
-        if (imageDataUrl) {
+        imageField.innerHTML = '<label class="field-label">Фото к заданию (необязательно)</label>';
+        if (imageUploading) {
+          const p = document.createElement('div');
+          p.className = 'field-hint';
+          p.textContent = 'Загружаю фото…';
+          imageField.appendChild(p);
+          return;
+        }
+        if (imageFileId) {
           const preview = document.createElement('div');
           preview.style.cssText = 'position:relative;display:inline-block;';
           const img = document.createElement('img');
-          img.src = imageDataUrl;
+          img.src = API_BASE_URL + '/api/image/' + imageFileId;
           img.style.cssText = 'max-width:160px;max-height:120px;border-radius:10px;border:2px solid var(--border);display:block;';
           preview.appendChild(img);
           const removeBtn = document.createElement('button');
           removeBtn.type = 'button';
           removeBtn.innerHTML = ICONS.trash;
           removeBtn.style.cssText = 'position:absolute;top:-8px;right:-8px;width:26px;height:26px;border-radius:50%;border:none;background:var(--red);color:white;display:flex;align-items:center;justify-content:center;cursor:pointer;';
-          removeBtn.onclick = () => { imageDataUrl = null; renderImageField(); };
+          removeBtn.onclick = () => { imageFileId = null; renderImageField(); };
           preview.appendChild(removeBtn);
           imageField.appendChild(preview);
         } else {
@@ -1048,12 +1128,27 @@
           fileInput.type = 'file';
           fileInput.accept = 'image/*';
           fileInput.style.display = 'none';
-          fileInput.onchange = () => {
+          fileInput.onchange = async () => {
             const file = fileInput.files[0];
             if (!file) return;
-            const reader = new FileReader();
-            reader.onload = () => { imageDataUrl = reader.result; renderImageField(); };
-            reader.readAsDataURL(file);
+            imageUploading = true;
+            renderImageField();
+            try {
+              const formData = new FormData();
+              formData.append('image', file);
+              const res = await fetch(API_BASE_URL + '/api/teacher/upload-image', {
+                method: 'POST',
+                headers: { 'X-Telegram-Init-Data': tg?.initData || '' },
+                body: formData,
+              });
+              if (!res.ok) throw new Error('Сервер ответил с ошибкой: ' + res.status);
+              const data = await res.json();
+              imageFileId = data.file_id;
+            } catch (err) {
+              showToast('Не получилось загрузить фото: ' + err.message);
+            }
+            imageUploading = false;
+            renderImageField();
           };
           uploadBtn.onclick = () => fileInput.click();
           imageField.appendChild(uploadBtn);
@@ -1170,6 +1265,7 @@
 
         const taskData = {
           question, description: dInput.value.trim(), type, options, answer, explanation: eInput.value.trim(),
+          image_file_id: imageFileId,
         };
 
         saveBtn.disabled = true;
@@ -1724,9 +1820,9 @@
       const card = document.createElement('div');
       card.className = 'task-card';
 
-      if (task.image) {
+      if (task.image_file_id) {
         const img = document.createElement('img');
-        img.src = task.image;
+        img.src = API_BASE_URL + '/api/image/' + task.image_file_id;
         img.style.cssText = 'max-width:100%;border-radius:12px;margin-bottom:14px;display:block;';
         card.appendChild(img);
       }
