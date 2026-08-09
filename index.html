@@ -573,6 +573,34 @@
 
   function findNextUnanswered() { return currentTasks.findIndex(t => !t.answered); }
 
+  // Миниатюра фото фиксированного размера + разворот на весь экран по нажатию
+  function renderTaskImage(container, imageFileId) {
+    const wrap = document.createElement('div');
+    wrap.style.cssText = 'position:relative;display:inline-block;margin-bottom:14px;';
+    const img = document.createElement('img');
+    img.src = API_BASE_URL + '/api/image/' + imageFileId;
+    img.style.cssText = 'width:100%;max-width:280px;height:160px;object-fit:cover;border-radius:12px;display:block;cursor:pointer;';
+    const expandBtn = document.createElement('button');
+    expandBtn.type = 'button';
+    expandBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 20 20" fill="none"><path d="M7 3H3V7M13 3H17V7M7 17H3V13M13 17H17V13" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    expandBtn.style.cssText = 'position:absolute;bottom:8px;right:8px;width:30px;height:30px;border-radius:50%;border:none;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;cursor:pointer;';
+    const openFull = () => {
+      const overlay = document.createElement('div');
+      overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.9);z-index:50;display:flex;align-items:center;justify-content:center;padding:20px;';
+      const fullImg = document.createElement('img');
+      fullImg.src = img.src;
+      fullImg.style.cssText = 'max-width:100%;max-height:100%;border-radius:8px;';
+      overlay.appendChild(fullImg);
+      overlay.onclick = () => overlay.remove();
+      document.body.appendChild(overlay);
+    };
+    img.onclick = openFull;
+    expandBtn.onclick = openFull;
+    wrap.appendChild(img);
+    wrap.appendChild(expandBtn);
+    container.appendChild(wrap);
+  }
+
   async function renderOrderChoice(scope, scopeId, title, isBack) {
     swapScreen((screen) => {
       const card = document.createElement('div');
@@ -675,13 +703,6 @@
     const card = document.createElement('div');
     card.className = 'task-card';
 
-    if (task.image_file_id) {
-      const img = document.createElement('img');
-      img.src = API_BASE_URL + '/api/image/' + task.image_file_id;
-      img.style.cssText = 'max-width:100%;border-radius:12px;margin-bottom:14px;display:block;';
-      card.appendChild(img);
-    }
-
     const q = document.createElement('p');
     q.className = 'task-question';
     q.textContent = task.question;
@@ -692,6 +713,26 @@
       d.className = 'task-description';
       d.textContent = task.description;
       card.appendChild(d);
+    }
+
+    if (task.image_file_id) {
+      renderTaskImage(card, task.image_file_id);
+    }
+
+    if (task.table_data && task.table_data.length) {
+      const table = document.createElement('table');
+      table.style.cssText = 'width:100%;border-collapse:collapse;margin-bottom:16px;table-layout:fixed;';
+      task.table_data.forEach(row => {
+        const tr = document.createElement('tr');
+        row.forEach(cell => {
+          const td = document.createElement('td');
+          td.style.cssText = 'border:1px solid var(--border);padding:8px 10px;font-size:13.5px;word-break:break-word;';
+          td.textContent = cell;
+          tr.appendChild(td);
+        });
+        table.appendChild(tr);
+      });
+      card.appendChild(table);
     }
 
     const answerArea = document.createElement('div');
