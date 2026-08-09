@@ -748,13 +748,65 @@
       renderTaskForm(current.topicId, current.editId, isBack);
     } else if (current.level === 'task_preview') {
       renderTaskPreview(current.topicId, current.taskId, isBack);
-    } else if (current.level === 'tests_soon') {
-      swapScreen((screen) => {
-        const p = document.createElement('p');
-        p.className = 'state-msg';
-        p.textContent = '🧪 Управление тестами через мини-апп скоро появится. Пока это можно делать через бота, как обычно.';
-        screen.appendChild(p);
-      }, isBack);
+    } else if (current.level === 'tests') {
+      showLoadingMenu();
+      try {
+        const tests = await apiGet(`/api/teacher/subjects/${currentSubjectId}/tests`);
+        const listScreen = renderRowList(
+          tests.map(t => Object.assign({}, t, {
+            sub: t.question_count + ' вопросов'
+              + (t.time_limit_minutes ? ` · ⏱ ${t.time_limit_minutes} мин` : '')
+              + (t.scale_title ? ` · 📐 ${t.scale_title}` : ''),
+          })),
+          'task', 'yellow',
+          (item) => { stack.push({ level: 'test_detail', testId: item.id, title: item.title }); renderCrumbs(); render(false); },
+          (item) => promptRename('Название теста', item.title, async (val) => {
+            await apiSend('PATCH', `/api/teacher/tests/${item.id}`, { title: val });
+            render(false);
+          }),
+          (item) => confirmDelete('Удалить тест «' + item.title + '» вместе со всеми вопросами?', async () => {
+            await apiSend('DELETE', `/api/teacher/tests/${item.id}`);
+            render(false);
+          }),
+          'Пока нет ни одного теста.', 'Добавить тест',
+          () => promptRename('Название нового теста', '', async (val) => {
+            await apiSend('POST', `/api/teacher/subjects/${currentSubjectId}/tests`, { title: val });
+            render(false);
+          }),
+        );
+        if (listScreen) {
+          const scalesBtn = document.createElement('button');
+          scalesBtn.className = 'add-row-btn';
+          scalesBtn.style.cssText = 'width:100%;margin-bottom:12px;color:var(--blue-dark);';
+          scalesBtn.textContent = '📐 Шкалы перевода баллов';
+          scalesBtn.onclick = () => { stack.push({ level: 'scales', title: 'Шкалы' }); renderCrumbs(); render(false); };
+          listScreen.insertBefore(scalesBtn, listScreen.firstChild);
+        }
+      } catch (err) { showErrorMsg(err, isBack); }
+    } else if (current.level === 'test_detail') {
+      renderTestDetail(current.testId, current.title, isBack);
+    } else if (current.level === 'testq_form') {
+      renderTestQForm(current.testId, current.editId, isBack);
+    } else if (current.level === 'testq_preview') {
+      renderTestQPreviewReal(current.testId, current.qId, isBack);
+    } else if (current.level === 'scales') {
+      showLoadingMenu();
+      try {
+        const scales = await apiGet(`/api/teacher/subjects/${currentSubjectId}/scales`);
+        renderRowList(
+          scales, 'task', 'blue',
+          (item) => { stack.push({ level: 'scale_form', scaleId: item.id, title: item.title }); renderCrumbs(); render(false); },
+          null,
+          (item) => confirmDelete('Удалить шкалу «' + item.title + '»? Тесты, где она назначена, останутся без шкалы.', async () => {
+            await apiSend('DELETE', `/api/teacher/scales/${item.id}`);
+            render(false);
+          }),
+          'Пока нет ни одной шкалы.', 'Добавить шкалу',
+          () => { stack.push({ level: 'scale_form', scaleId: null, title: 'Новая шкала' }); renderCrumbs(); render(false); },
+        );
+      } catch (err) { showErrorMsg(err, isBack); }
+    } else if (current.level === 'scale_form') {
+      renderScaleForm(current.scaleId, isBack);
     }
   }
 
@@ -771,8 +823,8 @@
     const testsChoice = document.createElement('button');
     testsChoice.className = 'choice-card';
     testsChoice.style.animationDelay = '0.05s';
-    testsChoice.innerHTML = '<svg class="choice-icon" viewBox="0 0 20 20" fill="none"><path d="M6 3H14L14 17L10 14.5L6 17V3Z" stroke="#B8860B" stroke-width="1.5" stroke-linejoin="round"/></svg><div class="choice-title">🧪 Тесты (скоро)</div>';
-    testsChoice.onclick = () => { stack.push({ level: 'tests_soon', title: 'Тесты' }); renderCrumbs(); render(false); };
+    testsChoice.innerHTML = '<svg class="choice-icon" viewBox="0 0 20 20" fill="none"><path d="M6 3H14L14 17L10 14.5L6 17V3Z" stroke="#B8860B" stroke-width="1.5" stroke-linejoin="round"/></svg><div class="choice-title">🧪 Тесты</div>';
+    testsChoice.onclick = () => { stack.push({ level: 'tests', title: 'Тесты' }); renderCrumbs(); render(false); };
     wrap.appendChild(testsChoice);
 
     swapScreen((screen) => { screen.appendChild(wrap); }, isBack);
@@ -1350,73 +1402,136 @@
     } catch (err) { showErrorMsg(err, isBack); }
   }
 
-  function renderTestQPreview(testId, qId, isBack) {
-    const task = (TEACHER_DB.testQuestions[testId] || []).find(t => t.id === qId);
-    renderQuestionPreview(task, isBack, () => { stack.pop(); renderCrumbs(); render(true); });
-  }
+  // --- Тесты: детали (настройки + список вопросов) ---
+  async function renderTestDetail(testId, title, isBack) {
+    showLoadingMenu();
+    try {
+      const [tests, questions] = await Promise.all([
+        apiGet(`/api/teacher/subjects/${currentSubjectId}/tests`),
+        apiGet(`/api/teacher/tests/${testId}/questions`),
+      ]);
+      const test = tests.find(t => t.id === testId) || {};
+      const scales = await apiGet(`/api/teacher/subjects/${currentSubjectId}/scales`);
 
-  function renderTestOpen(testId, isBack) {
-    const test = TEACHER_DB.tests.find(t => t.id === testId);
-    const questions = TEACHER_DB.testQuestions[testId] || [];
-
-    // Нумеруем вопросы отдельно по частям А/В — так же, как в самом боте.
-    const counters = {};
-    const labeled = questions.map(q => {
-      const part = q.part || 'A';
-      counters[part] = (counters[part] || 0) + 1;
-      const prefix = part === 'A' ? 'А' : 'В';
-      return Object.assign({}, q, {
-        title: prefix + counters[part] + ': ' + q.question,
-        sub: (q.type === 'text' ? 'Текстовый ответ' : (q.type === 'multi' ? 'Несколько верных' : 'Один верный')) + ' · ' + (q.maxScore || 1) + ' балл(ов)',
+      const counters = {};
+      const labeled = questions.map(q => {
+        const part = q.part || 'A';
+        counters[part] = (counters[part] || 0) + 1;
+        const prefix = part === 'A' ? 'А' : 'В';
+        return Object.assign({}, q, {
+          title: prefix + counters[part] + ': ' + q.question,
+          sub: (q.type === 'text' ? 'Текстовый ответ' : (q.type === 'multi' ? 'Несколько верных' : 'Один верный')) + ' · ' + (q.max_score || 1) + ' балл(ов)',
+        });
       });
-    });
 
-    const listScreen = renderRowList(
-      labeled,
-      'task', 'yellow',
-      () => {},
-      (item) => { stack.push({ level: 'testq_form', testId, editId: item.id, title: 'Изменить вопрос' }); renderCrumbs(); render(false); },
-      (item) => confirmDelete('Удалить этот вопрос?', () => {
-        TEACHER_DB.testQuestions[testId] = questions.filter(q => q.id !== item.id);
-        render(false);
-      }),
-      'В этом тесте пока нет вопросов.', 'Добавить вопрос',
-      () => { stack.push({ level: 'testq_form', testId, editId: null, part: 'A', title: 'Новый вопрос' }); renderCrumbs(); render(false); },
-      (item) => { stack.push({ level: 'testq_preview', testId, qId: item.id, title: 'Предпросмотр' }); renderCrumbs(); render(false); },
-    );
+      const listScreen = renderRowList(
+        labeled, 'task', 'yellow',
+        () => {},
+        (item) => { stack.push({ level: 'testq_form', testId, editId: item.id, title: 'Изменить вопрос' }); renderCrumbs(); render(false); },
+        (item) => confirmDelete('Удалить этот вопрос?', async () => {
+          await apiSend('DELETE', `/api/teacher/testquestions/${item.id}`);
+          render(false);
+        }),
+        'В этом тесте пока нет вопросов.', 'Добавить вопрос',
+        () => { stack.push({ level: 'testq_form', testId, editId: null, title: 'Новый вопрос' }); renderCrumbs(); render(false); },
+        (item) => { stack.push({ level: 'testq_preview', testId, qId: item.id, title: 'Предпросмотр' }); renderCrumbs(); render(false); },
+      );
 
-    if (isBack) listScreen.classList.add('back');
+      if (listScreen) {
+        const settingsCard = document.createElement('div');
+        settingsCard.className = 'form-card';
+        settingsCard.style.marginBottom = '14px';
 
-    if (questions.length) {
-      const previewBtn = document.createElement('button');
-      previewBtn.className = 'add-row-btn';
-      previewBtn.style.marginBottom = '12px';
-      previewBtn.style.color = 'var(--blue-dark)';
-      previewBtn.innerHTML = ICONS.eye + ' Пройти тест целиком, как ученик';
-      previewBtn.onclick = () => { stack.push({ level: 'test_taking_preview', testId, title: 'Предпросмотр теста' }); renderCrumbs(); render(false); };
-      listScreen.insertBefore(previewBtn, listScreen.firstChild);
-    }
+        const timerField = document.createElement('div');
+        timerField.className = 'field';
+        timerField.innerHTML = '<label class="field-label">Лимит времени (минут, необязательно)</label>';
+        const timerInput = document.createElement('input');
+        timerInput.className = 'field-input';
+        timerInput.type = 'number';
+        timerInput.min = '1';
+        timerInput.placeholder = 'Без ограничения';
+        timerInput.value = test.time_limit_minutes || '';
+        timerField.appendChild(timerInput);
+        settingsCard.appendChild(timerField);
+
+        const scaleField = document.createElement('div');
+        scaleField.className = 'field';
+        scaleField.innerHTML = '<label class="field-label">Шкала перевода баллов</label>';
+        const scaleSelect = document.createElement('select');
+        scaleSelect.className = 'field-input';
+        scaleSelect.style.cssText = 'font-family:\'Nunito\',sans-serif;';
+        const noneOpt = document.createElement('option');
+        noneOpt.value = '';
+        noneOpt.textContent = 'Без шкалы (только первичный балл)';
+        scaleSelect.appendChild(noneOpt);
+        scales.forEach(s => {
+          const opt = document.createElement('option');
+          opt.value = s.id;
+          opt.textContent = s.title;
+          if (test.scale_id === s.id) opt.selected = true;
+          scaleSelect.appendChild(opt);
+        });
+        scaleField.appendChild(scaleSelect);
+        settingsCard.appendChild(scaleField);
+
+        const saveSettingsBtn = document.createElement('button');
+        saveSettingsBtn.className = 'save-btn';
+        saveSettingsBtn.textContent = 'Сохранить настройки теста';
+        saveSettingsBtn.onclick = async () => {
+          saveSettingsBtn.disabled = true;
+          saveSettingsBtn.textContent = 'Сохраняю…';
+          try {
+            await apiSend('PATCH', `/api/teacher/tests/${testId}`, {
+              time_limit_minutes: timerInput.value ? parseInt(timerInput.value, 10) : null,
+              scale_id: scaleSelect.value ? parseInt(scaleSelect.value, 10) : null,
+            });
+            showToast('Настройки сохранены');
+          } catch (err) {
+            showToast('Не получилось сохранить: ' + err.message);
+          }
+          saveSettingsBtn.disabled = false;
+          saveSettingsBtn.textContent = 'Сохранить настройки теста';
+        };
+        settingsCard.appendChild(saveSettingsBtn);
+
+        listScreen.insertBefore(settingsCard, listScreen.firstChild);
+      }
+    } catch (err) { showErrorMsg(err, isBack); }
   }
 
-  function renderTestQForm(testId, editId, initialPart, isBack) {
-    const existingList = TEACHER_DB.testQuestions[testId] || [];
-    const existing = editId ? existingList.find(q => q.id === editId) : null;
+  async function renderTestQPreviewReal(testId, qId, isBack) {
+    showLoadingMenu();
+    try {
+      const questions = await apiGet(`/api/teacher/tests/${testId}/questions`);
+      const q = questions.find(x => x.id === qId);
+      renderQuestionPreview(q, isBack, () => { stack.pop(); renderCrumbs(); render(true); });
+    } catch (err) { showErrorMsg(err, isBack); }
+  }
+
+  // --- Форма вопроса теста — та же форма, что у задания, плюс часть (А/В) и баллы ---
+  async function renderTestQForm(testId, editId, isBack) {
+    showLoadingMenu();
+    let existing = null;
+    if (editId) {
+      try {
+        const questions = await apiGet(`/api/teacher/tests/${testId}/questions`);
+        existing = questions.find(q => q.id === editId);
+      } catch (err) { showErrorMsg(err, isBack); return; }
+    }
 
     let type = existing ? existing.type : 'text';
-    let part = existing ? (existing.part || 'A') : (initialPart || 'A');
+    let part = existing ? (existing.part || 'A') : 'A';
+    let maxScore = existing ? (existing.max_score || 1) : 1;
     let optionRows = [];
     if (existing && existing.type !== 'text') {
       const correctSet = new Set(Array.isArray(existing.answer) ? existing.answer : [existing.answer]);
       optionRows = existing.options.map(o => ({ text: o, correct: correctSet.has(o) }));
     }
-    let tableData = existing && existing.table ? existing.table.map(row => row.slice()) : null;
-    let imageDataUrl = existing ? (existing.image || null) : null;
 
     swapScreen((screen) => {
       const card = document.createElement('div');
       card.className = 'form-card';
 
-      // Часть теста (А/В) и баллы за вопрос
       const partField = document.createElement('div');
       partField.className = 'field';
       partField.innerHTML = '<label class="field-label">Часть теста</label>';
@@ -1439,7 +1554,7 @@
       scoreInput.className = 'field-input';
       scoreInput.type = 'number';
       scoreInput.min = '1';
-      scoreInput.value = existing ? (existing.maxScore || 1) : 1;
+      scoreInput.value = maxScore;
       scoreField.appendChild(scoreInput);
       card.appendChild(scoreField);
 
@@ -1467,9 +1582,80 @@
       const dInput = dFieldObj.textarea;
       card.appendChild(dFieldObj.wrapper);
 
+      let imageFileId = existing ? (existing.image_file_id || null) : null;
+      let imageUploading = false;
+      const imageField = document.createElement('div');
+      imageField.className = 'field';
+      card.appendChild(imageField);
+      renderImageField();
+
+      function renderImageField() {
+        imageField.innerHTML = '<label class="field-label">Фото к вопросу (необязательно)</label>';
+        if (imageUploading) {
+          const p = document.createElement('div');
+          p.className = 'field-hint';
+          p.textContent = 'Загружаю фото…';
+          imageField.appendChild(p);
+          return;
+        }
+        if (imageFileId) {
+          const preview = document.createElement('div');
+          preview.style.cssText = 'position:relative;display:inline-block;';
+          const img = document.createElement('img');
+          img.src = API_BASE_URL + '/api/image/' + imageFileId;
+          img.style.cssText = 'max-width:160px;max-height:120px;border-radius:10px;border:2px solid var(--border);display:block;';
+          preview.appendChild(img);
+          const removeBtn = document.createElement('button');
+          removeBtn.type = 'button';
+          removeBtn.innerHTML = ICONS.trash;
+          removeBtn.style.cssText = 'position:absolute;top:-8px;right:-8px;width:26px;height:26px;border-radius:50%;border:none;background:var(--red);color:white;display:flex;align-items:center;justify-content:center;cursor:pointer;';
+          removeBtn.onclick = () => { imageFileId = null; renderImageField(); };
+          preview.appendChild(removeBtn);
+          imageField.appendChild(preview);
+        } else {
+          const uploadBtn = document.createElement('button');
+          uploadBtn.type = 'button';
+          uploadBtn.className = 'add-option-btn';
+          uploadBtn.innerHTML = '🖼 Загрузить фото';
+          const fileInput = document.createElement('input');
+          fileInput.type = 'file';
+          fileInput.accept = 'image/*';
+          fileInput.style.display = 'none';
+          fileInput.onchange = async () => {
+            const file = fileInput.files[0];
+            if (!file) return;
+            imageUploading = true;
+            renderImageField();
+            try {
+              const formData = new FormData();
+              formData.append('image', file);
+              const res = await fetch(API_BASE_URL + '/api/teacher/upload-image', {
+                method: 'POST',
+                headers: { 'X-Telegram-Init-Data': tg?.initData || '' },
+                body: formData,
+              });
+              const data = await res.json().catch(() => ({}));
+              if (!res.ok) throw new Error(data.message || data.detail || ('Сервер ответил с ошибкой: ' + res.status));
+              imageFileId = data.file_id;
+            } catch (err) {
+              showToast('Не получилось загрузить фото: ' + err.message);
+            }
+            imageUploading = false;
+            renderImageField();
+          };
+          uploadBtn.onclick = () => fileInput.click();
+          imageField.appendChild(uploadBtn);
+          imageField.appendChild(fileInput);
+        }
+      }
+
+      let tableData = existing && existing.table_data ? existing.table_data.map(row => row.slice()) : null;
       const tableArea = document.createElement('div');
       card.appendChild(tableArea);
       renderTableArea();
+
+      function autoGrowCell(el) { el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px'; }
+
       function renderTableArea() {
         tableArea.innerHTML = '';
         if (!tableData) {
@@ -1484,77 +1670,45 @@
         }
         const field = document.createElement('div');
         field.className = 'field';
-        field.innerHTML = '<label class="field-label">Таблица</label><div class="field-hint">Пока сохраняется только в этом окне — подключение к серверу для таблиц будет добавлено позже.</div>';
+        field.innerHTML = '<label class="field-label">Таблица</label>';
         const grid = document.createElement('div');
-        grid.style.cssText = 'display:flex;flex-direction:column;gap:6px;margin-bottom:8px;';
+        grid.style.cssText = 'display:flex;flex-direction:column;gap:6px;margin-bottom:8px;width:100%;';
         tableData.forEach((row, ri) => {
           const rowEl = document.createElement('div');
-          rowEl.style.cssText = 'display:flex;gap:6px;';
+          rowEl.style.cssText = 'display:flex;gap:6px;width:100%;';
           row.forEach((cell, ci) => {
-            const cellInput = document.createElement('input');
+            const cellInput = document.createElement('textarea');
+            cellInput.rows = 1;
             cellInput.className = 'field-input';
-            cellInput.style.cssText = 'padding:8px 10px;font-size:13px;';
+            cellInput.style.cssText = 'padding:8px 10px;font-size:13px;flex:1;min-width:0;resize:none;overflow:hidden;line-height:1.4;word-break:break-word;';
             cellInput.value = cell;
-            cellInput.oninput = () => { tableData[ri][ci] = cellInput.value; };
+            cellInput.oninput = () => { tableData[ri][ci] = cellInput.value; autoGrowCell(cellInput); };
             rowEl.appendChild(cellInput);
+            setTimeout(() => autoGrowCell(cellInput), 0);
           });
           grid.appendChild(rowEl);
         });
         field.appendChild(grid);
         const controls = document.createElement('div');
-        controls.style.cssText = 'display:flex;gap:14px;';
+        controls.style.cssText = 'display:flex;gap:14px;flex-wrap:wrap;';
         const addRowBtn = document.createElement('button');
-        addRowBtn.type = 'button'; addRowBtn.className = 'add-option-btn'; addRowBtn.textContent = '+ строка';
+        addRowBtn.type = 'button'; addRowBtn.className = 'add-option-btn';
+        addRowBtn.textContent = '+ строка';
         addRowBtn.onclick = () => { tableData.push(tableData[0].map(() => '')); renderTableArea(); };
         controls.appendChild(addRowBtn);
         const addColBtn = document.createElement('button');
-        addColBtn.type = 'button'; addColBtn.className = 'add-option-btn'; addColBtn.textContent = '+ столбец';
+        addColBtn.type = 'button'; addColBtn.className = 'add-option-btn';
+        addColBtn.textContent = '+ столбец';
         addColBtn.onclick = () => { tableData.forEach(row => row.push('')); renderTableArea(); };
         controls.appendChild(addColBtn);
         const removeTableBtn = document.createElement('button');
         removeTableBtn.type = 'button'; removeTableBtn.className = 'add-option-btn';
-        removeTableBtn.style.color = 'var(--red-dark)'; removeTableBtn.textContent = '✕ Убрать таблицу';
+        removeTableBtn.style.color = 'var(--red-dark)';
+        removeTableBtn.textContent = '✕ Убрать таблицу';
         removeTableBtn.onclick = () => { tableData = null; renderTableArea(); };
         controls.appendChild(removeTableBtn);
         field.appendChild(controls);
         tableArea.appendChild(field);
-      }
-
-      const imageField = document.createElement('div');
-      imageField.className = 'field';
-      card.appendChild(imageField);
-      renderImageField();
-      function renderImageField() {
-        imageField.innerHTML = '<label class="field-label">Фото к вопросу (необязательно)</label>';
-        if (imageDataUrl) {
-          const preview = document.createElement('div');
-          preview.style.cssText = 'position:relative;display:inline-block;';
-          const img = document.createElement('img');
-          img.src = imageDataUrl;
-          img.style.cssText = 'max-width:160px;max-height:120px;border-radius:10px;border:2px solid var(--border);display:block;';
-          preview.appendChild(img);
-          const removeBtn = document.createElement('button');
-          removeBtn.type = 'button'; removeBtn.innerHTML = ICONS.trash;
-          removeBtn.style.cssText = 'position:absolute;top:-8px;right:-8px;width:26px;height:26px;border-radius:50%;border:none;background:var(--red);color:white;display:flex;align-items:center;justify-content:center;cursor:pointer;';
-          removeBtn.onclick = () => { imageDataUrl = null; renderImageField(); };
-          preview.appendChild(removeBtn);
-          imageField.appendChild(preview);
-        } else {
-          const uploadBtn = document.createElement('button');
-          uploadBtn.type = 'button'; uploadBtn.className = 'add-option-btn'; uploadBtn.innerHTML = '🖼 Загрузить фото';
-          const fileInput = document.createElement('input');
-          fileInput.type = 'file'; fileInput.accept = 'image/*'; fileInput.style.display = 'none';
-          fileInput.onchange = () => {
-            const file = fileInput.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = () => { imageDataUrl = reader.result; renderImageField(); };
-            reader.readAsDataURL(file);
-          };
-          uploadBtn.onclick = () => fileInput.click();
-          imageField.appendChild(uploadBtn);
-          imageField.appendChild(fileInput);
-        }
       }
 
       const answerArea = document.createElement('div');
@@ -1574,7 +1728,7 @@
           f.appendChild(textAnswerInput);
           const hint = document.createElement('div');
           hint.className = 'field-hint';
-          hint.textContent = 'Если ответ состоит только из цифр (например «12») — порядок не важен. Если в ответе есть буквы (например «А1Б2В3») — важно и то, какая буква с какой цифрой, и порядок написания.';
+          hint.textContent = 'Если ответ состоит только из цифр — порядок не важен. Если есть буквы — важен и порядок, и то, какая буква с какой цифрой.';
           f.appendChild(hint);
           answerArea.appendChild(f);
         } else {
@@ -1618,17 +1772,16 @@
       }
       rerenderOptionsArea();
 
-      const eFieldObj = makeFormattedField('Объяснение (необязательно)', null, existing ? (existing.explanation || '') : '', 'Покажется ученику после проверки теста');
+      const eFieldObj = makeFormattedField('Объяснение (необязательно)', null, existing ? (existing.explanation || '') : '', 'Покажется ученику при разборе после теста');
       const eInput = eFieldObj.textarea;
       card.appendChild(eFieldObj.wrapper);
 
       const saveBtn = document.createElement('button');
       saveBtn.className = 'save-btn';
       saveBtn.textContent = existing ? 'Сохранить изменения' : 'Добавить вопрос';
-      saveBtn.onclick = () => {
+      saveBtn.onclick = async () => {
         const question = qInput.value.trim();
         if (!question) { showToast('Введите текст вопроса'); return; }
-        const maxScore = Math.max(1, parseInt(scoreInput.value) || 1);
 
         let answer, options;
         if (type === 'text') {
@@ -1646,19 +1799,26 @@
 
         const qData = {
           question, description: dInput.value.trim(), type, options, answer, explanation: eInput.value.trim(),
-          table: tableData, image: imageDataUrl, part, maxScore,
+          image_file_id: imageFileId, table_data: tableData,
+          part, max_score: Math.max(1, parseInt(scoreInput.value, 10) || 1),
         };
 
-        if (existing) {
-          Object.assign(existing, qData);
-          showToast('Изменения сохранены');
-        } else {
-          TEACHER_DB.testQuestions[testId].push(Object.assign({ id: nextId++ }, qData));
-          showToast('Вопрос добавлен');
+        saveBtn.disabled = true;
+        try {
+          if (existing) {
+            await apiSend('PATCH', `/api/teacher/testquestions/${existing.id}`, qData);
+            showToast('Изменения сохранены');
+          } else {
+            await apiSend('POST', `/api/teacher/tests/${testId}/questions`, qData);
+            showToast('Вопрос добавлен');
+          }
+          stack.pop();
+          renderCrumbs();
+          render(true);
+        } catch (err) {
+          saveBtn.disabled = false;
+          showToast('Не получилось сохранить: ' + err.message);
         }
-        stack.pop();
-        renderCrumbs();
-        render(true);
       };
       card.appendChild(saveBtn);
 
@@ -1666,167 +1826,135 @@
     }, isBack);
   }
 
-  // --- Полное прохождение теста в предпросмотре: без подсказок по ходу,
-  // итог показывается в самом конце — так же, как это устроено в боте ---
-  let previewTestAnswers = [];
-  let previewTestIndex = 0;
-  let previewTestQuestions = [];
-
-  function renderTestTakingPreview(testId, isBack) {
-    previewTestQuestions = TEACHER_DB.testQuestions[testId] || [];
-    previewTestIndex = 0;
-    previewTestAnswers = [];
-    renderNextPreviewQuestion(isBack);
-  }
-
-  function renderNextPreviewQuestion(isBack) {
-    if (previewTestIndex >= previewTestQuestions.length) {
-      stack.push({ level: 'test_results_preview', title: 'Результат' });
-      renderCrumbs();
-      renderTestResultsPreview(false);
-      return;
+  // --- Шкала перевода баллов ---
+  async function renderScaleForm(scaleId, isBack) {
+    showLoadingMenu();
+    let existing = null;
+    if (scaleId) {
+      try {
+        existing = await apiGet(`/api/teacher/scales/${scaleId}`);
+      } catch (err) { showErrorMsg(err, isBack); return; }
     }
-    const q = previewTestQuestions[previewTestIndex];
 
-    swapScreen((screen) => {
-      const numLabel = document.createElement('span');
-      numLabel.className = 'progress-num';
-      numLabel.textContent = 'Вопрос ' + (previewTestIndex + 1) + ' из ' + previewTestQuestions.length;
-      screen.appendChild(numLabel);
-      const track = document.createElement('div');
-      track.className = 'progress-bar-track';
-      const fill = document.createElement('div');
-      fill.className = 'progress-bar-fill';
-      fill.style.width = Math.round((previewTestIndex / previewTestQuestions.length) * 100) + '%';
-      track.appendChild(fill);
-      screen.appendChild(track);
-
-      const card = document.createElement('div');
-      card.className = 'task-card';
-
-      if (q.image) {
-        const img = document.createElement('img');
-        img.src = q.image;
-        img.style.cssText = 'max-width:100%;border-radius:12px;margin-bottom:14px;display:block;';
-        card.appendChild(img);
-      }
-
-      const qEl = document.createElement('p');
-      qEl.className = 'task-question';
-      qEl.innerHTML = renderMarkdownText(q.question);
-      card.appendChild(qEl);
-
-      if (q.description) {
-        const d = document.createElement('p');
-        d.className = 'task-description';
-        d.innerHTML = renderMarkdownText(q.description);
-        card.appendChild(d);
-      }
-
-      if (q.table && q.table.length) {
-        const table = document.createElement('table');
-        table.style.cssText = 'width:100%;border-collapse:collapse;margin-bottom:16px;';
-        q.table.forEach(row => {
-          const tr = document.createElement('tr');
-          row.forEach(cell => {
-            const td = document.createElement('td');
-            td.style.cssText = 'border:1px solid var(--border);padding:8px 10px;font-size:13.5px;';
-            td.innerHTML = renderMarkdownText(cell);
-            tr.appendChild(td);
-          });
-          table.appendChild(tr);
-        });
-        card.appendChild(table);
-      }
-
-      const answerArea = document.createElement('div');
-      card.appendChild(answerArea);
-
-      const advance = (answer) => {
-        const correctList = Array.isArray(q.answer) ? q.answer : [q.answer];
-        previewTestAnswers.push({ correct: checkAnswerPreview(answer, correctList.length > 1 ? correctList : q.answer) });
-        previewTestIndex++;
-        renderNextPreviewQuestion(false);
-      };
-
-      if ((q.type === 'buttons' || q.type === 'multi') && q.options.length) {
-        const isMulti = q.type === 'multi';
-        let selected = [];
-        const nextBtn = document.createElement('button');
-        nextBtn.className = 'save-btn';
-        nextBtn.textContent = previewTestIndex === previewTestQuestions.length - 1 ? 'Завершить тест' : 'Далее';
-        nextBtn.disabled = true;
-
-        const optionEls = q.options.map((opt, i) => {
-          const btn = document.createElement('button');
-          btn.className = 'option-btn';
-          btn.innerHTML = '<span class="option-num">' + (i + 1) + '</span><span class="option-text"></span>';
-          btn.querySelector('.option-text').textContent = opt;
-          btn.onclick = () => {
-            if (isMulti) {
-              const pos = selected.indexOf(opt);
-              if (pos === -1) { selected.push(opt); btn.classList.add('selected'); }
-              else { selected.splice(pos, 1); btn.classList.remove('selected'); }
-            } else {
-              selected = [opt];
-              optionEls.forEach(b => b.classList.remove('selected'));
-              btn.classList.add('selected');
-            }
-            nextBtn.disabled = selected.length === 0;
-          };
-          answerArea.appendChild(btn);
-          return btn;
-        });
-        nextBtn.onclick = () => advance(selected);
-        answerArea.appendChild(nextBtn);
-      } else {
-        const input = document.createElement('input');
-        input.className = 'field-input';
-        input.placeholder = 'Введите ответ…';
-        input.style.marginBottom = '10px';
-        answerArea.appendChild(input);
-        const nextBtn = document.createElement('button');
-        nextBtn.className = 'save-btn';
-        nextBtn.style.marginTop = '0';
-        nextBtn.textContent = previewTestIndex === previewTestQuestions.length - 1 ? 'Завершить тест' : 'Далее';
-        nextBtn.disabled = true;
-        input.addEventListener('input', () => { nextBtn.disabled = !input.value.trim(); });
-        nextBtn.onclick = () => { if (!input.value.trim()) return; advance(input.value.trim()); };
-        answerArea.appendChild(nextBtn);
-      }
-
-      screen.appendChild(card);
-
-      const closeBtn = document.createElement('button');
-      closeBtn.className = 'back-btn';
-      closeBtn.style.cssText = 'width:100%;margin-top:14px;';
-      closeBtn.textContent = 'Прервать предпросмотр';
-      closeBtn.onclick = () => { stack.pop(); renderCrumbs(); render(true); };
-      screen.appendChild(closeBtn);
-    }, isBack);
-  }
-
-  function renderTestResultsPreview(isBack) {
-    const correct = previewTestAnswers.filter(a => a.correct).length;
-    const wrong = previewTestAnswers.length - correct;
+    let rows = existing ? Object.entries(existing.table).map(([k, v]) => ({ primary: k, actual: String(v) })) : [{ primary: '0', actual: '0' }];
 
     swapScreen((screen) => {
       const card = document.createElement('div');
       card.className = 'form-card';
-      card.style.textAlign = 'center';
-      card.innerHTML =
-        '<div class="field-label" style="text-align:center;">Результат предпросмотра</div>' +
-        '<div style="font-family:\'Jost\',sans-serif;font-size:36px;font-weight:700;color:var(--green-dark);margin:10px 0;">' + correct + ' / ' + previewTestAnswers.length + '</div>' +
-        '<div style="display:flex;justify-content:center;gap:20px;margin-bottom:10px;">' +
-        '<div><div style="font-family:\'Jost\',sans-serif;font-weight:700;color:var(--green-dark);">' + correct + '</div><div class="field-hint">Верно</div></div>' +
-        '<div><div style="font-family:\'Jost\',sans-serif;font-weight:700;color:var(--red-dark);">' + wrong + '</div><div class="field-hint">Неверно</div></div>' +
-        '</div>';
 
-      const closeBtn = document.createElement('button');
-      closeBtn.className = 'save-btn';
-      closeBtn.textContent = 'Закрыть предпросмотр';
-      closeBtn.onclick = () => { stack.pop(); stack.pop(); renderCrumbs(); render(true); };
-      card.appendChild(closeBtn);
+      const titleFieldObj = makeFormattedField('Название шкалы', null, existing ? existing.title : '', 'Например: ЕГЭ, русский язык 2026');
+      const titleInput = titleFieldObj.textarea;
+      titleInput.rows = 1;
+      card.appendChild(titleFieldObj.wrapper);
+
+      const tableField = document.createElement('div');
+      tableField.className = 'field';
+      tableField.innerHTML = '<label class="field-label">Первичный балл → тестовый балл</label><div class="field-hint" style="margin:0 0 10px;">Для каждого первичного балла, который может набрать ученик, укажите итоговый.</div>';
+      const rowsArea = document.createElement('div');
+      tableField.appendChild(rowsArea);
+      card.appendChild(tableField);
+
+      function renderRows() {
+        rowsArea.innerHTML = '';
+        rows.forEach((row, i) => {
+          const rowEl = document.createElement('div');
+          rowEl.style.cssText = 'display:flex;gap:8px;align-items:center;margin-bottom:6px;';
+          const primaryInput = document.createElement('input');
+          primaryInput.className = 'field-input'; primaryInput.type = 'number'; primaryInput.style.flex = '1';
+          primaryInput.placeholder = 'первичный'; primaryInput.value = row.primary;
+          primaryInput.oninput = () => { row.primary = primaryInput.value; };
+          rowEl.appendChild(primaryInput);
+          const arrow = document.createElement('span');
+          arrow.textContent = '→'; arrow.style.color = 'var(--text-soft)';
+          rowEl.appendChild(arrow);
+          const actualInput = document.createElement('input');
+          actualInput.className = 'field-input'; actualInput.type = 'number'; actualInput.style.flex = '1';
+          actualInput.placeholder = 'тестовый'; actualInput.value = row.actual;
+          actualInput.oninput = () => { row.actual = actualInput.value; };
+          rowEl.appendChild(actualInput);
+          const delBtn = document.createElement('button');
+          delBtn.type = 'button'; delBtn.className = 'option-remove'; delBtn.innerHTML = ICONS.trash;
+          delBtn.onclick = () => { rows.splice(i, 1); renderRows(); };
+          rowEl.appendChild(delBtn);
+          rowsArea.appendChild(rowEl);
+        });
+      }
+      renderRows();
+
+      const addRowBtn = document.createElement('button');
+      addRowBtn.type = 'button'; addRowBtn.className = 'add-option-btn';
+      addRowBtn.textContent = '+ строка';
+      addRowBtn.onclick = () => { rows.push({ primary: '', actual: '' }); renderRows(); };
+      card.appendChild(addRowBtn);
+
+      const autoWrap = document.createElement('div');
+      autoWrap.style.cssText = 'display:flex;gap:8px;margin-top:14px;align-items:flex-end;';
+      const autoMaxPrimary = document.createElement('div');
+      autoMaxPrimary.style.flex = '1';
+      autoMaxPrimary.innerHTML = '<label class="field-label" style="font-size:12px;">Макс. первичный</label>';
+      const autoMaxPrimaryInput = document.createElement('input');
+      autoMaxPrimaryInput.className = 'field-input'; autoMaxPrimaryInput.type = 'number';
+      autoMaxPrimary.appendChild(autoMaxPrimaryInput);
+      autoWrap.appendChild(autoMaxPrimary);
+      const autoMaxActual = document.createElement('div');
+      autoMaxActual.style.flex = '1';
+      autoMaxActual.innerHTML = '<label class="field-label" style="font-size:12px;">Макс. тестовый</label>';
+      const autoMaxActualInput = document.createElement('input');
+      autoMaxActualInput.className = 'field-input'; autoMaxActualInput.type = 'number';
+      autoMaxActual.appendChild(autoMaxActualInput);
+      autoWrap.appendChild(autoMaxActual);
+      const autoBtn = document.createElement('button');
+      autoBtn.type = 'button'; autoBtn.className = 'add-option-btn'; autoBtn.style.flexShrink = '0';
+      autoBtn.textContent = 'Заполнить автоматически';
+      autoBtn.onclick = () => {
+        const maxP = parseInt(autoMaxPrimaryInput.value, 10);
+        const maxA = parseInt(autoMaxActualInput.value, 10);
+        if (!maxP || !maxA) { showToast('Укажите оба максимума'); return; }
+        rows = [];
+        for (let p = 0; p <= maxP; p++) {
+          rows.push({ primary: String(p), actual: String(Math.round((p / maxP) * maxA)) });
+        }
+        renderRows();
+        showToast('Шкала заполнена — можно поправить отдельные значения вручную');
+      };
+      autoWrap.appendChild(autoBtn);
+      card.appendChild(autoWrap);
+      const autoHint = document.createElement('div');
+      autoHint.className = 'field-hint';
+      autoHint.style.marginTop = '6px';
+      autoHint.textContent = 'Посчитает пропорционально сама — от 0 до максимума с обеих сторон, дальше можно подправить любую строку вручную.';
+      card.appendChild(autoHint);
+
+      const saveBtn = document.createElement('button');
+      saveBtn.className = 'save-btn';
+      saveBtn.textContent = existing ? 'Сохранить изменения' : 'Создать шкалу';
+      saveBtn.onclick = async () => {
+        const title = titleInput.value.trim();
+        if (!title) { showToast('Введите название шкалы'); return; }
+        const tableDict = {};
+        for (const row of rows) {
+          if (row.primary === '' || row.actual === '') continue;
+          tableDict[String(parseInt(row.primary, 10))] = parseInt(row.actual, 10);
+        }
+        if (!Object.keys(tableDict).length) { showToast('Добавьте хотя бы одну строку шкалы'); return; }
+        saveBtn.disabled = true;
+        try {
+          if (existing) {
+            await apiSend('PATCH', `/api/teacher/scales/${scaleId}`, { title, table: tableDict });
+            showToast('Изменения сохранены');
+          } else {
+            await apiSend('POST', `/api/teacher/subjects/${currentSubjectId}/scales`, { title, table: tableDict });
+            showToast('Шкала создана');
+          }
+          stack.pop();
+          renderCrumbs();
+          render(true);
+        } catch (err) {
+          saveBtn.disabled = false;
+          showToast('Не получилось сохранить: ' + err.message);
+        }
+      };
+      card.appendChild(saveBtn);
 
       screen.appendChild(card);
     }, isBack);
