@@ -1715,10 +1715,22 @@
 
   // --- Временная диагностика проверки подлинности — удалить после того, как разберёмся ---
   document.getElementById('debugBtn').onclick = async () => {
+    const clientInfo = {
+      tg_object_exists: !!window.Telegram,
+      webapp_object_exists: !!tg,
+      platform: tg?.platform,
+      version: tg?.version,
+      initData_length: (tg?.initData || '').length,
+      initDataUnsafe_present: !!tg?.initDataUnsafe,
+      initDataUnsafe_user_present: !!tg?.initDataUnsafe?.user,
+      initDataUnsafe_keys: tg?.initDataUnsafe ? Object.keys(tg.initDataUnsafe) : [],
+    };
+    alert('НА СТРАНИЦЕ:\n' + JSON.stringify(clientInfo, null, 2));
+
     try {
       const res = await fetch(API_BASE_URL + '/api/debug/whoami', { headers: { 'X-Telegram-Init-Data': tg?.initData || '' } });
       const data = await res.json();
-      alert(JSON.stringify(data, null, 2));
+      alert('НА СЕРВЕРЕ:\n' + JSON.stringify(data, null, 2));
     } catch (err) {
       alert('Ошибка запроса: ' + err.message);
     }
