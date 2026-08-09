@@ -980,7 +980,10 @@
     italicBtn.type = 'button'; italicBtn.className = 'format-btn italic-btn'; italicBtn.textContent = 'К'; italicBtn.title = 'Курсив';
     const codeBtn = document.createElement('button');
     codeBtn.type = 'button'; codeBtn.className = 'format-btn code-btn'; codeBtn.textContent = '</>'; codeBtn.title = 'Моноширинный';
-    toolbar.appendChild(boldBtn); toolbar.appendChild(italicBtn); toolbar.appendChild(codeBtn);
+    const expandBtn = document.createElement('button');
+    expandBtn.type = 'button'; expandBtn.className = 'format-btn'; expandBtn.title = 'Развернуть на весь экран';
+    expandBtn.innerHTML = '<svg width="13" height="13" viewBox="0 0 20 20" fill="none"><path d="M7 3H3V7M13 3H17V7M7 17H3V13M13 17H17V13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    toolbar.appendChild(boldBtn); toolbar.appendChild(italicBtn); toolbar.appendChild(codeBtn); toolbar.appendChild(expandBtn);
     wrapper.appendChild(toolbar);
 
     const textarea = document.createElement('textarea');
@@ -988,6 +991,29 @@
     textarea.placeholder = placeholder || '';
     textarea.value = initialValue || '';
     wrapper.appendChild(textarea);
+
+    expandBtn.onclick = () => {
+      lockBodyScroll();
+      const overlay = document.createElement('div');
+      overlay.style.cssText = 'position:fixed;inset:0;background:var(--bg);z-index:40;display:flex;flex-direction:column;padding:16px;';
+      overlay.innerHTML = '<div class="field-label" style="margin-bottom:10px;">' + labelText + '</div>';
+      const bigArea = document.createElement('textarea');
+      bigArea.className = 'field-textarea';
+      bigArea.style.cssText = 'flex:1;font-size:15px;line-height:1.6;resize:none;';
+      bigArea.value = textarea.value;
+      overlay.appendChild(bigArea);
+      const doneBtn = document.createElement('button');
+      doneBtn.className = 'save-btn';
+      doneBtn.textContent = 'Готово';
+      doneBtn.onclick = () => {
+        textarea.value = bigArea.value;
+        unlockBodyScroll();
+        overlay.remove();
+      };
+      overlay.appendChild(doneBtn);
+      document.body.appendChild(overlay);
+      bigArea.focus();
+    };
 
     function wrapSelection(marker) {
       const start = textarea.selectionStart;
