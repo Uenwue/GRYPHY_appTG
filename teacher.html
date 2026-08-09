@@ -296,7 +296,6 @@
 <body>
 
   <button class="theme-toggle" id="themeToggle" title="Сменить тему" aria-label="Сменить тему"></button>
-  <button class="theme-toggle" id="debugBtn" title="Диагностика" aria-label="Диагностика" style="right:62px;">🔧</button>
 
   <div class="wrap">
     <header>
@@ -396,9 +395,14 @@
     trash: '<svg viewBox="0 0 20 20" fill="none"><path d="M4 6H16M8 6V4H12V6M6 6L6.7 16H13.3L14 6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>',
     check: '<svg viewBox="0 0 20 20" fill="none"><path d="M4 10L8 14L16 5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
     eye: '<svg viewBox="0 0 20 20" fill="none"><path d="M1 10C1 10 4.5 4 10 4C15.5 4 19 10 19 10C19 10 15.5 16 10 16C4.5 16 1 10 1 10Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><circle cx="10" cy="10" r="2.6" stroke="currentColor" stroke-width="1.6"/></svg>',
+    eyeOff: '<svg viewBox="0 0 20 20" fill="none"><path d="M1 10C1 10 4.5 4 10 4C15.5 4 19 10 19 10C19 10 15.5 16 10 16C4.5 16 1 10 1 10Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><circle cx="10" cy="10" r="2.6" stroke="currentColor" stroke-width="1.6"/><path d="M2 2L18 18" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>',
+    lockClosed: '<svg viewBox="0 0 20 20" fill="none"><rect x="4" y="9" width="12" height="8" rx="1.5" stroke="currentColor" stroke-width="1.6"/><path d="M6.5 9V6.5C6.5 4.6 8 3 10 3C12 3 13.5 4.6 13.5 6.5V9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>',
+    lockOpen: '<svg viewBox="0 0 20 20" fill="none"><rect x="4" y="9" width="12" height="8" rx="1.5" stroke="currentColor" stroke-width="1.6"/><path d="M6.5 9V6.5C6.5 4.6 8 3 10 3C11.6 3 13 4.1 13.4 5.6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>',
   };
 
-  function renderRowList(items, iconType, iconClass, onOpen, onEdit, onDelete, emptyText, addLabel, onAdd, onPreview) {
+  function renderRowList(items, iconType, iconClass, onOpen, onEdit, onDelete, emptyText, addLabel, onAdd, onPreview, extra) {
+    extra = extra || {};
+    const { onLock, onHide, onReorder } = extra;
     return swapScreen((screen) => {
       const list = document.createElement('div');
       list.className = 'list';
@@ -414,6 +418,27 @@
         const row = document.createElement('div');
         row.className = 'row-card';
         row.style.animationDelay = (i * 0.04) + 's';
+        if (item.is_hidden) row.style.opacity = '0.5';
+
+        if (onReorder) {
+          const reorderCol = document.createElement('div');
+          reorderCol.style.cssText = 'display:flex;flex-direction:column;gap:2px;flex-shrink:0;';
+          const upBtn = document.createElement('button');
+          upBtn.className = 'icon-btn';
+          upBtn.style.cssText = 'width:22px;height:18px;';
+          upBtn.disabled = i === 0;
+          upBtn.innerHTML = '<svg width="11" height="11" viewBox="0 0 20 20" fill="none"><path d="M4 12L10 6L16 12" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+          upBtn.onclick = (e) => { e.stopPropagation(); onReorder(i, i - 1); };
+          const downBtn = document.createElement('button');
+          downBtn.className = 'icon-btn';
+          downBtn.style.cssText = 'width:22px;height:18px;';
+          downBtn.disabled = i === items.length - 1;
+          downBtn.innerHTML = '<svg width="11" height="11" viewBox="0 0 20 20" fill="none"><path d="M4 8L10 14L16 8" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+          downBtn.onclick = (e) => { e.stopPropagation(); onReorder(i, i + 1); };
+          reorderCol.appendChild(upBtn);
+          reorderCol.appendChild(downBtn);
+          row.appendChild(reorderCol);
+        }
 
         const icon = document.createElement('div');
         icon.className = 'row-icon ' + iconClass;
@@ -424,13 +449,20 @@
         body.className = 'row-body';
         const t = document.createElement('div');
         t.className = 'row-title';
-        t.textContent = item.title;
+        t.textContent = item.title + (item.is_locked ? ' 🔒' : '');
         body.appendChild(t);
         if (item.sub) {
           const s = document.createElement('div');
           s.className = 'row-sub';
           s.textContent = item.sub;
           body.appendChild(s);
+        }
+        if (item.is_locked && item.lock_message) {
+          const lm = document.createElement('div');
+          lm.className = 'row-sub';
+          lm.style.color = 'var(--red-dark)';
+          lm.textContent = '🔒 ' + item.lock_message;
+          body.appendChild(lm);
         }
         body.onclick = () => onOpen(item);
         row.appendChild(body);
@@ -444,6 +476,22 @@
           prevBtn.innerHTML = ICONS.eye;
           prevBtn.onclick = (e) => { e.stopPropagation(); onPreview(item); };
           actions.appendChild(prevBtn);
+        }
+        if (onLock) {
+          const lockBtn = document.createElement('button');
+          lockBtn.className = 'icon-btn';
+          lockBtn.title = item.is_locked ? 'Снять замок' : 'Поставить замок';
+          lockBtn.innerHTML = item.is_locked ? ICONS.lockOpen : ICONS.lockClosed;
+          lockBtn.onclick = (e) => { e.stopPropagation(); onLock(item); };
+          actions.appendChild(lockBtn);
+        }
+        if (onHide) {
+          const hideBtn = document.createElement('button');
+          hideBtn.className = 'icon-btn';
+          hideBtn.title = item.is_hidden ? 'Показать ученикам' : 'Скрыть от учеников';
+          hideBtn.innerHTML = item.is_hidden ? ICONS.eyeOff : ICONS.eye;
+          hideBtn.onclick = (e) => { e.stopPropagation(); onHide(item); };
+          actions.appendChild(hideBtn);
         }
         if (onEdit) {
           const editBtn = document.createElement('button');
@@ -543,6 +591,31 @@
             await apiSend('POST', `/api/teacher/subjects/${currentSubjectId}/sections`, { title: val });
             render(false);
           }),
+          null,
+          {
+            onLock: async (item) => {
+              if (item.is_locked) {
+                await apiSend('PATCH', `/api/teacher/sections/${item.id}`, { is_locked: false });
+                render(false);
+              } else {
+                promptLockMessage('', async (msg) => {
+                  await apiSend('PATCH', `/api/teacher/sections/${item.id}`, { is_locked: true, lock_message: msg });
+                  render(false);
+                });
+              }
+            },
+            onHide: async (item) => {
+              await apiSend('PATCH', `/api/teacher/sections/${item.id}`, { is_hidden: !item.is_hidden });
+              render(false);
+            },
+            onReorder: async (fromIndex, toIndex) => {
+              const ids = sections.map(s => s.id);
+              const [moved] = ids.splice(fromIndex, 1);
+              ids.splice(toIndex, 0, moved);
+              await apiSend('POST', `/api/teacher/subjects/${currentSubjectId}/sections/reorder`, { order: ids });
+              render(false);
+            },
+          },
         );
       } catch (err) { showErrorMsg(err, isBack); }
     } else if (current.level === 'topics') {
@@ -566,6 +639,31 @@
             await apiSend('POST', `/api/teacher/sections/${current.sectionId}/topics`, { title: val });
             render(false);
           }),
+          null,
+          {
+            onLock: async (item) => {
+              if (item.is_locked) {
+                await apiSend('PATCH', `/api/teacher/topics/${item.id}`, { is_locked: false });
+                render(false);
+              } else {
+                promptLockMessage('', async (msg) => {
+                  await apiSend('PATCH', `/api/teacher/topics/${item.id}`, { is_locked: true, lock_message: msg });
+                  render(false);
+                });
+              }
+            },
+            onHide: async (item) => {
+              await apiSend('PATCH', `/api/teacher/topics/${item.id}`, { is_hidden: !item.is_hidden });
+              render(false);
+            },
+            onReorder: async (fromIndex, toIndex) => {
+              const ids = topics.map(t => t.id);
+              const [moved] = ids.splice(fromIndex, 1);
+              ids.splice(toIndex, 0, moved);
+              await apiSend('POST', `/api/teacher/sections/${current.sectionId}/topics/reorder`, { order: ids });
+              render(false);
+            },
+          },
         );
       } catch (err) { showErrorMsg(err, isBack); }
     } else if (current.level === 'tasks') {
@@ -641,42 +739,118 @@
     }, isBack);
   }
 
+  function lockBodyScroll() {
+    const scrollY = window.scrollY;
+    document.body.style.position = 'fixed';
+    document.body.style.top = '-' + scrollY + 'px';
+    document.body.style.left = '0';
+    document.body.style.right = '0';
+    document.body.dataset.scrollY = scrollY;
+  }
+  function unlockBodyScroll() {
+    const scrollY = document.body.dataset.scrollY || '0';
+    document.body.style.position = '';
+    document.body.style.top = '';
+    document.body.style.left = '';
+    document.body.style.right = '';
+    window.scrollTo(0, parseInt(scrollY, 10));
+  }
+
   function promptRename(label, initial, onSave) {
+    lockBodyScroll();
     const overlay = document.createElement('div');
     overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center;z-index:30;padding:20px;';
     overlay.innerHTML = '<div style="background:white;border-radius:16px;padding:18px;max-width:340px;width:100%;">' +
       '<div class="field-label">' + label + '</div>' +
       '<input class="field-input" id="promptInput" value="" style="margin-bottom:14px;">' +
+      '<div id="promptErr" style="color:#EA2B2B;font-size:12.5px;font-weight:700;margin-bottom:8px;display:none;"></div>' +
       '<div style="display:flex;gap:8px;">' +
       '<button class="back-btn" id="promptCancel" style="flex:1;">Отмена</button>' +
       '<button class="save-btn" id="promptSave" style="flex:1;margin-top:0;">Сохранить</button>' +
       '</div></div>';
     document.body.appendChild(overlay);
     const input = overlay.querySelector('#promptInput');
+    const errBox = overlay.querySelector('#promptErr');
+    const saveBtn = overlay.querySelector('#promptSave');
     input.value = initial;
     input.focus();
     input.select();
-    overlay.querySelector('#promptCancel').onclick = () => overlay.remove();
-    overlay.querySelector('#promptSave').onclick = () => {
+    function closeOverlay() { unlockBodyScroll(); overlay.remove(); }
+    overlay.querySelector('#promptCancel').onclick = closeOverlay;
+    saveBtn.onclick = async () => {
       const val = input.value.trim();
       if (!val) return;
-      overlay.remove();
-      onSave(val);
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Сохраняю…';
+      errBox.style.display = 'none';
+      try {
+        await onSave(val);
+        closeOverlay();
+      } catch (err) {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Сохранить';
+        errBox.textContent = 'Не получилось: ' + err.message;
+        errBox.style.display = 'block';
+      }
+    };
+  }
+
+  // Спрашивает текст сообщения для замка (можно оставить пустым — тогда
+  // подставится стандартное «Пока недоступно»). onSave вызывается с текстом.
+  function promptLockMessage(currentMessage, onSave) {
+    lockBodyScroll();
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center;z-index:30;padding:20px;';
+    overlay.innerHTML = '<div style="background:white;border-radius:16px;padding:18px;max-width:340px;width:100%;">' +
+      '<div class="field-label">Сообщение для ученика (необязательно)</div>' +
+      '<div class="field-hint" style="margin:0 0 8px;">Например: «Откроется после предыдущей темы» или «Скоро будет»</div>' +
+      '<input class="field-input" id="lockMsgInput" value="" style="margin-bottom:14px;">' +
+      '<div style="display:flex;gap:8px;">' +
+      '<button class="back-btn" id="lockMsgCancel" style="flex:1;">Отмена</button>' +
+      '<button class="save-btn" id="lockMsgSave" style="flex:1;margin-top:0;">Поставить замок</button>' +
+      '</div></div>';
+    document.body.appendChild(overlay);
+    const input = overlay.querySelector('#lockMsgInput');
+    input.value = currentMessage || '';
+    input.focus();
+    function closeOverlay() { unlockBodyScroll(); overlay.remove(); }
+    overlay.querySelector('#lockMsgCancel').onclick = closeOverlay;
+    overlay.querySelector('#lockMsgSave').onclick = async () => {
+      closeOverlay();
+      await onSave(input.value.trim() || 'Пока недоступно');
     };
   }
 
   function confirmDelete(text, onConfirm) {
+    lockBodyScroll();
     const overlay = document.createElement('div');
     overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center;z-index:30;padding:20px;';
     overlay.innerHTML = '<div style="background:white;border-radius:16px;padding:18px;max-width:340px;width:100%;">' +
       '<div style="font-weight:700;margin-bottom:14px;">' + text + '</div>' +
+      '<div id="delErr" style="color:#EA2B2B;font-size:12.5px;font-weight:700;margin-bottom:8px;display:none;"></div>' +
       '<div style="display:flex;gap:8px;">' +
       '<button class="back-btn" id="delCancel" style="flex:1;">Отмена</button>' +
       '<button class="save-btn" id="delOk" style="flex:1;margin-top:0;background:var(--red);border-bottom-color:var(--red-dark);">Удалить</button>' +
       '</div></div>';
     document.body.appendChild(overlay);
-    overlay.querySelector('#delCancel').onclick = () => overlay.remove();
-    overlay.querySelector('#delOk').onclick = () => { overlay.remove(); onConfirm(); };
+    const errBox = overlay.querySelector('#delErr');
+    const delBtn = overlay.querySelector('#delOk');
+    function closeOverlay() { unlockBodyScroll(); overlay.remove(); }
+    overlay.querySelector('#delCancel').onclick = closeOverlay;
+    delBtn.onclick = async () => {
+      delBtn.disabled = true;
+      delBtn.textContent = 'Удаляю…';
+      errBox.style.display = 'none';
+      try {
+        await onConfirm();
+        closeOverlay();
+      } catch (err) {
+        delBtn.disabled = false;
+        delBtn.textContent = 'Удалить';
+        errBox.textContent = 'Не получилось: ' + err.message;
+        errBox.style.display = 'block';
+      }
+    };
   }
 
   // Поле с панелью форматирования (Ж/К/код) — оборачивает выделенный текст
@@ -1713,29 +1887,6 @@
     if (saved) document.documentElement.setAttribute('data-theme', saved);
     applyIcon();
   })();
-
-  // --- Временная диагностика проверки подлинности — удалить после того, как разберёмся ---
-  document.getElementById('debugBtn').onclick = async () => {
-    const clientInfo = {
-      tg_object_exists: !!window.Telegram,
-      webapp_object_exists: !!tg,
-      platform: tg?.platform,
-      version: tg?.version,
-      initData_length: (tg?.initData || '').length,
-      initDataUnsafe_present: !!tg?.initDataUnsafe,
-      initDataUnsafe_user_present: !!tg?.initDataUnsafe?.user,
-      initDataUnsafe_keys: tg?.initDataUnsafe ? Object.keys(tg.initDataUnsafe) : [],
-    };
-    alert('НА СТРАНИЦЕ:\n' + JSON.stringify(clientInfo, null, 2));
-
-    try {
-      const res = await fetch(API_BASE_URL + '/api/debug/whoami', { headers: { 'X-Telegram-Init-Data': tg?.initData || '' } });
-      const data = await res.json();
-      alert('НА СЕРВЕРЕ:\n' + JSON.stringify(data, null, 2));
-    } catch (err) {
-      alert('Ошибка запроса: ' + err.message);
-    }
-  };
 
   render(false);
 </script>
