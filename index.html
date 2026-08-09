@@ -544,15 +544,21 @@
       }
 
       if (item.is_locked) {
-        card.style.opacity = '0.4';
-        card.style.filter = 'grayscale(0.6)';
+        card.style.background = 'var(--border)';
         card.style.cursor = 'default';
+        card.style.boxShadow = 'none';
         const arrowEl = card.querySelector('.item-arrow');
         if (arrowEl) arrowEl.remove();
+        const titleEl = card.querySelector('.item-title');
+        titleEl.style.color = 'var(--text-soft)';
+        const subEl = card.querySelector('.item-sub');
+        if (subEl) subEl.style.color = 'var(--text-soft)';
+        const iconWrap = card.querySelector('.level-icon-wrap');
+        if (iconWrap) { iconWrap.style.background = 'var(--bg)'; iconWrap.style.color = 'var(--text-soft)'; }
         const lockBadge = document.createElement('span');
         lockBadge.textContent = '🔒';
         lockBadge.style.marginLeft = '6px';
-        card.querySelector('.item-title').appendChild(lockBadge);
+        titleEl.appendChild(lockBadge);
         card.onclick = () => {
           const msg = item.lock_message || 'Пока недоступно.';
           if (tg?.showAlert) tg.showAlert(msg); else alert(msg);
