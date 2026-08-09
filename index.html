@@ -3,10 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Экзамен — мини-апп</title>
-<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<title>Экзамен — мини-апп (демо)</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Jost:wght@400;500;600;700&family=Nunito:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
   :root {
     --bg: #FFFFFF;
@@ -24,9 +23,46 @@
     --red-dark: #EA2B2B;
     --red-tint: #FFDFE0;
     --yellow: #FFC800;
+    --yellow-tint: #FFF1C2;
     --card-shadow: 0 2px 0 var(--border);
     --bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
   }
+
+  /* Тёмная тема — включается автоматически по системной настройке... */
+  @media (prefers-color-scheme: dark) {
+    html:not([data-theme="light"]) {
+      --bg: #14181F;
+      --bg-soft: #1C222C;
+      --border: #2B323F;
+      --text: #F1F3F6;
+      --text-soft: #8B93A3;
+      --green-tint: rgba(88, 204, 2, 0.16);
+      --blue-tint: rgba(28, 176, 246, 0.16);
+      --red-tint: rgba(255, 75, 75, 0.16);
+      --yellow-tint: rgba(255, 200, 0, 0.16);
+    }
+  }
+  /* ...или вручную через переключатель (сохраняется в localStorage) */
+  html[data-theme="dark"] {
+    --bg: #14181F;
+    --bg-soft: #1C222C;
+    --border: #2B323F;
+    --text: #F1F3F6;
+    --text-soft: #8B93A3;
+    --green-tint: rgba(88, 204, 2, 0.16);
+    --blue-tint: rgba(28, 176, 246, 0.16);
+    --red-tint: rgba(255, 75, 75, 0.16);
+    --yellow-tint: rgba(255, 200, 0, 0.16);
+  }
+
+  .theme-toggle {
+    position: fixed; top: 16px; right: 16px; z-index: 15;
+    width: 38px; height: 38px; border-radius: 50%; border: 2px solid var(--border); background: var(--bg);
+    display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--text-soft);
+    transition: transform 0.12s var(--bounce);
+  }
+  .theme-toggle:active { transform: scale(0.88); }
+  .theme-toggle svg { width: 18px; height: 18px; }
 
   * { box-sizing: border-box; }
 
@@ -51,7 +87,7 @@
 
   header { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; }
   .stamp-mini { width: 40px; height: 40px; flex-shrink: 0; }
-  header h1 { font-family: 'Baloo 2', sans-serif; font-size: 19px; font-weight: 800; margin: 0; color: var(--text); }
+  header h1 { font-family: 'Jost', sans-serif; font-size: 19px; font-weight: 700; margin: 0; color: var(--text); }
   header .who { color: var(--green-dark); }
 
   .crumbs { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; min-height: 36px; }
@@ -59,13 +95,13 @@
   .back-btn {
     background: var(--bg); border: 2px solid var(--border); border-bottom: 4px solid var(--border);
     border-radius: 12px;
-    padding: 6px 14px; font-family: 'Nunito', sans-serif; font-size: 13px; font-weight: 800;
+    padding: 6px 14px; font-family: 'Nunito', sans-serif; font-size: 13px; font-weight: 700;
     color: var(--text-soft); cursor: pointer; transition: transform 0.12s var(--bounce);
     text-transform: uppercase; letter-spacing: 0.02em;
   }
   .back-btn:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
   .back-btn:active { transform: translateY(3px); border-bottom-width: 1px; }
-  .crumb-title { font-family: 'Baloo 2', sans-serif; font-size: 16px; font-weight: 700; color: var(--text); }
+  .crumb-title { font-family: 'Jost', sans-serif; font-size: 16px; font-weight: 700; color: var(--text); }
 
   .screen { animation: screen-in 0.32s var(--bounce) both; }
   .screen.back { animation: screen-in-back 0.32s var(--bounce) both; }
@@ -98,22 +134,24 @@
   }
   .level-icon-wrap.subjects { background: var(--green-tint); }
   .level-icon-wrap.sections { background: var(--blue-tint); }
-  .level-icon-wrap.topics { background: #FFF1C2; }
+  .level-icon-wrap.topics { background: var(--yellow-tint); }
+  .level-icon-wrap.tests { background: var(--yellow-tint); }
+  .level-icon-wrap.rules { background: var(--green-tint); }
   .level-icon { width: 18px; height: 18px; }
 
-  .item-title { font-family: 'Baloo 2', sans-serif; font-size: 16.5px; font-weight: 700; }
+  .item-title { font-family: 'Jost', sans-serif; font-size: 16.5px; font-weight: 700; }
   .item-sub { font-size: 12.5px; color: var(--text-soft); margin-top: 2px; font-weight: 600; }
-  .item-arrow { color: var(--border); font-size: 20px; flex-shrink: 0; font-weight: 800; }
+  .item-arrow { color: var(--border); font-size: 20px; flex-shrink: 0; font-weight: 700; }
   .badge {
     display: inline-block; background: var(--green-tint); border: none;
-    border-radius: 20px; padding: 4px 12px; font-size: 12px; font-weight: 800; color: var(--green-dark); white-space: nowrap;
+    border-radius: 20px; padding: 4px 12px; font-size: 12px; font-weight: 700; color: var(--green-dark); white-space: nowrap;
   }
 
   .state-msg { text-align: center; color: var(--text-soft); font-size: 15px; font-weight: 700; padding: 30px 10px; }
   .state-msg.error { color: var(--red); }
   .retry-btn {
     margin-top: 10px; background: var(--blue); border: none; border-bottom: 4px solid var(--blue-dark); color: white; border-radius: 14px;
-    padding: 10px 20px; font-family: 'Baloo 2', sans-serif; font-size: 14px; font-weight: 800; cursor: pointer;
+    padding: 10px 20px; font-family: 'Jost', sans-serif; font-size: 14px; font-weight: 700; cursor: pointer;
     text-transform: uppercase; letter-spacing: 0.02em; transition: transform 0.12s var(--bounce);
   }
   .retry-btn:active { transform: translateY(3px); border-bottom-width: 1px; }
@@ -127,7 +165,7 @@
   .pencil-dots span:nth-child(3) { animation-delay: 0.26s; }
   @keyframes dot-bounce { 0%, 60%, 100% { transform: translateY(0); opacity: 0.5; } 30% { transform: translateY(-6px); opacity: 1; } }
 
-  .progress-line { font-size: 13px; font-weight: 800; color: var(--text-soft); margin-bottom: 10px; text-align: center; text-transform: uppercase; letter-spacing: 0.03em; }
+  .progress-line { font-size: 13px; font-weight: 700; color: var(--text-soft); margin-bottom: 10px; text-align: center; text-transform: uppercase; letter-spacing: 0.03em; }
 
   .task-card {
     background: var(--bg); border: 2px solid var(--border); border-radius: 20px;
@@ -135,18 +173,16 @@
     animation: card-in 0.36s var(--bounce) both;
   }
 
-  .task-question { font-family: 'Baloo 2', sans-serif; font-size: 19px; font-weight: 700; margin: 0 0 8px; }
-  .task-description { font-size: 15px; color: var(--text-soft); font-weight: 600; line-height: 1.5; margin: 0 0 18px; }
-
-  .option-btn {
-    display: block; width: 100%; text-align: left; margin-bottom: 10px;
-    background: var(--bg); border: 2px solid var(--border); border-bottom: 4px solid var(--border); border-radius: 14px;
-    padding: 13px 16px; font-family: 'Nunito', sans-serif; font-size: 15.5px; font-weight: 700; color: var(--text); cursor: pointer;
-    transition: transform 0.12s var(--bounce), background 0.15s ease, border-color 0.15s ease;
+  .task-question { font-family: 'Jost', sans-serif; font-size: 19px; font-weight: 600; margin: 0 0 14px; }
+  .question-label {
+    display: inline-block; font-family: 'Jost', sans-serif; font-size: 12px; font-weight: 700;
+    color: var(--blue-dark); background: var(--blue-tint); padding: 3px 9px; border-radius: 8px;
+    margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.03em;
   }
-  .option-btn:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
-  .option-btn:hover:not(:disabled) { border-color: var(--blue); background: var(--blue-tint); }
-  .option-btn:active:not(:disabled) { transform: translateY(3px); border-bottom-width: 2px; }
+  .task-description {
+    font-size: 14.5px; color: var(--text-soft); font-weight: 600; line-height: 1.55;
+    margin: 0 0 20px; padding: 12px 14px; background: var(--bg-soft); border-radius: 12px;
+  }
 
   .text-input {
     width: 100%; padding: 13px 16px; font-family: 'Nunito', sans-serif; font-size: 16px; font-weight: 700;
@@ -156,30 +192,33 @@
   .text-input:focus-visible { outline: 2px solid var(--blue); border-color: var(--blue); }
 
   .submit-btn {
-    width: 100%; padding: 14px 16px; background: var(--green); color: white; border: none;
-    border-bottom: 4px solid var(--green-dark);
-    border-radius: 14px; font-family: 'Baloo 2', sans-serif; font-size: 16px; font-weight: 800; cursor: pointer;
-    text-transform: uppercase; letter-spacing: 0.03em;
+    width: 100%; padding: 10px 16px; background: var(--green); color: white; border: none;
+    border-bottom: 3px solid var(--green-dark);
+    border-radius: 10px; font-family: 'Jost', sans-serif; font-size: 13px; font-weight: 700; cursor: pointer;
+    text-transform: uppercase; letter-spacing: 0.02em;
     transition: transform 0.12s var(--bounce), border-bottom-width 0.12s ease;
   }
-  .submit-btn:disabled { opacity: 0.4; cursor: default; }
-  .submit-btn:active:not(:disabled) { transform: translateY(4px); border-bottom-width: 0; }
+  .submit-btn:disabled {
+    background: var(--border); color: var(--text-soft); border-bottom-color: var(--border);
+    opacity: 1; cursor: default;
+  }
+  .submit-btn:active:not(:disabled) { transform: translateY(3px); border-bottom-width: 0; }
 
   .feedback { margin-top: 18px; padding: 14px 16px; border-radius: 16px; border: 2px solid; animation: feedback-in 0.3s var(--bounce) both; }
   @keyframes feedback-in { from { opacity: 0; transform: translateY(-6px) scale(0.96); } to { opacity: 1; transform: translateY(0) scale(1); } }
   .feedback.ok { background: var(--green-tint); border-color: var(--green); }
   .feedback.bad { background: var(--red-tint); border-color: var(--red); }
-  .feedback-title { font-family: 'Baloo 2', sans-serif; font-weight: 800; font-size: 16px; margin: 0 0 6px; }
+  .feedback-title { font-family: 'Jost', sans-serif; font-weight: 700; font-size: 16px; margin: 0 0 6px; }
   .feedback.ok .feedback-title { color: var(--green-dark); }
   .feedback.bad .feedback-title { color: var(--red-dark); }
   .feedback-body { font-size: 14px; font-weight: 700; color: var(--text); line-height: 1.5; }
   .feedback-explain { margin-top: 8px; font-size: 13.5px; color: var(--text-soft); font-weight: 600; font-style: normal; }
 
   .next-btn {
-    width: 100%; margin-top: 16px; padding: 14px 16px; background: var(--blue); color: white; border: none;
-    border-bottom: 4px solid var(--blue-dark);
-    border-radius: 14px; font-family: 'Baloo 2', sans-serif; font-size: 16px; font-weight: 800; cursor: pointer;
-    text-transform: uppercase; letter-spacing: 0.03em;
+    width: 100%; margin-top: 14px; padding: 10px 16px; background: var(--blue); color: white; border: none;
+    border-bottom: 3px solid var(--blue-dark);
+    border-radius: 10px; font-family: 'Jost', sans-serif; font-size: 13px; font-weight: 700; cursor: pointer;
+    text-transform: uppercase; letter-spacing: 0.02em;
     transition: transform 0.12s var(--bounce), border-bottom-width 0.12s ease;
   }
   .next-btn:active { transform: translateY(4px); border-bottom-width: 0; }
@@ -187,9 +226,131 @@
   @media (prefers-reduced-motion: reduce) {
     .screen, .screen.back, .item-card, .task-card, .feedback { animation: none !important; opacity: 1 !important; transform: none !important; }
   }
+
+  /* --- Нижняя панель вкладок --- */
+  body { padding-bottom: 78px; }
+
+  .tab-bar {
+    position: fixed; left: 0; right: 0; bottom: 0;
+    background: var(--bg); border-top: 2px solid var(--border);
+    display: flex; justify-content: center; gap: 0;
+    padding: 8px 0 max(8px, env(safe-area-inset-bottom));
+    z-index: 10;
+  }
+  .tab-bar-inner { max-width: 420px; width: 100%; display: flex; }
+  .tab-btn {
+    flex: 1; background: none; border: none; cursor: pointer;
+    display: flex; flex-direction: column; align-items: center; gap: 3px;
+    padding: 6px 4px; font-family: 'Nunito', sans-serif; font-size: 11.5px; font-weight: 700;
+    color: var(--text-soft); transition: transform 0.12s var(--bounce);
+    text-transform: uppercase; letter-spacing: 0.02em;
+  }
+  .tab-btn svg { width: 24px; height: 24px; }
+  .tab-btn.active { color: var(--green-dark); }
+  .tab-btn:active { transform: scale(0.92); }
+
+  /* --- Выбор "Задания / Тесты" на экране предмета --- */
+  .home-choice { display: flex; flex-direction: column; gap: 10px; margin-top: 6px; }
+  .choice-card {
+    background: var(--bg); border: 2px solid var(--border); border-bottom: 3px solid var(--border);
+    border-radius: 14px; padding: 14px 16px; text-align: center; cursor: pointer;
+    font-family: 'Nunito', sans-serif; transition: transform 0.12s var(--bounce);
+    animation: card-in 0.36s var(--bounce) both;
+  }
+  .choice-card:active { transform: translateY(2px); border-bottom-width: 1px; }
+  .choice-card .choice-icon { width: 28px; height: 28px; margin: 0 auto 6px; }
+  .choice-card .choice-title { font-family: 'Jost', sans-serif; font-size: 15px; font-weight: 600; color: var(--text); }
+
+  /* --- Результаты теста --- */
+  .result-card {
+    background: var(--bg); border: 2px solid var(--border); border-radius: 20px;
+    padding: 26px 20px; text-align: center; animation: card-in 0.36s var(--bounce) both;
+  }
+  .result-score { font-family: 'Jost', sans-serif; font-size: 40px; font-weight: 700; color: var(--green-dark); margin: 6px 0; }
+  .result-label { font-size: 13px; font-weight: 700; color: var(--text-soft); text-transform: uppercase; letter-spacing: 0.03em; }
+  .result-breakdown { display: flex; justify-content: center; gap: 18px; margin-top: 16px; }
+  .result-stat { text-align: center; }
+  .result-stat .num { font-family: 'Jost', sans-serif; font-size: 20px; font-weight: 700; }
+  .result-stat.ok .num { color: var(--green-dark); }
+  .result-stat.bad .num { color: var(--red-dark); }
+  .result-stat .lbl { font-size: 11px; color: var(--text-soft); font-weight: 700; }
+
+  /* --- Профиль --- */
+  .profile-card {
+    background: var(--bg); border: 2px solid var(--border); border-radius: 16px;
+    padding: 14px 16px; margin-bottom: 10px; animation: card-in 0.36s var(--bounce) both;
+  }
+  .profile-card .p-title { font-family: 'Jost', sans-serif; font-size: 15px; font-weight: 700; }
+  .profile-card .p-date { font-size: 12px; color: var(--text-soft); font-weight: 600; margin: 2px 0 8px; }
+  .profile-card .p-row { display: flex; gap: 14px; font-size: 13.5px; font-weight: 700; }
+  .profile-card .p-ok { color: var(--green-dark); }
+  .profile-card .p-bad { color: var(--red-dark); }
+  .section-label {
+    font-family: 'Jost', sans-serif; font-size: 14px; font-weight: 700; color: var(--text-soft);
+    text-transform: uppercase; letter-spacing: 0.03em; margin: 18px 0 10px;
+  }
+  .section-label:first-child { margin-top: 0; }
+
+  /* --- Прогресс-бар на экране задания --- */
+  .task-header-row { margin-bottom: 20px; }
+  .progress-num {
+    display: block; font-size: 12.5px; font-weight: 700; color: var(--text-soft);
+    margin-bottom: 6px; text-align: center; text-transform: uppercase; letter-spacing: 0.02em;
+  }
+  .progress-bar-track { height: 14px; background: var(--border); border-radius: 20px; overflow: hidden; }
+  .progress-bar-fill { height: 100%; background: var(--green); border-radius: 20px; transition: width 0.35s var(--bounce); }
+
+  .skip-btn {
+    width: 100%; padding: 10px 16px; margin-bottom: 8px;
+    background: var(--bg); color: var(--text-soft); border: 2px solid var(--border); border-bottom: 3px solid var(--border);
+    border-radius: 10px; font-family: 'Jost', sans-serif; font-size: 13px; font-weight: 700; cursor: pointer;
+    text-transform: uppercase; letter-spacing: 0.02em;
+    transition: transform 0.12s var(--bounce), border-bottom-width 0.12s ease;
+  }
+  .skip-btn:active { transform: translateY(2px); border-bottom-width: 2px; }
+
+  /* --- Пронумерованные варианты ответа (переключаемые, до "Проверить") --- */
+  .option-btn {
+    display: flex; align-items: flex-start; gap: 9px;
+    text-align: left; width: 100%; margin-bottom: 8px;
+    background: var(--bg); border: 2px solid var(--border); border-bottom: 3px solid var(--border); border-radius: 12px;
+    padding: 9px 12px; font-family: 'Nunito', sans-serif; font-size: 14px; font-weight: 600; color: var(--text); cursor: pointer;
+    transition: transform 0.12s var(--bounce), background 0.15s ease, border-color 0.15s ease;
+  }
+  .option-num {
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    width: 22px; height: 22px; margin-top: 1px; border-radius: 6px; border: 2px solid var(--border);
+    font-family: 'Jost', sans-serif; font-size: 12px; font-weight: 700; color: var(--text-soft); background: var(--bg-soft);
+  }
+  .option-text { flex: 1; }
+  .option-tag {
+    font-size: 11px; font-weight: 700; color: var(--green-dark); white-space: nowrap; align-self: center;
+    text-transform: uppercase; letter-spacing: 0.02em;
+  }
+
+  .option-btn:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+  .option-btn.selectable:hover { border-color: var(--blue); }
+  .option-btn.selectable:active { transform: translateY(3px); border-bottom-width: 2px; }
+
+  .option-btn.selected { border-color: var(--blue); background: var(--blue-tint); }
+  .option-btn.selected .option-num { border-color: var(--blue); color: var(--blue-dark); background: var(--bg); }
+
+  .option-btn.correct-selected { border-color: var(--green); background: var(--green-tint); cursor: default; }
+  .option-btn.correct-selected .option-num { border-color: var(--green); background: var(--green); color: white; }
+
+  .option-btn.incorrect-selected { border-color: var(--red); background: var(--red-tint); cursor: default; }
+  .option-btn.incorrect-selected .option-num { border-color: var(--red); background: var(--red); color: white; }
+
+  .option-btn.correct-missed { border-color: var(--green); background: var(--bg); border-style: dashed; cursor: default; }
+  .option-btn.correct-missed .option-num { border-color: var(--green); color: var(--green-dark); }
+
+  .option-btn.neutral-final { opacity: 0.55; cursor: default; }
+  .option-btn.neutral-final:active { transform: none; border-bottom-width: 4px; }
 </style>
 </head>
 <body>
+
+  <button class="theme-toggle" id="themeToggle" title="Сменить тему" aria-label="Сменить тему"></button>
 
   <div class="wrap">
     <header>
@@ -203,13 +364,23 @@
     <div class="crumbs" id="crumbs"></div>
     <div id="screenHost">
       <div class="screen" id="content">
-        <div class="loading-row">
-          Загружаем предметы
-          <span class="pencil-dots"><span></span><span></span><span></span></span>
-        </div>
+        <div class="loading-row">Загружаем предметы <span class="pencil-dots"><span></span><span></span><span></span></span></div>
       </div>
     </div>
   </div>
+
+  <nav class="tab-bar">
+    <div class="tab-bar-inner">
+      <button class="tab-btn active" id="tabStudy" onclick="switchTab('study')">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M4 6C4 4.9 4.9 4 6 4H18C19.1 4 20 4.9 20 6V20L12 16L4 20V6Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+        Учёба
+      </button>
+      <button class="tab-btn" id="tabProfile" onclick="switchTab('profile')">
+        <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="2"/><path d="M4 20C4 16.7 7.6 14 12 14C16.4 14 20 16.7 20 20" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        Профиль
+      </button>
+    </div>
+  </nav>
 
 <script>
   // Адрес вашего бэкенда на Amvera — заполнить после развёртывания.
@@ -220,10 +391,27 @@
     tg.ready();
     tg.expand();
     const user = tg.initDataUnsafe?.user;
-    if (user?.first_name) {
-      document.getElementById('userName').textContent = user.first_name;
-    }
+    if (user?.first_name) document.getElementById('userName').textContent = user.first_name;
   }
+
+  async function apiGet(path) {
+    const res = await fetch(API_BASE_URL + path, { headers: { 'X-Telegram-Init-Data': tg?.initData || '' } });
+    if (res.status === 401) throw new Error('Не удалось подтвердить, что это вы — откройте страницу через кнопку в боте.');
+    if (!res.ok) throw new Error('Сервер ответил с ошибкой: ' + res.status);
+    return res.json();
+  }
+
+  async function apiPost(path, body) {
+    const res = await fetch(API_BASE_URL + path, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Telegram-Init-Data': tg?.initData || '' },
+      body: JSON.stringify(body),
+    });
+    if (res.status === 401) throw new Error('Не удалось подтвердить, что это вы — откройте страницу через кнопку в боте.');
+    if (!res.ok) throw new Error('Сервер ответил с ошибкой: ' + res.status);
+    return res.json();
+  }
+
 
   const screenHost = document.getElementById('screenHost');
   const crumbsEl = document.getElementById('crumbs');
@@ -231,7 +419,6 @@
   let stack = [{ level: 'subjects', title: 'Предметы' }];
   let currentTasks = [];
 
-  // --- Значки уровней (свои для предметов / разделов / тем) ---
   const ICONS = {
     subjects: `<svg class="level-icon" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
       <circle cx="10" cy="10" r="7.2" stroke="#58A700" stroke-width="1.8"/>
@@ -242,31 +429,15 @@
     </svg>`,
     topics: `<svg class="level-icon" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
       <path d="M5 3H15V17L10 14.2L5 17V3Z" stroke="#B8860B" stroke-width="1.7" stroke-linejoin="round"/>
+    </svg>`,
+    tests: `<svg class="level-icon" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <path d="M6 3H14L14 17L10 14.5L6 17V3Z" stroke="#B8860B" stroke-width="1.7" stroke-linejoin="round"/>
+    </svg>`,
+    rules: `<svg class="level-icon" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <path d="M4 4C4 3 4.9 2 6 2H15V18H6C4.9 18 4 17 4 16V4Z" stroke="#58A700" stroke-width="1.7" stroke-linejoin="round"/>
+      <path d="M4 16C4 15 4.9 14 6 14H15" stroke="#58A700" stroke-width="1.7"/>
     </svg>`
   };
-
-  async function apiGet(path) {
-    const res = await fetch(API_BASE_URL + path, {
-      headers: { 'X-Telegram-Init-Data': tg?.initData || '' }
-    });
-    if (res.status === 401) throw new Error('Не удалось подтвердить, что это вы — откройте страницу через кнопку в боте.');
-    if (!res.ok) throw new Error('Сервер ответил с ошибкой: ' + res.status);
-    return res.json();
-  }
-
-  async function apiPost(path, body) {
-    const res = await fetch(API_BASE_URL + path, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Telegram-Init-Data': tg?.initData || ''
-      },
-      body: JSON.stringify(body)
-    });
-    if (res.status === 401) throw new Error('Не удалось подтвердить, что это вы — откройте страницу через кнопку в боте.');
-    if (!res.ok) throw new Error('Сервер ответил с ошибкой: ' + res.status);
-    return res.json();
-  }
 
   function renderCrumbs() {
     crumbsEl.innerHTML = '';
@@ -274,7 +445,18 @@
       const btn = document.createElement('button');
       btn.className = 'back-btn';
       btn.textContent = '← Назад';
-      btn.onclick = () => { stack.pop(); render(true); };
+      btn.onclick = () => {
+        // С результата теста и с самого теста "назад" всегда возвращает
+        // к списку тестов целиком, а не на промежуточный шаг прохождения.
+        const cur = stack[stack.length - 1].level;
+        if (cur === 'test_results' || cur === 'test_taking') {
+          stack.pop();
+          if (stack[stack.length - 1]?.level === 'test_taking') stack.pop();
+        } else {
+          stack.pop();
+        }
+        render(true);
+      };
       crumbsEl.appendChild(btn);
     }
     const title = document.createElement('span');
@@ -283,7 +465,6 @@
     crumbsEl.appendChild(title);
   }
 
-  // Заменяет содержимое #screenHost новым .screen с анимацией входа.
   function swapScreen(buildFn, isBack) {
     const screen = document.createElement('div');
     screen.className = 'screen' + (isBack ? ' back' : '');
@@ -329,10 +510,7 @@
     }, isBack);
 
     const list = screen.querySelector('#listContainer');
-    if (!items.length) {
-      showState('Здесь пока пусто.');
-      return;
-    }
+    if (!items.length) { showState('Здесь пока пусто.'); return; }
     items.forEach((item, i) => {
       const card = document.createElement('button');
       card.className = 'item-card';
@@ -369,11 +547,7 @@
     });
   }
 
-  // --- Экран решения заданий ---
-
-  function findNextUnanswered() {
-    return currentTasks.findIndex(t => !t.answered);
-  }
+  function findNextUnanswered() { return currentTasks.findIndex(t => !t.answered); }
 
   function renderTaskScreen(isBack) {
     const screen = swapScreen(() => {}, isBack);
@@ -385,16 +559,51 @@
       const correctCount = currentTasks.filter(t => t.is_correct).length;
       p.textContent = `🏁 Все задания решены! Верно: ${correctCount} из ${currentTasks.length}.`;
       screen.appendChild(p);
+
+      const retryBtn = document.createElement('button');
+      retryBtn.className = 'submit-btn';
+      retryBtn.style.maxWidth = '260px';
+      retryBtn.style.margin = '0 auto 10px';
+      retryBtn.style.display = 'block';
+      retryBtn.textContent = '🔄 Пройти заново';
+      retryBtn.onclick = () => {
+        currentTasks.forEach(t => { t.answered = false; t.is_correct = undefined; t.given_answer = undefined; });
+        renderTaskScreen(false);
+      };
+      screen.appendChild(retryBtn);
+
+      const topicId = stack[stack.length - 1]?.topicId;
+      if (topicId) {
+        const reviewBtn = document.createElement('button');
+        reviewBtn.className = 'skip-btn';
+        reviewBtn.style.maxWidth = '260px';
+        reviewBtn.style.margin = '0 auto';
+        reviewBtn.style.display = 'block';
+        reviewBtn.textContent = '🔍 Пересмотреть свои ответы';
+        reviewBtn.onclick = () => { stack.push({ level: 'topic_review', topicId, title: 'Разбор ответов' }); renderCrumbs(); render(false); };
+        screen.appendChild(reviewBtn);
+      }
       return;
     }
 
     const idx = findNextUnanswered();
     const task = currentTasks[idx];
 
-    const progressP = document.createElement('p');
-    progressP.className = 'progress-line';
-    progressP.textContent = `Задание ${answeredCount + 1} из ${currentTasks.length}`;
-    screen.appendChild(progressP);
+    // Прогресс-бар (крестик выхода не нужен — назад ведёт кнопка в крошках сверху)
+    const headerRow = document.createElement('div');
+    headerRow.className = 'task-header-row';
+    const numLabel = document.createElement('span');
+    numLabel.className = 'progress-num';
+    numLabel.textContent = 'Задание ' + (answeredCount + 1) + ' из ' + currentTasks.length;
+    headerRow.appendChild(numLabel);
+    const track = document.createElement('div');
+    track.className = 'progress-bar-track';
+    const fill = document.createElement('div');
+    fill.className = 'progress-bar-fill';
+    fill.style.width = Math.round((answeredCount / currentTasks.length) * 100) + '%';
+    track.appendChild(fill);
+    headerRow.appendChild(track);
+    screen.appendChild(headerRow);
 
     const card = document.createElement('div');
     card.className = 'task-card';
@@ -414,14 +623,51 @@
     const answerArea = document.createElement('div');
     card.appendChild(answerArea);
 
-    if (task.type === 'buttons' && task.options) {
-      for (const opt of task.options) {
+    if ((task.type === 'buttons' || task.type === 'multi') && task.options) {
+      // Правильных ответов может быть несколько — task.answer это строка (один
+      // верный) или массив (несколько верных). Приводим к массиву для единой логики.
+      const correctList = Array.isArray(task.answer) ? task.answer : [task.answer];
+      const isMulti = task.type === 'multi';
+      let selected = [];
+
+      const submitBtn = document.createElement('button');
+      submitBtn.className = 'submit-btn';
+      submitBtn.textContent = 'Проверить';
+      submitBtn.disabled = true;
+
+      const optionEls = task.options.map((opt, i) => {
         const btn = document.createElement('button');
-        btn.className = 'option-btn';
-        btn.textContent = opt;
-        btn.onclick = () => submitAnswer(task.id, opt, card);
+        btn.className = 'option-btn selectable';
+        btn.innerHTML = `<span class="option-num">${i + 1}</span><span class="option-text"></span>`;
+        btn.querySelector('.option-text').textContent = opt;
+        btn.onclick = () => {
+          if (isMulti) {
+            const pos = selected.indexOf(opt);
+            if (pos === -1) { selected.push(opt); btn.classList.add('selected'); }
+            else { selected.splice(pos, 1); btn.classList.remove('selected'); }
+          } else {
+            selected = [opt];
+            optionEls.forEach(b => b.classList.remove('selected'));
+            btn.classList.add('selected');
+          }
+          submitBtn.disabled = selected.length === 0;
+        };
         answerArea.appendChild(btn);
-      }
+        return btn;
+      });
+
+      submitBtn.onclick = () => submitAnswer(task.id, selected, card, task, optionEls, correctList);
+
+      const skipBtn = document.createElement('button');
+      skipBtn.className = 'skip-btn';
+      skipBtn.textContent = 'Пропустить';
+      skipBtn.onclick = () => {
+        currentTasks.splice(currentTasks.indexOf(task), 1);
+        currentTasks.push(task);
+        renderTaskScreen(false);
+      };
+      answerArea.appendChild(skipBtn);
+      answerArea.appendChild(submitBtn);
     } else {
       const input = document.createElement('input');
       input.type = 'text';
@@ -432,30 +678,61 @@
       const submitBtn = document.createElement('button');
       submitBtn.className = 'submit-btn';
       submitBtn.textContent = 'Ответить';
-      submitBtn.onclick = () => {
-        if (!input.value.trim()) return;
-        submitAnswer(task.id, input.value.trim(), card);
+      submitBtn.disabled = true;
+      input.addEventListener('input', () => { submitBtn.disabled = !input.value.trim(); });
+      submitBtn.onclick = () => { if (!input.value.trim()) return; submitAnswer(task.id, input.value.trim(), card, task); };
+
+      const skipBtn = document.createElement('button');
+      skipBtn.className = 'skip-btn';
+      skipBtn.textContent = 'Пропустить';
+      skipBtn.onclick = () => {
+        currentTasks.splice(currentTasks.indexOf(task), 1);
+        currentTasks.push(task);
+        renderTaskScreen(false);
       };
+      answerArea.appendChild(skipBtn);
       answerArea.appendChild(submitBtn);
 
-      input.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') submitBtn.click();
-      });
+      input.addEventListener('keydown', (e) => { if (e.key === 'Enter') submitBtn.click(); });
     }
 
     screen.appendChild(card);
   }
 
-  async function submitAnswer(taskId, answer, cardEl) {
+  async function submitAnswer(taskId, answer, cardEl, task, optionEls, correctList) {
     try {
       const result = await apiPost(`/api/tasks/${taskId}/answer`, { answer });
-      tg?.HapticFeedback?.notificationOccurred(result.correct ? 'success' : 'error');
 
-      const task = currentTasks.find(t => t.id === taskId);
-      if (task) {
-        task.answered = true;
-        task.is_correct = result.correct;
-        task.given_answer = answer;
+      const taskRef = currentTasks.find(t => t.id === taskId);
+      if (taskRef) { taskRef.answered = true; taskRef.is_correct = result.correct; taskRef.given_answer = answer; }
+
+      // Для вариантов с кнопками — красим каждый вариант по отдельности:
+      // выбрал и верно → зелёным; выбрал и неверно → красным;
+      // не выбрал, но это был верный вариант → зелёный контур ("пропущено");
+      // не выбрал и он неверный → просто гаснет.
+      if (optionEls && correctList) {
+        const selectedSet = new Set(Array.isArray(answer) ? answer : [answer]);
+        const correctSet = new Set(correctList);
+        optionEls.forEach((btn) => {
+          const opt = btn.querySelector('.option-text').textContent;
+          const isSelected = selectedSet.has(opt);
+          const isCorrectOpt = correctSet.has(opt);
+          btn.classList.remove('selectable', 'selected');
+          btn.onclick = null;
+          if (isSelected && isCorrectOpt) {
+            btn.classList.add('correct-selected');
+          } else if (isSelected && !isCorrectOpt) {
+            btn.classList.add('incorrect-selected');
+          } else if (!isSelected && isCorrectOpt) {
+            btn.classList.add('correct-missed');
+            const tag = document.createElement('span');
+            tag.className = 'option-tag';
+            tag.textContent = 'пропущено';
+            btn.appendChild(tag);
+          } else {
+            btn.classList.add('neutral-final');
+          }
+        });
       }
 
       const feedback = document.createElement('div');
@@ -466,7 +743,7 @@
       title.textContent = result.correct ? '✅ Верно!' : '❌ Неверно';
       feedback.appendChild(title);
 
-      if (!result.correct) {
+      if (!result.correct && !optionEls) {
         const body = document.createElement('p');
         body.className = 'feedback-body';
         body.textContent = `Правильный ответ: ${result.correct_answer}`;
@@ -480,6 +757,11 @@
         feedback.appendChild(explain);
       }
 
+      // Кнопки "Пропустить"/"Проверить" (и поле ввода, если оно было) больше
+      // не нужны — убираем их совсем, а не просто гасим, чтобы объяснение
+      // оказалось на их месте, а под ним — уже одна кнопка "Далее".
+      cardEl.querySelectorAll('.skip-btn, .submit-btn, .text-input').forEach(el => el.remove());
+
       cardEl.appendChild(feedback);
 
       const nextBtn = document.createElement('button');
@@ -488,11 +770,8 @@
       nextBtn.textContent = remaining > 0 ? 'Далее →' : 'Показать итог';
       nextBtn.onclick = () => renderTaskScreen(false);
       cardEl.appendChild(nextBtn);
-
-      cardEl.querySelectorAll('.option-btn, .text-input, .submit-btn').forEach(el => el.disabled = true);
     } catch (err) {
       showState('Не получилось отправить ответ. ' + err.message, true, false);
-      console.error(err);
     }
   }
 
@@ -504,45 +783,562 @@
     try {
       if (current.level === 'subjects') {
         const subjects = await apiGet('/api/subjects');
-        renderList(
-          subjects.map(s => ({ id: s.id, title: s.title })),
-          (item) => { stack.push({ level: 'sections', subjectId: item.id, title: item.title }); render(false); },
-          'subjects', isBack
-        );
+        renderList(subjects.map(s => ({ id: s.id, title: s.title })),
+          (item) => { stack.push({ level: 'subject_home', subjectId: item.id, title: item.title }); render(false); },
+          'subjects', isBack);
+      } else if (current.level === 'subject_home') {
+        renderSubjectHome(current.subjectId, isBack);
       } else if (current.level === 'sections') {
         const sections = await apiGet(`/api/subjects/${current.subjectId}/sections`);
-        renderList(
-          sections.map(s => ({ id: s.id, title: s.title })),
-          (item) => { stack.push({ level: 'topics', sectionId: item.id, title: item.title }); render(false); },
-          'sections', isBack
-        );
+        const purpose = current.purpose;
+        renderList(sections.map(s => ({ id: s.id, title: s.title })),
+          (item) => { stack.push({ level: 'topics', sectionId: item.id, purpose, title: item.title }); render(false); },
+          'sections', isBack);
       } else if (current.level === 'topics') {
         const topics = await apiGet(`/api/sections/${current.sectionId}/topics`);
-        renderList(
-          topics.map(t => ({ id: t.id, title: t.title, badge: t.task_count + ' зад.' })),
+        const purpose = current.purpose;
+        renderList(topics.map(t => ({ id: t.id, title: t.title, badge: purpose === 'tasks' ? (t.task_count + ' зад.') : undefined })),
           async (item) => {
-            tg?.HapticFeedback?.impactOccurred('light');
-            stack.push({ level: 'tasks', topicId: item.id, title: item.title });
-            renderCrumbs();
-            showLoading('Загружаем задания', false);
-            try {
-              currentTasks = await apiGet(`/api/topics/${item.id}/tasks`);
-              renderTaskScreen(false);
-            } catch (err) {
-              showState('Не получилось загрузить задания. ' + err.message, true, true);
+            if (purpose === 'rules') {
+              stack.push({ level: 'rules', topicId: item.id, title: item.title });
+              renderCrumbs();
+              showLoading('Загружаем правила', false);
+              try {
+                const rules = await apiGet(`/api/topics/${item.id}/rules`);
+                renderList(rules.map(r => ({ id: r.id, title: r.title })),
+                  (r) => { openRule(rules.find(x => x.id === r.id)); },
+                  'rules', false);
+              } catch (err) {
+                showState('Не получилось загрузить правила.', true, true);
+              }
+            } else {
+              stack.push({ level: 'tasks', topicId: item.id, title: item.title });
+              renderCrumbs();
+              showLoading('Загружаем задания', false);
+              try {
+                currentTasks = await apiGet(`/api/topics/${item.id}/tasks`);
+                renderTaskScreen(false);
+              } catch (err) {
+                showState('Не получилось загрузить задания.', true, true);
+              }
             }
           },
-          'topics', isBack
-        );
+          'topics', isBack);
       } else if (current.level === 'tasks') {
         currentTasks = await apiGet(`/api/topics/${current.topicId}/tasks`);
         renderTaskScreen(isBack);
+      } else if (current.level === 'rules') {
+        const rules = await apiGet(`/api/topics/${current.topicId}/rules`);
+        renderList(rules.map(r => ({ id: r.id, title: r.title })),
+          (r) => { openRule(rules.find(x => x.id === r.id)); },
+          'rules', isBack);
+      } else if (current.level === 'tests') {
+        const tests = await apiGet(`/api/subjects/${current.subjectId}/tests`);
+        renderList(tests.map(t => ({ id: t.id, title: t.title })),
+          (item) => { startTest(item.id, item.title); },
+          'tests', isBack);
+      } else if (current.level === 'test_taking') {
+        renderTestQuestion(isBack);
+      } else if (current.level === 'test_results') {
+        renderTestResults(isBack);
+      } else if (current.level === 'test_review') {
+        renderTestReview(current.attemptId, current.questions, isBack);
+      } else if (current.level === 'topic_review') {
+        renderTopicReview(current.topicId, isBack);
+      } else if (current.level === 'rule_view') {
+        renderRuleView(current.rule, isBack);
       }
     } catch (err) {
-      showState('Не получилось загрузить данные. ' + err.message, true, true, isBack);
-      console.error(err);
+      showState('Не получилось загрузить данные.', true, true, isBack);
     }
   }
+
+  function openRule(rule) {
+    stack.push({ level: 'rule_view', rule, title: rule.title });
+    renderCrumbs();
+    renderRuleView(rule, false);
+  }
+
+  function renderRuleView(rule, isBack) {
+    swapScreen((screen) => {
+      const card = document.createElement('div');
+      card.className = 'task-card';
+      card.innerHTML = `
+        <p class="task-question">${rule.heading || rule.title}</p>
+        <p class="task-description" style="margin-bottom:0">${rule.description || ''}</p>
+      `;
+      screen.appendChild(card);
+    }, isBack);
+  }
+
+  // --- Экран предмета: выбор "Разделы" / "Правила" / "Тесты" ---
+  function renderSubjectHome(subjectId, isBack) {
+    swapScreen((screen) => {
+      const list = document.createElement('div');
+      list.className = 'list';
+
+      const items = [
+        { key: 'tasks', title: 'Задания', icon: 'sections' },
+        { key: 'rules', title: 'Правила', icon: 'rules' },
+        { key: 'tests', title: 'Тесты', icon: 'tests' },
+      ];
+      items.forEach((item, i) => {
+        const card = document.createElement('button');
+        card.className = 'item-card';
+        card.style.animationDelay = (i * 0.05) + 's';
+        card.innerHTML = `<span class="level-icon-wrap ${item.icon}">${ICONS[item.icon]}</span>`;
+        const left = document.createElement('div');
+        const t = document.createElement('div');
+        t.className = 'item-title';
+        t.textContent = item.title;
+        left.appendChild(t);
+        card.appendChild(left);
+        const arrow = document.createElement('span');
+        arrow.className = 'item-arrow';
+        arrow.textContent = '›';
+        card.appendChild(arrow);
+        card.onclick = () => {
+          if (item.key === 'tests') { stack.push({ level: 'tests', subjectId, title: 'Тесты' }); render(false); }
+          else { stack.push({ level: 'sections', subjectId, purpose: item.key, title: 'Разделы' }); render(false); }
+        };
+        list.appendChild(card);
+      });
+
+      screen.appendChild(list);
+    }, isBack);
+  }
+
+  // --- Прохождение теста: без подсказок по ходу, итог — в конце ---
+  let currentTestQuestions = [];
+  let currentTestIndex = 0;
+  let currentAttemptId = null;
+  let currentTestFinalSummary = null;
+
+  async function startTest(testId, title) {
+    stack.push({ level: 'test_taking', testId, title });
+    renderCrumbs();
+    showLoading('Загружаем тест', false);
+    try {
+      const res = await apiPost(`/api/tests/${testId}/start`, {});
+      currentAttemptId = res.attempt_id;
+      currentTestQuestions = res.questions;
+      currentTestIndex = 0;
+      renderTestQuestion(false);
+    } catch (err) {
+      showState('Не получилось загрузить тест. ' + err.message, true, true);
+    }
+  }
+
+  function renderTestQuestion(isBack) {
+    const screen = swapScreen(() => {}, isBack);
+
+    if (currentTestIndex >= currentTestQuestions.length) {
+      finishCurrentTest();
+      return;
+    }
+
+    const q = currentTestQuestions[currentTestIndex];
+
+    const headerRow = document.createElement('div');
+    headerRow.className = 'task-header-row';
+    const numLabel = document.createElement('span');
+    numLabel.className = 'progress-num';
+    numLabel.textContent = 'Вопрос ' + (currentTestIndex + 1) + ' из ' + currentTestQuestions.length;
+    headerRow.appendChild(numLabel);
+    const track = document.createElement('div');
+    track.className = 'progress-bar-track';
+    const fill = document.createElement('div');
+    fill.className = 'progress-bar-fill';
+    fill.style.width = Math.round((currentTestIndex / currentTestQuestions.length) * 100) + '%';
+    track.appendChild(fill);
+    headerRow.appendChild(track);
+    screen.appendChild(headerRow);
+
+    const card = document.createElement('div');
+    card.className = 'task-card';
+
+    if (q.label) {
+      const label = document.createElement('span');
+      label.className = 'question-label';
+      label.textContent = q.label;
+      card.appendChild(label);
+    }
+
+    const qEl = document.createElement('p');
+    qEl.className = 'task-question';
+    qEl.textContent = q.question;
+    card.appendChild(qEl);
+
+    if (q.description) {
+      const d = document.createElement('p');
+      d.className = 'task-description';
+      d.textContent = q.description;
+      card.appendChild(d);
+    }
+
+    const answerArea = document.createElement('div');
+    card.appendChild(answerArea);
+
+    const advance = async (answer, skip) => {
+      try {
+        if (skip) {
+          await apiPost(`/api/tests/attempts/${currentAttemptId}/answer`, { question_id: q.id, skip: true });
+        } else {
+          await apiPost(`/api/tests/attempts/${currentAttemptId}/answer`, { question_id: q.id, answer });
+        }
+        currentTestIndex++;
+        renderTestQuestion(false);
+      } catch (err) {
+        showState('Не получилось сохранить ответ. ' + err.message, true, false);
+      }
+    };
+
+    if (q.type === 'buttons' && q.options) {
+      let selected = null;
+      const nextBtn = document.createElement('button');
+      nextBtn.className = 'submit-btn';
+      nextBtn.textContent = currentTestIndex === currentTestQuestions.length - 1 ? 'Завершить тест' : 'Далее';
+      nextBtn.disabled = true;
+
+      const optBtns = q.options.map((opt) => {
+        const btn = document.createElement('button');
+        btn.className = 'option-btn';
+        btn.innerHTML = '<span class="option-text"></span>';
+        btn.querySelector('.option-text').textContent = opt;
+        btn.onclick = () => {
+          selected = opt;
+          optBtns.forEach(b => b.classList.remove('selected'));
+          btn.classList.add('selected');
+          nextBtn.disabled = false;
+        };
+        answerArea.appendChild(btn);
+        return btn;
+      });
+
+      const skipBtn = document.createElement('button');
+      skipBtn.className = 'skip-btn';
+      skipBtn.textContent = 'Пропустить';
+      skipBtn.onclick = () => advance(null, true);
+      answerArea.appendChild(skipBtn);
+
+      nextBtn.onclick = () => { if (selected === null) return; advance(selected, false); };
+      answerArea.appendChild(nextBtn);
+    } else {
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.className = 'text-input';
+      input.placeholder = 'Введите ответ…';
+      answerArea.appendChild(input);
+
+      const submitBtn = document.createElement('button');
+      submitBtn.className = 'submit-btn';
+      submitBtn.textContent = currentTestIndex === currentTestQuestions.length - 1 ? 'Завершить тест' : 'Далее';
+      submitBtn.disabled = true;
+      input.addEventListener('input', () => { submitBtn.disabled = !input.value.trim(); });
+      submitBtn.onclick = () => { if (!input.value.trim()) return; advance(input.value.trim(), false); };
+
+      const skipBtn = document.createElement('button');
+      skipBtn.className = 'skip-btn';
+      skipBtn.textContent = 'Пропустить';
+      skipBtn.onclick = () => advance(null, true);
+      answerArea.appendChild(skipBtn);
+      answerArea.appendChild(submitBtn);
+
+      input.addEventListener('keydown', (e) => { if (e.key === 'Enter') submitBtn.click(); });
+    }
+
+    screen.appendChild(card);
+  }
+
+  async function finishCurrentTest() {
+    showLoading('Считаем результат', false);
+    try {
+      currentTestFinalSummary = await apiPost(`/api/tests/attempts/${currentAttemptId}/finish`, {});
+      stack.push({ level: 'test_results', title: 'Результат' });
+      renderCrumbs();
+      renderTestResults(false);
+    } catch (err) {
+      showState('Не получилось посчитать результат. ' + err.message, true, true);
+    }
+  }
+
+  function renderTestResults(isBack) {
+    const screen = swapScreen(() => {}, isBack);
+    const s = currentTestFinalSummary;
+
+    const card = document.createElement('div');
+    card.className = 'result-card';
+    const scoreLine = s.actual_score !== null && s.actual_score !== undefined
+      ? `<div class="result-score">${s.actual_score}</div><div class="field-hint" style="text-align:center;">тестовый балл (первичный: ${s.primary_score} из ${s.max_primary_score})</div>`
+      : `<div class="result-score">${s.primary_score} / ${s.max_primary_score}</div><div class="field-hint" style="text-align:center;">первичный балл</div>`;
+    card.innerHTML = `
+      <div class="result-label">Результат</div>
+      ${scoreLine}
+      <div class="result-breakdown" style="margin-top:14px;">
+        <div class="result-stat ok"><div class="num">${s.correct}</div><div class="lbl">Верно</div></div>
+        <div class="result-stat bad"><div class="num">${s.wrong}</div><div class="lbl">Неверно</div></div>
+      </div>
+    `;
+
+    const reviewBtn = document.createElement('button');
+    reviewBtn.className = 'skip-btn';
+    reviewBtn.style.marginTop = '18px';
+    reviewBtn.textContent = '🔍 Пересмотреть свои ответы';
+    reviewBtn.onclick = () => { stack.push({ level: 'test_review', attemptId: currentAttemptId, questions: s.questions, title: 'Разбор ответов' }); renderCrumbs(); render(false); };
+    card.appendChild(reviewBtn);
+
+    const doneBtn = document.createElement('button');
+    doneBtn.className = 'submit-btn';
+    doneBtn.style.marginTop = '10px';
+    doneBtn.textContent = 'Готово';
+    doneBtn.onclick = () => { stack.pop(); stack.pop(); render(true); };
+    card.appendChild(doneBtn);
+
+    const retryBtn = document.createElement('button');
+    retryBtn.className = 'skip-btn';
+    retryBtn.style.marginTop = '10px';
+    retryBtn.textContent = '🔄 Пройти заново';
+    retryBtn.onclick = () => {
+      const testId = stack[stack.length - 2]?.testId;
+      const title = stack[stack.length - 2]?.title;
+      stack.pop(); stack.pop();
+      startTest(testId, title);
+    };
+    card.appendChild(retryBtn);
+
+    screen.appendChild(card);
+  }
+
+  // --- Разбор своих ответов в тесте: список вопросов -> открыть любой,
+  // увидеть свой ответ / правильный / объяснение (как просили) ---
+  // --- Разбор своих ответов по обычным заданиям темы ---
+  async function renderTopicReview(topicId, isBack) {
+    showLoading('Загружаем', isBack);
+    try {
+      const summary = await apiGet(`/api/topics/${topicId}/review`);
+      renderList(
+        summary.questions.map(([num, correct]) => ({ id: num, title: 'Задание ' + num + (correct ? ' ✅' : ' ❌') })),
+        async (item) => {
+          showLoading('Загружаем', false);
+          try {
+            const detail = await apiGet(`/api/topics/${topicId}/review/${item.id}`);
+            renderReviewDetail({
+              question: detail.question, description: detail.description,
+              given_answer: detail.given_answer, correct_answer: detail.correct_answer,
+              explanation: detail.explanation, is_correct: detail.is_correct,
+            }, true);
+          } catch (err) {
+            showState('Не получилось загрузить. ' + err.message, true, true);
+          }
+        },
+        'topics', isBack
+      );
+    } catch (err) {
+      showState('Не получилось загрузить. ' + err.message, true, true, isBack);
+    }
+  }
+
+  function renderTestReview(attemptId, questions, isBack) {
+    renderList(
+      questions.map(q => ({
+        id: q.label, title: q.label + (q.correct ? ' ✅' : ' ❌'),
+        sub: q.earned + ' из ' + q.max + ' балл(ов)', part: q.label[0] === 'А' ? 'A' : 'B',
+        position: parseInt(q.label.slice(1), 10),
+      })),
+      async (item) => {
+        showLoading('Загружаем', false);
+        try {
+          const detail = await apiGet(`/api/tests/attempts/${attemptId}/question/${item.part}/${item.position}`);
+          renderReviewDetail(detail, true);
+        } catch (err) {
+          showState('Не получилось загрузить. ' + err.message, true, true);
+        }
+      },
+      'tests', isBack
+    );
+  }
+
+  function renderReviewDetail(detail, isBack) {
+    swapScreen((screen) => {
+      const card = document.createElement('div');
+      card.className = 'task-card';
+
+      const q = document.createElement('p');
+      q.className = 'task-question';
+      q.textContent = detail.question;
+      card.appendChild(q);
+
+      if (detail.description) {
+        const d = document.createElement('p');
+        d.className = 'task-description';
+        d.textContent = detail.description;
+        card.appendChild(d);
+      }
+
+      const feedback = document.createElement('div');
+      feedback.className = 'feedback ' + (detail.is_correct ? 'ok' : 'bad');
+      const title = document.createElement('p');
+      title.className = 'feedback-title';
+      title.textContent = detail.is_correct ? '✅ Верно' : '❌ Неверно';
+      feedback.appendChild(title);
+      const body = document.createElement('p');
+      body.className = 'feedback-body';
+      body.textContent = 'Ваш ответ: ' + (detail.given_answer || '—') + (detail.is_correct ? '' : ('. Правильный: ' + detail.correct_answer));
+      feedback.appendChild(body);
+      if (detail.explanation) {
+        const explain = document.createElement('p');
+        explain.className = 'feedback-explain';
+        explain.textContent = detail.explanation;
+        feedback.appendChild(explain);
+      }
+      card.appendChild(feedback);
+
+      screen.appendChild(card);
+    }, isBack);
+  }
+
+  // --- Вкладка "Профиль": Предмет -> Задания/Тесты -> статистика (как в боте) ---
+  let activeTab = 'study';
+  let profileStack = [{ level: 'profile_subjects', title: 'Статистика' }];
+
+  function switchTab(tab) {
+    if (activeTab === tab) return;
+    activeTab = tab;
+    document.getElementById('tabStudy').classList.toggle('active', tab === 'study');
+    document.getElementById('tabProfile').classList.toggle('active', tab === 'profile');
+    if (tab === 'study') {
+      renderCrumbs();
+      render(false);
+    } else {
+      profileStack = [{ level: 'profile_subjects', title: 'Статистика' }];
+      renderProfileCrumbs();
+      renderProfile(false);
+    }
+  }
+
+  function renderProfileCrumbs() {
+    crumbsEl.innerHTML = '';
+    if (profileStack.length > 1) {
+      const btn = document.createElement('button');
+      btn.className = 'back-btn';
+      btn.textContent = '← Назад';
+      btn.onclick = () => { profileStack.pop(); renderProfileCrumbs(); renderProfile(true); };
+      crumbsEl.appendChild(btn);
+    }
+    const title = document.createElement('span');
+    title.className = 'crumb-title';
+    title.textContent = profileStack[profileStack.length - 1].title;
+    crumbsEl.appendChild(title);
+  }
+
+  async function renderProfile(isBack) {
+    const current = profileStack[profileStack.length - 1];
+    showLoading('Загружаем', isBack);
+
+    if (current.level === 'profile_subjects') {
+      const subjects = await apiGet('/api/subjects');
+      renderList(subjects.map(s => ({ id: s.id, title: s.title })),
+        (item) => { profileStack.push({ level: 'profile_subject_home', subjectId: item.id, title: item.title }); renderProfileCrumbs(); renderProfile(false); },
+        'subjects', isBack);
+    } else if (current.level === 'profile_subject_home') {
+      swapScreen((screen) => {
+        const wrap = document.createElement('div');
+        wrap.className = 'home-choice';
+
+        const taskChoice = document.createElement('button');
+        taskChoice.className = 'choice-card';
+        taskChoice.innerHTML = `
+          <svg class="choice-icon" viewBox="0 0 20 20" fill="none"><path d="M2 6.5C2 5.67 2.67 5 3.5 5H8L9.5 6.5H16.5C17.33 6.5 18 7.17 18 8V14.5C18 15.33 17.33 16 16.5 16H3.5C2.67 16 2 15.33 2 14.5V6.5Z" stroke="#1899D6" stroke-width="1.5" stroke-linejoin="round"/></svg>
+          <div class="choice-title">📝 Статистика по заданиям</div>`;
+        taskChoice.onclick = () => { profileStack.push({ level: 'profile_tasks', subjectId: current.subjectId, title: 'Задания' }); renderProfileCrumbs(); renderProfile(false); };
+        wrap.appendChild(taskChoice);
+
+        const testChoice = document.createElement('button');
+        testChoice.className = 'choice-card';
+        testChoice.style.animationDelay = '0.05s';
+        testChoice.innerHTML = `
+          <svg class="choice-icon" viewBox="0 0 20 20" fill="none"><path d="M6 3H14L14 17L10 14.5L6 17V3Z" stroke="#B8860B" stroke-width="1.5" stroke-linejoin="round"/></svg>
+          <div class="choice-title">🧪 Статистика по тестам</div>`;
+        testChoice.onclick = () => { profileStack.push({ level: 'profile_tests', subjectId: current.subjectId, title: 'Тесты' }); renderProfileCrumbs(); renderProfile(false); };
+        wrap.appendChild(testChoice);
+
+        screen.appendChild(wrap);
+      }, isBack);
+    } else if (current.level === 'profile_tasks') {
+      const stats = await apiGet(`/api/subjects/${current.subjectId}/profile`);
+      swapScreen((screen) => {
+        if (!stats.tasks.length) {
+          const p = document.createElement('p');
+          p.className = 'state-msg';
+          p.textContent = 'Пока нет пройденных тем или разделов по этому предмету.';
+          screen.appendChild(p);
+          return;
+        }
+        stats.tasks.forEach((item, i) => {
+          const card = document.createElement('div');
+          card.className = 'profile-card';
+          card.style.animationDelay = (i * 0.05) + 's';
+          card.innerHTML = `
+            <div class="p-title">${item.title}</div>
+            <div class="p-date">${item.date}</div>
+            <div class="p-row"><span class="p-ok">✅ ${item.correct}</span><span class="p-bad">❌ ${item.wrong}</span></div>
+          `;
+          screen.appendChild(card);
+        });
+      }, isBack);
+    } else if (current.level === 'profile_tests') {
+      const stats = await apiGet(`/api/subjects/${current.subjectId}/profile`);
+      swapScreen((screen) => {
+        if (!stats.tests.length) {
+          const p = document.createElement('p');
+          p.className = 'state-msg';
+          p.textContent = 'Пока нет пройденных тестов по этому предмету.';
+          screen.appendChild(p);
+          return;
+        }
+        stats.tests.forEach((item, i) => {
+          const card = document.createElement('div');
+          card.className = 'profile-card';
+          card.style.animationDelay = (i * 0.05) + 's';
+          const scoreText = (item.actual_score !== null && item.actual_score !== undefined)
+            ? `${item.actual_score} тест. балл (${item.primary_score} перв.)`
+            : `${item.primary_score} перв. балл`;
+          card.innerHTML = `
+            <div class="p-title">${item.test_title}</div>
+            <div class="p-date">${item.date}</div>
+            <div class="p-row">🏆 ${scoreText} · ✅ ${item.correct} ❌ ${item.wrong}</div>
+          `;
+          screen.appendChild(card);
+        });
+      }, isBack);
+    }
+  }
+
+  // --- Переключатель темы: сохраняет выбор, по умолчанию следует системной теме ---
+  (function initThemeToggle() {
+    const btn = document.getElementById('themeToggle');
+    const sunIcon = '<svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="4.5" stroke="currentColor" stroke-width="2"/><path d="M12 2.5V5M12 19V21.5M4.2 4.2L6 6M18 18L19.8 19.8M2.5 12H5M19 12H21.5M4.2 19.8L6 18M18 6L19.8 4.2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
+    const moonIcon = '<svg viewBox="0 0 24 24" fill="none"><path d="M20 14.5C18.7 15.6 17 16.2 15.2 16.2C10.9 16.2 7.5 12.7 7.5 8.5C7.5 6.7 8.1 5 9.2 3.7C5.3 4.6 2.5 8 2.5 12.1C2.5 17 6.5 21 11.4 21C15.6 21 19 18.2 19.9 14.3C19.9 14.4 19.9 14.4 20 14.5Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>';
+
+    function isDark() {
+      const saved = localStorage.getItem('miniapp-theme');
+      if (saved === 'dark') return true;
+      if (saved === 'light') return false;
+      return window.matchMedia('(prefers-color-scheme: dark)').matches;
+    }
+    function applyIcon() {
+      btn.innerHTML = isDark() ? sunIcon : moonIcon;
+    }
+    btn.onclick = () => {
+      const next = isDark() ? 'light' : 'dark';
+      localStorage.setItem('miniapp-theme', next);
+      document.documentElement.setAttribute('data-theme', next);
+      applyIcon();
+    };
+    const saved = localStorage.getItem('miniapp-theme');
+    if (saved) document.documentElement.setAttribute('data-theme', saved);
+    applyIcon();
+  })();
 
   render(false);
 </script>
