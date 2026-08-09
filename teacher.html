@@ -322,7 +322,10 @@
   async function apiGet(path) {
     const res = await fetch(API_BASE_URL + path, { headers: { 'X-Telegram-Init-Data': tg?.initData || '' } });
     if (res.status === 401) throw new Error('Не удалось подтвердить, что это вы.');
-    if (res.status === 403) throw new Error('Нет доступа к этому предмету.');
+    if (res.status === 403) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body.message || 'Нет доступа к этому предмету.');
+    }
     if (!res.ok) throw new Error('Сервер ответил с ошибкой: ' + res.status);
     return res.json();
   }
@@ -333,7 +336,10 @@
       body: JSON.stringify(body || {}),
     });
     if (res.status === 401) throw new Error('Не удалось подтвердить, что это вы.');
-    if (res.status === 403) throw new Error('Нет доступа к этому предмету.');
+    if (res.status === 403) {
+      const errBody = await res.json().catch(() => ({}));
+      throw new Error(errBody.message || 'Нет доступа к этому предмету.');
+    }
     if (!res.ok) throw new Error('Сервер ответил с ошибкой: ' + res.status);
     return res.json();
   }
@@ -1708,6 +1714,9 @@
 
   render(false);
 </script>
+
+</body>
+</html>
 
 </body>
 </html>
