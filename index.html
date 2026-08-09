@@ -544,7 +544,11 @@
       }
 
       if (item.is_locked) {
-        card.style.opacity = '0.55';
+        card.style.opacity = '0.4';
+        card.style.filter = 'grayscale(0.6)';
+        card.style.cursor = 'default';
+        const arrowEl = card.querySelector('.item-arrow');
+        if (arrowEl) arrowEl.remove();
         const lockBadge = document.createElement('span');
         lockBadge.textContent = '🔒';
         lockBadge.style.marginLeft = '6px';
@@ -1344,7 +1348,15 @@
         (item) => { profileStack.push({ level: 'profile_subject_home', subjectId: item.id, title: item.title }); renderProfileCrumbs(); renderProfile(false); },
         'subjects', isBack);
     } else if (current.level === 'profile_subject_home') {
+      const stats = await apiGet(`/api/subjects/${current.subjectId}/profile`);
       swapScreen((screen) => {
+        if (stats.streak_days > 0) {
+          const streakCard = document.createElement('div');
+          streakCard.style.cssText = 'background:var(--yellow-tint);border-radius:14px;padding:14px;text-align:center;margin-bottom:14px;';
+          streakCard.innerHTML = `<div style="font-size:24px;">🔥 ${stats.streak_days}</div><div class="field-hint" style="margin:0;">${stats.streak_days === 1 ? 'день подряд в приложении' : 'дней подряд в приложении'}</div>`;
+          screen.appendChild(streakCard);
+        }
+
         const wrap = document.createElement('div');
         wrap.className = 'home-choice';
 
