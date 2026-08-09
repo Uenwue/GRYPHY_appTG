@@ -1004,11 +1004,16 @@
       const dInput = dFieldObj.textarea;
       card.appendChild(dFieldObj.wrapper);
 
-      // Таблица в описании (если нужна) — добавляется отдельным блоком
-      let tableData = existing && existing.table ? existing.table.map(row => row.slice()) : null;
+      // Таблица к заданию (необязательно) — сохраняется по-настоящему
+      let tableData = existing && existing.table_data ? existing.table_data.map(row => row.slice()) : null;
       const tableArea = document.createElement('div');
       card.appendChild(tableArea);
       renderTableArea();
+
+      function autoGrowCell(el) {
+        el.style.height = 'auto';
+        el.style.height = el.scrollHeight + 'px';
+      }
 
       function renderTableArea() {
         tableArea.innerHTML = '';
@@ -1025,27 +1030,29 @@
 
         const field = document.createElement('div');
         field.className = 'field';
-        field.innerHTML = '<label class="field-label">Таблица</label><div class="field-hint">Пока сохраняется только в этом окне — подключение к серверу для таблиц будет добавлено позже.</div>';
+        field.innerHTML = '<label class="field-label">Таблица</label>';
 
         const grid = document.createElement('div');
-        grid.style.cssText = 'display:flex;flex-direction:column;gap:6px;margin-bottom:8px;';
+        grid.style.cssText = 'display:flex;flex-direction:column;gap:6px;margin-bottom:8px;width:100%;';
         tableData.forEach((row, ri) => {
           const rowEl = document.createElement('div');
-          rowEl.style.cssText = 'display:flex;gap:6px;';
+          rowEl.style.cssText = 'display:flex;gap:6px;width:100%;';
           row.forEach((cell, ci) => {
-            const cellInput = document.createElement('input');
+            const cellInput = document.createElement('textarea');
+            cellInput.rows = 1;
             cellInput.className = 'field-input';
-            cellInput.style.cssText = 'padding:8px 10px;font-size:13px;';
+            cellInput.style.cssText = 'padding:8px 10px;font-size:13px;flex:1;min-width:0;resize:none;overflow:hidden;line-height:1.4;word-break:break-word;';
             cellInput.value = cell;
-            cellInput.oninput = () => { tableData[ri][ci] = cellInput.value; };
+            cellInput.oninput = () => { tableData[ri][ci] = cellInput.value; autoGrowCell(cellInput); };
             rowEl.appendChild(cellInput);
+            setTimeout(() => autoGrowCell(cellInput), 0);
           });
           grid.appendChild(rowEl);
         });
         field.appendChild(grid);
 
         const controls = document.createElement('div');
-        controls.style.cssText = 'display:flex;gap:14px;';
+        controls.style.cssText = 'display:flex;gap:14px;flex-wrap:wrap;';
 
         const addRowBtn = document.createElement('button');
         addRowBtn.type = 'button'; addRowBtn.className = 'add-option-btn';
@@ -1249,7 +1256,7 @@
 
         const taskData = {
           question, description: dInput.value.trim(), type, options, answer, explanation: eInput.value.trim(),
-          image_file_id: imageFileId,
+          image_file_id: imageFileId, table_data: tableData,
         };
 
         saveBtn.disabled = true;
@@ -1301,6 +1308,34 @@
     out = out.replace(/\*([^*]+)\*/g, '<b>$1</b>');
     out = out.replace(/_([^_]+)_/g, '<i>$1</i>');
     return out.replace(/\n/g, '<br>');
+  }
+
+  // Миниатюра фото фиксированного размера + кнопка разворота на весь экран
+  function renderTaskImage(container, imageFileId) {
+    const wrap = document.createElement('div');
+    wrap.style.cssText = 'position:relative;display:inline-block;margin-bottom:14px;';
+    const img = document.createElement('img');
+    img.src = API_BASE_URL + '/api/image/' + imageFileId;
+    img.style.cssText = 'width:100%;max-width:280px;height:160px;object-fit:cover;border-radius:12px;display:block;cursor:pointer;';
+    const expandBtn = document.createElement('button');
+    expandBtn.type = 'button';
+    expandBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 20 20" fill="none"><path d="M7 3H3V7M13 3H17V7M7 17H3V13M13 17H17V13" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    expandBtn.style.cssText = 'position:absolute;bottom:8px;right:8px;width:30px;height:30px;border-radius:50%;border:none;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;cursor:pointer;';
+    const openFull = () => {
+      const overlay = document.createElement('div');
+      overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.9);z-index:50;display:flex;align-items:center;justify-content:center;padding:20px;';
+      const fullImg = document.createElement('img');
+      fullImg.src = img.src;
+      fullImg.style.cssText = 'max-width:100%;max-height:100%;border-radius:8px;';
+      overlay.appendChild(fullImg);
+      overlay.onclick = () => overlay.remove();
+      document.body.appendChild(overlay);
+    };
+    img.onclick = openFull;
+    expandBtn.onclick = openFull;
+    wrap.appendChild(img);
+    wrap.appendChild(expandBtn);
+    container.appendChild(wrap);
   }
 
   async function renderTaskPreview(topicId, taskId, isBack) {
@@ -1804,13 +1839,6 @@
       const card = document.createElement('div');
       card.className = 'task-card';
 
-      if (task.image_file_id) {
-        const img = document.createElement('img');
-        img.src = API_BASE_URL + '/api/image/' + task.image_file_id;
-        img.style.cssText = 'max-width:100%;border-radius:12px;margin-bottom:14px;display:block;';
-        card.appendChild(img);
-      }
-
       const q = document.createElement('p');
       q.className = 'task-question';
       q.innerHTML = renderMarkdownText(task.question);
@@ -1823,14 +1851,18 @@
         card.appendChild(d);
       }
 
-      if (task.table && task.table.length) {
+      if (task.image_file_id) {
+        renderTaskImage(card, task.image_file_id);
+      }
+
+      if (task.table_data && task.table_data.length) {
         const table = document.createElement('table');
-        table.style.cssText = 'width:100%;border-collapse:collapse;margin-bottom:16px;';
-        task.table.forEach(row => {
+        table.style.cssText = 'width:100%;border-collapse:collapse;margin-bottom:16px;table-layout:fixed;';
+        task.table_data.forEach(row => {
           const tr = document.createElement('tr');
           row.forEach(cell => {
             const td = document.createElement('td');
-            td.style.cssText = 'border:1px solid var(--border);padding:8px 10px;font-size:13.5px;';
+            td.style.cssText = 'border:1px solid var(--border);padding:8px 10px;font-size:13.5px;word-break:break-word;';
             td.innerHTML = renderMarkdownText(cell);
             tr.appendChild(td);
           });
