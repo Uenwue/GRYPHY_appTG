@@ -453,6 +453,7 @@
         // к списку тестов целиком, а не на промежуточный шаг прохождения.
         const cur = stack[stack.length - 1].level;
         if (cur === 'test_results' || cur === 'test_taking') {
+          stopTestTimer();
           stack.pop();
           if (stack[stack.length - 1]?.level === 'test_taking') stack.pop();
         } else {
@@ -1076,6 +1077,12 @@
   let currentTestIndex = 0;
   let currentAttemptId = null;
   let currentTestFinalSummary = null;
+  let testDeadline = null;
+  let testTimerInterval = null;
+
+  function stopTestTimer() {
+    if (testTimerInterval) { clearInterval(testTimerInterval); testTimerInterval = null; }
+  }
 
   async function startTest(testId, title) {
     stack.push({ level: 'test_taking', testId, title });
@@ -1086,6 +1093,8 @@
       currentAttemptId = res.attempt_id;
       currentTestQuestions = res.questions;
       currentTestIndex = 0;
+      stopTestTimer();
+      testDeadline = res.time_limit_minutes ? (Date.now() + res.time_limit_minutes * 60000) : null;
       renderTestQuestion(false);
     } catch (err) {
       showState('Не получилось загрузить тест. ' + err.message, true, true);
@@ -1096,6 +1105,7 @@
     const screen = swapScreen(() => {}, isBack);
 
     if (currentTestIndex >= currentTestQuestions.length) {
+      stopTestTimer();
       finishCurrentTest();
       return;
     }
@@ -1116,6 +1126,32 @@
     track.appendChild(fill);
     headerRow.appendChild(track);
     screen.appendChild(headerRow);
+
+    if (testDeadline) {
+      const timerEl = document.createElement('div');
+      timerEl.id = 'testTimer';
+      timerEl.style.cssText = 'text-align:center;font-family:\'Jost\',sans-serif;font-weight:700;font-size:15px;margin-bottom:12px;color:var(--text-soft);';
+      screen.appendChild(timerEl);
+
+      function tick() {
+        const msLeft = testDeadline - Date.now();
+        if (msLeft <= 0) {
+          timerEl.textContent = '⏱ 00:00';
+          stopTestTimer();
+          if (tg?.showAlert) tg.showAlert('Время вышло — тест завершается автоматически.');
+          finishCurrentTest();
+          return;
+        }
+        const totalSec = Math.floor(msLeft / 1000);
+        const mm = Math.floor(totalSec / 60);
+        const ss = totalSec % 60;
+        timerEl.textContent = '⏱ ' + String(mm).padStart(2, '0') + ':' + String(ss).padStart(2, '0');
+        if (msLeft < 60000) timerEl.style.color = 'var(--red-dark)';
+      }
+      stopTestTimer();
+      tick();
+      testTimerInterval = setInterval(tick, 1000);
+    }
 
     const card = document.createElement('div');
     card.className = 'task-card';
@@ -1214,6 +1250,7 @@
   }
 
   async function finishCurrentTest() {
+    stopTestTimer();
     showLoading('Считаем результат', false);
     try {
       currentTestFinalSummary = await apiPost(`/api/tests/attempts/${currentAttemptId}/finish`, {});
