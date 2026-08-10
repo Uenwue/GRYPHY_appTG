@@ -816,18 +816,19 @@
 
     if ((task.type === 'buttons' || task.type === 'multi') && task.options) {
       const isMulti = task.type === 'multi';
-      let selected = [];
+      let selected = task._draftSelected ? task._draftSelected.slice() : [];
 
       const submitBtn = document.createElement('button');
       submitBtn.className = 'submit-btn';
       submitBtn.textContent = 'Проверить';
-      submitBtn.disabled = true;
+      submitBtn.disabled = selected.length === 0;
 
       const optionEls = task.options.map((opt, i) => {
         const btn = document.createElement('button');
         btn.className = 'option-btn selectable';
         btn.innerHTML = `<span class="option-num">${i + 1}</span><span class="option-text"></span>`;
-        btn.querySelector('.option-text').textContent = opt;
+        btn.querySelector('.option-text').innerHTML = renderMarkdownText(opt);
+        if (selected.includes(opt)) btn.classList.add('selected');
         btn.onclick = () => {
           if (isMulti) {
             const pos = selected.indexOf(opt);
@@ -838,6 +839,7 @@
             optionEls.forEach(b => b.classList.remove('selected'));
             btn.classList.add('selected');
           }
+          task._draftSelected = selected.slice();
           submitBtn.disabled = selected.length === 0;
         };
         answerArea.appendChild(btn);
@@ -1139,15 +1141,21 @@
 
   // --- Экран предмета: выбор "Разделы" / "Правила" / "Тесты" ---
   function renderSubjectHome(subjectId, isBack) {
-    swapScreen((screen) => {
+    swapScreen(async (screen) => {
       const list = document.createElement('div');
       list.className = 'list';
+      screen.appendChild(list);
+
+      let blocks = { tasks_hidden: false, rules_hidden: false, tests_hidden: false };
+      try {
+        blocks = await apiGet(`/api/subjects/${subjectId}/blocks`);
+      } catch (err) { /* если не получилось — просто показываем всё, не критично */ }
 
       const items = [
-        { key: 'tasks', title: 'Задания', icon: 'sections' },
-        { key: 'rules', title: 'Правила', icon: 'rules' },
-        { key: 'tests', title: 'Тесты', icon: 'tests' },
-      ];
+        { key: 'tasks', title: 'Задания', icon: 'sections', hidden: blocks.tasks_hidden },
+        { key: 'rules', title: 'Правила', icon: 'rules', hidden: blocks.rules_hidden },
+        { key: 'tests', title: 'Тесты', icon: 'tests', hidden: blocks.tests_hidden },
+      ].filter(item => !item.hidden);
       items.forEach((item, i) => {
         const card = document.createElement('button');
         card.className = 'item-card';
@@ -1169,8 +1177,6 @@
         };
         list.appendChild(card);
       });
-
-      screen.appendChild(list);
     }, isBack);
   }
 
@@ -1370,6 +1376,9 @@
           // Не отправляем "пропуск" на сервер — просто откладываем вопрос
           // на потом, отвечать всё равно придётся, до конца теста его не
           // обойти. Ответ уйдёт на сервер, когда до него дойдёт очередь.
+          // Что уже успели выбрать/напечатать — сохраняем как черновик,
+          // чтобы не потерять при повторном показе этого вопроса.
+          q.draftAnswer = answer;
           skippedTestQuestions.push(q);
         } else {
           await apiPost(`/api/tests/attempts/${currentAttemptId}/answer`, { question_id: q.id, answer });
@@ -1385,17 +1394,18 @@
 
     if ((q.type === 'buttons' || q.type === 'multi') && q.options && q.options.length) {
       const isMulti = q.type === 'multi';
-      let selected = [];
+      const draftSet = new Set(q.draftAnswer ? (Array.isArray(q.draftAnswer) ? q.draftAnswer : [q.draftAnswer]) : []);
+      let selected = q.draftAnswer ? (Array.isArray(q.draftAnswer) ? [...q.draftAnswer] : [q.draftAnswer]) : [];
       const nextBtn = document.createElement('button');
       nextBtn.className = 'submit-btn';
       nextBtn.textContent = isLastOverall ? 'Завершить тест' : 'Далее';
-      nextBtn.disabled = true;
+      nextBtn.disabled = selected.length === 0;
 
       const optBtns = q.options.map((opt) => {
         const btn = document.createElement('button');
-        btn.className = 'option-btn';
+        btn.className = 'option-btn' + (draftSet.has(opt) ? ' selected' : '');
         btn.innerHTML = '<span class="option-text"></span>';
-        btn.querySelector('.option-text').textContent = opt;
+        btn.querySelector('.option-text').innerHTML = renderMarkdownText(opt);
         btn.onclick = () => {
           if (isMulti) {
             const pos = selected.indexOf(opt);
@@ -1416,7 +1426,7 @@
         const skipBtn = document.createElement('button');
         skipBtn.className = 'skip-btn';
         skipBtn.textContent = 'Пропустить';
-        skipBtn.onclick = () => advance(null, true);
+        skipBtn.onclick = () => advance(isMulti ? selected : (selected[0] || null), true);
         answerArea.appendChild(skipBtn);
       }
 
@@ -1427,12 +1437,13 @@
       input.type = 'text';
       input.className = 'text-input';
       input.placeholder = 'Введите ответ…';
+      if (q.draftAnswer) input.value = q.draftAnswer;
       answerArea.appendChild(input);
 
       const submitBtn = document.createElement('button');
       submitBtn.className = 'submit-btn';
       submitBtn.textContent = isLastOverall ? 'Завершить тест' : 'Далее';
-      submitBtn.disabled = true;
+      submitBtn.disabled = !input.value.trim();
       input.addEventListener('input', () => { submitBtn.disabled = !input.value.trim(); });
       submitBtn.onclick = () => { if (!input.value.trim()) return; advance(input.value.trim(), false); };
 
@@ -1440,7 +1451,7 @@
         const skipBtn = document.createElement('button');
         skipBtn.className = 'skip-btn';
         skipBtn.textContent = 'Пропустить';
-        skipBtn.onclick = () => advance(null, true);
+        skipBtn.onclick = () => advance(input.value.trim() || null, true);
         answerArea.appendChild(skipBtn);
       }
       answerArea.appendChild(submitBtn);
@@ -1619,7 +1630,7 @@
           btn.style.cursor = 'default';
           btn.innerHTML = '<span class="option-num"></span><span class="option-text"></span>';
           btn.querySelector('.option-num').textContent = idx + 1;
-          btn.querySelector('.option-text').textContent = opt;
+          btn.querySelector('.option-text').innerHTML = renderMarkdownText(opt);
           const isSelected = selectedSet.has(opt.trim());
           const isCorrectOpt = correctSet.has(opt.trim());
           if (isSelected && isCorrectOpt) {
