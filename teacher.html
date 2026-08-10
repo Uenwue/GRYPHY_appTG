@@ -1377,13 +1377,51 @@
               boldToggle.className = 'format-btn';
               boldToggle.style.cssText = 'width:30px;height:30px;flex-shrink:0;';
               boldToggle.textContent = 'Ж';
-              boldToggle.title = 'Жирный (весь вариант)';
+              boldToggle.title = 'Жирный (выделенный фрагмент)';
               boldToggle.onclick = () => {
-                const isWrapped = /^\*.*\*$/.test(input.value.trim());
-                input.value = isWrapped ? input.value.trim().slice(1, -1) : '*' + input.value + '*';
+                const start = input.selectionStart ?? input.value.length;
+                const end = input.selectionEnd ?? input.value.length;
+                const selected = input.value.slice(start, end) || input.value;
+                const selStart = start === end ? 0 : start;
+                const selEnd = start === end ? input.value.length : end;
+                input.value = input.value.slice(0, selStart) + '*' + selected + '*' + input.value.slice(selEnd);
                 row.text = input.value;
+                input.focus();
+                input.selectionStart = selStart + 1;
+                input.selectionEnd = selStart + 1 + selected.length;
               };
               r.appendChild(boldToggle);
+
+              const expandOptBtn = document.createElement('button');
+              expandOptBtn.type = 'button';
+              expandOptBtn.className = 'format-btn';
+              expandOptBtn.style.cssText = 'width:30px;height:30px;flex-shrink:0;';
+              expandOptBtn.title = 'Развернуть вариант';
+              expandOptBtn.innerHTML = '<svg width="13" height="13" viewBox="0 0 20 20" fill="none"><path d="M7 3H3V7M13 3H17V7M7 17H3V13M13 17H17V13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+              expandOptBtn.onclick = () => {
+                lockBodyScroll();
+                const overlay = document.createElement('div');
+                overlay.style.cssText = 'position:fixed;inset:0;background:var(--bg);z-index:40;display:flex;flex-direction:column;padding:16px;';
+                overlay.innerHTML = '<div class="field-label" style="margin-bottom:10px;">Вариант ' + (i + 1) + '</div>';
+                const bigArea = document.createElement('textarea');
+                bigArea.className = 'field-textarea';
+                bigArea.style.cssText = 'flex:1;font-size:15px;line-height:1.6;resize:none;';
+                bigArea.value = input.value;
+                overlay.appendChild(bigArea);
+                const doneBtn = document.createElement('button');
+                doneBtn.className = 'save-btn';
+                doneBtn.textContent = 'Готово';
+                doneBtn.onclick = () => {
+                  input.value = bigArea.value;
+                  row.text = input.value;
+                  unlockBodyScroll();
+                  overlay.remove();
+                };
+                overlay.appendChild(doneBtn);
+                document.body.appendChild(overlay);
+                bigArea.focus();
+              };
+              r.appendChild(expandOptBtn);
 
               const removeBtn = document.createElement('button');
               removeBtn.type = 'button';
@@ -1444,13 +1482,14 @@
           if (existing) {
             await apiSend('PATCH', `/api/teacher/tasks/${existing.id}`, taskData);
             showToast('Изменения сохранены');
+            saveBtn.disabled = false;
           } else {
             await apiSend('POST', `/api/teacher/topics/${topicId}/tasks`, taskData);
             showToast('Задание добавлено');
+            stack.pop();
+            renderCrumbs();
+            render(true);
           }
-          stack.pop();
-          renderCrumbs();
-          render(true);
         } catch (err) {
           saveBtn.disabled = false;
           showToast('Не получилось сохранить: ' + err.message);
@@ -1578,6 +1617,22 @@
       );
 
       if (listScreen) {
+        // Раскрашиваем метку части у каждой строки: А — синим, В — жёлтым.
+        const rowTitles = listScreen.querySelectorAll('.row-title');
+        rowTitles.forEach((el, i) => {
+          const q = labeled[i];
+          if (!q) return;
+          const isB = (q.part || 'A') === 'B';
+          const prefix = isB ? 'В' : 'А';
+          const rest = el.textContent.replace(/^[АВ]\d+:/, '');
+          el.innerHTML = '';
+          const badge = document.createElement('span');
+          badge.style.cssText = 'color:' + (isB ? '#8A6D00' : 'var(--blue-dark)') + ';font-weight:800;';
+          badge.textContent = el.textContent.match(/^[АВ]\d+:/)?.[0] || (prefix + ':');
+          el.appendChild(badge);
+          el.appendChild(document.createTextNode(rest));
+        });
+
         if (questions.length) {
           const templateBtn = document.createElement('button');
           templateBtn.className = 'add-row-btn';
@@ -1993,13 +2048,48 @@
               r.appendChild(input);
               const boldToggle = document.createElement('button');
               boldToggle.type = 'button'; boldToggle.className = 'format-btn'; boldToggle.style.cssText = 'width:30px;height:30px;flex-shrink:0;';
-              boldToggle.textContent = 'Ж'; boldToggle.title = 'Жирный (весь вариант)';
+              boldToggle.textContent = 'Ж'; boldToggle.title = 'Жирный (выделенный фрагмент)';
               boldToggle.onclick = () => {
-                const isWrapped = /^\*.*\*$/.test(input.value.trim());
-                input.value = isWrapped ? input.value.trim().slice(1, -1) : '*' + input.value + '*';
+                const start = input.selectionStart ?? input.value.length;
+                const end = input.selectionEnd ?? input.value.length;
+                const selected = input.value.slice(start, end) || input.value;
+                const selStart = start === end ? 0 : start;
+                const selEnd = start === end ? input.value.length : end;
+                input.value = input.value.slice(0, selStart) + '*' + selected + '*' + input.value.slice(selEnd);
                 row.text = input.value;
+                input.focus();
+                input.selectionStart = selStart + 1;
+                input.selectionEnd = selStart + 1 + selected.length;
               };
               r.appendChild(boldToggle);
+              const expandOptBtn = document.createElement('button');
+              expandOptBtn.type = 'button'; expandOptBtn.className = 'format-btn'; expandOptBtn.style.cssText = 'width:30px;height:30px;flex-shrink:0;';
+              expandOptBtn.title = 'Развернуть вариант';
+              expandOptBtn.innerHTML = '<svg width="13" height="13" viewBox="0 0 20 20" fill="none"><path d="M7 3H3V7M13 3H17V7M7 17H3V13M13 17H17V13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+              expandOptBtn.onclick = () => {
+                lockBodyScroll();
+                const overlay = document.createElement('div');
+                overlay.style.cssText = 'position:fixed;inset:0;background:var(--bg);z-index:40;display:flex;flex-direction:column;padding:16px;';
+                overlay.innerHTML = '<div class="field-label" style="margin-bottom:10px;">Вариант ' + (i + 1) + '</div>';
+                const bigArea = document.createElement('textarea');
+                bigArea.className = 'field-textarea';
+                bigArea.style.cssText = 'flex:1;font-size:15px;line-height:1.6;resize:none;';
+                bigArea.value = input.value;
+                overlay.appendChild(bigArea);
+                const doneBtn = document.createElement('button');
+                doneBtn.className = 'save-btn';
+                doneBtn.textContent = 'Готово';
+                doneBtn.onclick = () => {
+                  input.value = bigArea.value;
+                  row.text = input.value;
+                  unlockBodyScroll();
+                  overlay.remove();
+                };
+                overlay.appendChild(doneBtn);
+                document.body.appendChild(overlay);
+                bigArea.focus();
+              };
+              r.appendChild(expandOptBtn);
               const removeBtn = document.createElement('button');
               removeBtn.type = 'button'; removeBtn.className = 'option-remove'; removeBtn.innerHTML = ICONS.trash;
               removeBtn.onclick = () => { optionRows.splice(i, 1); renderOptionRowsQ(); };
@@ -2055,13 +2145,14 @@
           if (existing) {
             await apiSend('PATCH', `/api/teacher/testquestions/${existing.id}`, qData);
             showToast('Изменения сохранены');
+            saveBtn.disabled = false;
           } else {
             await apiSend('POST', `/api/teacher/tests/${testId}/questions`, qData);
             showToast('Вопрос добавлен');
+            stack.pop();
+            renderCrumbs();
+            render(true);
           }
-          stack.pop();
-          renderCrumbs();
-          render(true);
         } catch (err) {
           saveBtn.disabled = false;
           showToast('Не получилось сохранить: ' + err.message);
