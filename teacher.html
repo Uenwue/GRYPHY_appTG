@@ -70,6 +70,9 @@
     font-family: 'Nunito', system-ui, sans-serif;
   }
 
+  html, body {
+    background: var(--bg);
+  }
   body { padding: 20px 16px 40px; }
 
   .demo-flag {
@@ -689,6 +692,23 @@
           (item) => { stack.push({ level: 'task_preview', topicId: current.topicId, taskId: item.id, title: 'Предпросмотр' }); renderCrumbs(); render(false); },
         );
         if (listScreen) {
+          if (tasks.length) {
+            const templateBtn = document.createElement('button');
+            templateBtn.className = 'add-row-btn';
+            templateBtn.style.cssText = 'width:100%;margin-bottom:12px;color:var(--blue-dark);';
+            templateBtn.textContent = '📋 Добавить похожее на последнее';
+            templateBtn.onclick = () => {
+              const last = tasks[tasks.length - 1];
+              stack.push({
+                level: 'task_form', topicId: current.topicId, editId: null, title: 'Новое задание',
+                templateFrom: { question: last.question, type: last.type, options: last.options },
+              });
+              renderCrumbs();
+              render(false);
+            };
+            listScreen.insertBefore(templateBtn, listScreen.firstChild);
+          }
+
           const ioRow = document.createElement('div');
           ioRow.style.cssText = 'display:flex;gap:8px;margin-bottom:12px;';
 
@@ -744,7 +764,7 @@
         }
       } catch (err) { showErrorMsg(err, isBack); }
     } else if (current.level === 'task_form') {
-      renderTaskForm(current.topicId, current.editId, isBack);
+      renderTaskForm(current.topicId, current.editId, isBack, current.templateFrom);
     } else if (current.level === 'task_preview') {
       renderTaskPreview(current.topicId, current.taskId, isBack);
     } else if (current.level === 'tests') {
@@ -868,7 +888,7 @@
     lockBodyScroll();
     const overlay = document.createElement('div');
     overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center;z-index:30;padding:20px;';
-    overlay.innerHTML = '<div style="background:white;border-radius:16px;padding:18px;max-width:340px;width:100%;">' +
+    overlay.innerHTML = '<div style="background:var(--bg);border-radius:16px;padding:18px;max-width:340px;width:100%;">' +
       '<div class="field-label">' + label + '</div>' +
       '<input class="field-input" id="promptInput" value="" style="margin-bottom:14px;">' +
       '<div id="promptErr" style="color:#EA2B2B;font-size:12.5px;font-weight:700;margin-bottom:8px;display:none;"></div>' +
@@ -909,7 +929,7 @@
     lockBodyScroll();
     const overlay = document.createElement('div');
     overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center;z-index:30;padding:20px;';
-    overlay.innerHTML = '<div style="background:white;border-radius:16px;padding:18px;max-width:340px;width:100%;">' +
+    overlay.innerHTML = '<div style="background:var(--bg);border-radius:16px;padding:18px;max-width:340px;width:100%;">' +
       '<div class="field-label">Сообщение для ученика (необязательно)</div>' +
       '<div class="field-hint" style="margin:0 0 8px;">Например: «Откроется после предыдущей темы» или «Скоро будет»</div>' +
       '<input class="field-input" id="lockMsgInput" value="" style="margin-bottom:14px;">' +
@@ -933,7 +953,7 @@
     lockBodyScroll();
     const overlay = document.createElement('div');
     overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center;z-index:30;padding:20px;';
-    overlay.innerHTML = '<div style="background:white;border-radius:16px;padding:18px;max-width:340px;width:100%;">' +
+    overlay.innerHTML = '<div style="background:var(--bg);border-radius:16px;padding:18px;max-width:340px;width:100%;">' +
       '<div style="font-weight:700;margin-bottom:14px;">' + text + '</div>' +
       '<div id="delErr" style="color:#EA2B2B;font-size:12.5px;font-weight:700;margin-bottom:8px;display:none;"></div>' +
       '<div style="display:flex;gap:8px;">' +
@@ -1038,7 +1058,7 @@
     return { wrapper, textarea };
   }
 
-  async function renderTaskForm(topicId, editId, isBack) {
+  async function renderTaskForm(topicId, editId, isBack, templateFrom) {
     showLoadingMenu();
     let existing = null;
     if (editId) {
@@ -1048,11 +1068,16 @@
       } catch (err) { showErrorMsg(err, isBack); return; }
     }
 
-    let type = existing ? existing.type : 'text';
+    // "Похоже на предыдущее" — вопрос/тип/варианты те же, что у последнего
+    // задания темы, но описание/объяснение пустые, а отметка "верно" сброшена
+    // (учитель должен выбрать её заново, чтобы точно не забыть это сделать).
+    let type = existing ? existing.type : (templateFrom ? templateFrom.type : 'text');
     let optionRows = [];
     if (existing && existing.type !== 'text') {
       const correctSet = new Set(Array.isArray(existing.answer) ? existing.answer : [existing.answer]);
       optionRows = existing.options.map(o => ({ text: o, correct: correctSet.has(o) }));
+    } else if (!existing && templateFrom && templateFrom.type !== 'text') {
+      optionRows = templateFrom.options.map(o => ({ text: o, correct: false }));
     }
 
     swapScreen((screen) => {
@@ -1076,7 +1101,7 @@
       typeField.appendChild(seg);
       card.appendChild(typeField);
 
-      const qFieldObj = makeFormattedField('Вопрос', null, existing ? existing.question : '', 'Например: Вставьте букву: к_рабль');
+      const qFieldObj = makeFormattedField('Вопрос', null, existing ? existing.question : (templateFrom ? templateFrom.question : ''), 'Например: Вставьте букву: к_рабль');
       const qInput = qFieldObj.textarea;
       card.appendChild(qFieldObj.wrapper);
 
