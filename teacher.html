@@ -208,7 +208,9 @@
   }
   .segmented button.active { background: var(--bg); color: var(--blue-dark); box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
 
-  .option-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .option-row { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; padding: 8px; border: 1px solid var(--border); border-radius: 10px; }
+  .option-row-top { display: flex; align-items: center; gap: 6px; }
+  .option-row-top .field-input, .option-row-top .field-textarea { flex: 1; }
   .option-row .field-input { flex: 1; padding: 9px 12px; font-size: 14px; }
   .correct-toggle {
     width: 32px; height: 32px; border-radius: 9px; border: 2px solid var(--border); background: var(--bg);
@@ -407,7 +409,7 @@
 
   function renderRowList(items, iconType, iconClass, onOpen, onEdit, onDelete, emptyText, addLabel, onAdd, onPreview, extra) {
     extra = extra || {};
-    const { onLock, onHide, onReorder } = extra;
+    const { onLock, onHide, onReorder, onToggleExplanations } = extra;
     return swapScreen((screen) => {
       const list = document.createElement('div');
       list.className = 'list';
@@ -505,6 +507,16 @@
           hideBtn.innerHTML = item.is_hidden ? ICONS.eyeOff : ICONS.eye;
           hideBtn.onclick = (e) => { e.stopPropagation(); onHide(item); };
           actions.appendChild(hideBtn);
+        }
+        if (onToggleExplanations) {
+          const explBtn = document.createElement('button');
+          explBtn.className = 'icon-btn';
+          const showsExpl = item.show_explanations !== false;
+          explBtn.title = showsExpl ? 'Объяснения показываются — нажмите, чтобы скрыть' : 'Объяснения скрыты — нажмите, чтобы показывать';
+          explBtn.style.opacity = showsExpl ? '1' : '0.4';
+          explBtn.textContent = '💡';
+          explBtn.onclick = (e) => { e.stopPropagation(); onToggleExplanations(item); };
+          actions.appendChild(explBtn);
         }
         if (onEdit) {
           const editBtn = document.createElement('button');
@@ -659,6 +671,10 @@
             },
             onHide: async (item) => {
               await apiSend('PATCH', `/api/teacher/topics/${item.id}`, { is_hidden: !item.is_hidden });
+              render(false);
+            },
+            onToggleExplanations: async (item) => {
+              await apiSend('PATCH', `/api/teacher/topics/${item.id}`, { show_explanations: item.show_explanations === false });
               render(false);
             },
             onReorder: async (fromIndex, toIndex) => {
@@ -1354,6 +1370,9 @@
               const r = document.createElement('div');
               r.className = 'option-row';
 
+              const topRow = document.createElement('div');
+              topRow.className = 'option-row-top';
+
               const toggle = document.createElement('button');
               toggle.type = 'button';
               toggle.className = 'correct-toggle' + (row.correct ? ' on' : '');
@@ -1363,14 +1382,7 @@
                 row.correct = !row.correct;
                 renderOptionRows();
               };
-              r.appendChild(toggle);
-
-              const input = document.createElement('input');
-              input.className = 'field-input';
-              input.placeholder = 'Вариант ' + (i + 1);
-              input.value = row.text;
-              input.oninput = () => { row.text = input.value; };
-              r.appendChild(input);
+              topRow.appendChild(toggle);
 
               const boldToggle = document.createElement('button');
               boldToggle.type = 'button';
@@ -1378,57 +1390,48 @@
               boldToggle.style.cssText = 'width:30px;height:30px;flex-shrink:0;';
               boldToggle.textContent = 'Ж';
               boldToggle.title = 'Жирный (выделенный фрагмент)';
-              boldToggle.onclick = () => {
-                const start = input.selectionStart ?? input.value.length;
-                const end = input.selectionEnd ?? input.value.length;
-                const selected = input.value.slice(start, end) || input.value;
-                const selStart = start === end ? 0 : start;
-                const selEnd = start === end ? input.value.length : end;
-                input.value = input.value.slice(0, selStart) + '*' + selected + '*' + input.value.slice(selEnd);
-                row.text = input.value;
-                input.focus();
-                input.selectionStart = selStart + 1;
-                input.selectionEnd = selStart + 1 + selected.length;
-              };
-              r.appendChild(boldToggle);
+              topRow.appendChild(boldToggle);
 
-              const expandOptBtn = document.createElement('button');
-              expandOptBtn.type = 'button';
-              expandOptBtn.className = 'format-btn';
-              expandOptBtn.style.cssText = 'width:30px;height:30px;flex-shrink:0;';
-              expandOptBtn.title = 'Развернуть вариант';
-              expandOptBtn.innerHTML = '<svg width="13" height="13" viewBox="0 0 20 20" fill="none"><path d="M7 3H3V7M13 3H17V7M7 17H3V13M13 17H17V13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-              expandOptBtn.onclick = () => {
-                lockBodyScroll();
-                const overlay = document.createElement('div');
-                overlay.style.cssText = 'position:fixed;inset:0;background:var(--bg);z-index:40;display:flex;flex-direction:column;padding:16px;';
-                overlay.innerHTML = '<div class="field-label" style="margin-bottom:10px;">Вариант ' + (i + 1) + '</div>';
-                const bigArea = document.createElement('textarea');
-                bigArea.className = 'field-textarea';
-                bigArea.style.cssText = 'flex:1;font-size:15px;line-height:1.6;resize:none;';
-                bigArea.value = input.value;
-                overlay.appendChild(bigArea);
-                const doneBtn = document.createElement('button');
-                doneBtn.className = 'save-btn';
-                doneBtn.textContent = 'Готово';
-                doneBtn.onclick = () => {
-                  input.value = bigArea.value;
-                  row.text = input.value;
-                  unlockBodyScroll();
-                  overlay.remove();
-                };
-                overlay.appendChild(doneBtn);
-                document.body.appendChild(overlay);
-                bigArea.focus();
-              };
-              r.appendChild(expandOptBtn);
+              const italicToggle = document.createElement('button');
+              italicToggle.type = 'button';
+              italicToggle.className = 'format-btn italic-btn';
+              italicToggle.style.cssText = 'width:30px;height:30px;flex-shrink:0;';
+              italicToggle.textContent = 'К';
+              italicToggle.title = 'Курсив (выделенный фрагмент)';
+              topRow.appendChild(italicToggle);
 
               const removeBtn = document.createElement('button');
               removeBtn.type = 'button';
               removeBtn.className = 'option-remove';
               removeBtn.innerHTML = ICONS.trash;
               removeBtn.onclick = () => { optionRows.splice(i, 1); renderOptionRows(); };
-              r.appendChild(removeBtn);
+              topRow.appendChild(removeBtn);
+
+              r.appendChild(topRow);
+
+              const input = document.createElement('textarea');
+              input.className = 'field-textarea';
+              input.rows = 1;
+              input.style.minHeight = '38px';
+              input.placeholder = 'Вариант ' + (i + 1);
+              input.value = row.text;
+              input.oninput = () => { row.text = input.value; };
+              r.appendChild(input);
+
+              function wrapOptionSelection(marker) {
+                const start = input.selectionStart ?? input.value.length;
+                const end = input.selectionEnd ?? input.value.length;
+                const selected = input.value.slice(start, end) || input.value;
+                const selStart = start === end ? 0 : start;
+                const selEnd = start === end ? input.value.length : end;
+                input.value = input.value.slice(0, selStart) + marker + selected + marker + input.value.slice(selEnd);
+                row.text = input.value;
+                input.focus();
+                input.selectionStart = selStart + marker.length;
+                input.selectionEnd = selStart + marker.length + selected.length;
+              }
+              boldToggle.onclick = () => wrapOptionSelection('*');
+              italicToggle.onclick = () => wrapOptionSelection('_');
 
               optionsList.appendChild(r);
             });
@@ -1732,6 +1735,26 @@
         scaleField.appendChild(scaleSelect);
         settingsCard.appendChild(scaleField);
 
+        const explField = document.createElement('div');
+        explField.className = 'field';
+        explField.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:10px;';
+        const explLabel = document.createElement('label');
+        explLabel.className = 'field-label';
+        explLabel.style.margin = '0';
+        explLabel.textContent = 'Показывать объяснения ученикам';
+        explField.appendChild(explLabel);
+        const explToggle = document.createElement('button');
+        explToggle.type = 'button';
+        let showExplanations = test.show_explanations !== false;
+        function renderExplToggle() {
+          explToggle.className = 'correct-toggle' + (showExplanations ? ' on' : '');
+          explToggle.innerHTML = ICONS.check;
+        }
+        renderExplToggle();
+        explToggle.onclick = () => { showExplanations = !showExplanations; renderExplToggle(); };
+        explField.appendChild(explToggle);
+        settingsCard.appendChild(explField);
+
         const saveSettingsBtn = document.createElement('button');
         saveSettingsBtn.className = 'save-btn';
         saveSettingsBtn.textContent = 'Сохранить настройки теста';
@@ -1742,6 +1765,7 @@
             await apiSend('PATCH', `/api/teacher/tests/${testId}`, {
               time_limit_minutes: timerInput.value ? parseInt(timerInput.value, 10) : null,
               scale_id: scaleSelect.value ? parseInt(scaleSelect.value, 10) : null,
+              show_explanations: showExplanations,
             });
             showToast('Настройки сохранены');
           } catch (err) {
@@ -2032,62 +2056,49 @@
             optionRows.forEach((row, i) => {
               const r = document.createElement('div');
               r.className = 'option-row';
+              const topRow = document.createElement('div');
+              topRow.className = 'option-row-top';
               const toggle = document.createElement('button');
               toggle.type = 'button'; toggle.className = 'correct-toggle' + (row.correct ? ' on' : ''); toggle.innerHTML = ICONS.check;
               toggle.onclick = () => { if (!isMulti) optionRows.forEach(o => o.correct = false); row.correct = !row.correct; renderOptionRowsQ(); };
-              r.appendChild(toggle);
-              const input = document.createElement('input');
-              input.className = 'field-input'; input.placeholder = 'Вариант ' + (i + 1); input.value = row.text;
-              input.oninput = () => { row.text = input.value; };
-              r.appendChild(input);
+              topRow.appendChild(toggle);
               const boldToggle = document.createElement('button');
               boldToggle.type = 'button'; boldToggle.className = 'format-btn'; boldToggle.style.cssText = 'width:30px;height:30px;flex-shrink:0;';
               boldToggle.textContent = 'Ж'; boldToggle.title = 'Жирный (выделенный фрагмент)';
-              boldToggle.onclick = () => {
+              topRow.appendChild(boldToggle);
+              const italicToggle = document.createElement('button');
+              italicToggle.type = 'button'; italicToggle.className = 'format-btn italic-btn'; italicToggle.style.cssText = 'width:30px;height:30px;flex-shrink:0;';
+              italicToggle.textContent = 'К'; italicToggle.title = 'Курсив (выделенный фрагмент)';
+              topRow.appendChild(italicToggle);
+              const removeBtn = document.createElement('button');
+              removeBtn.type = 'button'; removeBtn.className = 'option-remove'; removeBtn.innerHTML = ICONS.trash;
+              removeBtn.onclick = () => { optionRows.splice(i, 1); renderOptionRowsQ(); };
+              topRow.appendChild(removeBtn);
+              r.appendChild(topRow);
+
+              const input = document.createElement('textarea');
+              input.className = 'field-textarea';
+              input.rows = 1;
+              input.style.minHeight = '38px';
+              input.placeholder = 'Вариант ' + (i + 1); input.value = row.text;
+              input.oninput = () => { row.text = input.value; };
+              r.appendChild(input);
+
+              function wrapOptionSelectionQ(marker) {
                 const start = input.selectionStart ?? input.value.length;
                 const end = input.selectionEnd ?? input.value.length;
                 const selected = input.value.slice(start, end) || input.value;
                 const selStart = start === end ? 0 : start;
                 const selEnd = start === end ? input.value.length : end;
-                input.value = input.value.slice(0, selStart) + '*' + selected + '*' + input.value.slice(selEnd);
+                input.value = input.value.slice(0, selStart) + marker + selected + marker + input.value.slice(selEnd);
                 row.text = input.value;
                 input.focus();
-                input.selectionStart = selStart + 1;
-                input.selectionEnd = selStart + 1 + selected.length;
-              };
-              r.appendChild(boldToggle);
-              const expandOptBtn = document.createElement('button');
-              expandOptBtn.type = 'button'; expandOptBtn.className = 'format-btn'; expandOptBtn.style.cssText = 'width:30px;height:30px;flex-shrink:0;';
-              expandOptBtn.title = 'Развернуть вариант';
-              expandOptBtn.innerHTML = '<svg width="13" height="13" viewBox="0 0 20 20" fill="none"><path d="M7 3H3V7M13 3H17V7M7 17H3V13M13 17H17V13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-              expandOptBtn.onclick = () => {
-                lockBodyScroll();
-                const overlay = document.createElement('div');
-                overlay.style.cssText = 'position:fixed;inset:0;background:var(--bg);z-index:40;display:flex;flex-direction:column;padding:16px;';
-                overlay.innerHTML = '<div class="field-label" style="margin-bottom:10px;">Вариант ' + (i + 1) + '</div>';
-                const bigArea = document.createElement('textarea');
-                bigArea.className = 'field-textarea';
-                bigArea.style.cssText = 'flex:1;font-size:15px;line-height:1.6;resize:none;';
-                bigArea.value = input.value;
-                overlay.appendChild(bigArea);
-                const doneBtn = document.createElement('button');
-                doneBtn.className = 'save-btn';
-                doneBtn.textContent = 'Готово';
-                doneBtn.onclick = () => {
-                  input.value = bigArea.value;
-                  row.text = input.value;
-                  unlockBodyScroll();
-                  overlay.remove();
-                };
-                overlay.appendChild(doneBtn);
-                document.body.appendChild(overlay);
-                bigArea.focus();
-              };
-              r.appendChild(expandOptBtn);
-              const removeBtn = document.createElement('button');
-              removeBtn.type = 'button'; removeBtn.className = 'option-remove'; removeBtn.innerHTML = ICONS.trash;
-              removeBtn.onclick = () => { optionRows.splice(i, 1); renderOptionRowsQ(); };
-              r.appendChild(removeBtn);
+                input.selectionStart = selStart + marker.length;
+                input.selectionEnd = selStart + marker.length + selected.length;
+              }
+              boldToggle.onclick = () => wrapOptionSelectionQ('*');
+              italicToggle.onclick = () => wrapOptionSelectionQ('_');
+
               optionsList.appendChild(r);
             });
           }
