@@ -815,9 +815,6 @@
     card.appendChild(answerArea);
 
     if ((task.type === 'buttons' || task.type === 'multi') && task.options) {
-      // Правильных ответов может быть несколько — task.answer это строка (один
-      // верный) или массив (несколько верных). Приводим к массиву для единой логики.
-      const correctList = Array.isArray(task.answer) ? task.answer : [task.answer];
       const isMulti = task.type === 'multi';
       let selected = [];
 
@@ -847,7 +844,7 @@
         return btn;
       });
 
-      submitBtn.onclick = () => submitAnswer(task.id, selected, card, task, optionEls, correctList);
+      submitBtn.onclick = () => submitAnswer(task.id, selected, card, task, optionEls);
 
       const skipBtn = document.createElement('button');
       skipBtn.className = 'skip-btn';
@@ -892,7 +889,7 @@
 
   let taskFeedbackMode = 'immediate';
 
-  async function submitAnswer(taskId, answer, cardEl, task, optionEls, correctList) {
+  async function submitAnswer(taskId, answer, cardEl, task, optionEls) {
     try {
       const result = await apiPost(`/api/tasks/${taskId}/answer`, { answer });
 
@@ -917,9 +914,13 @@
       // выбрал и верно → зелёным; выбрал и неверно → красным;
       // не выбрал, но это был верный вариант → зелёный контур ("пропущено");
       // не выбрал и он неверный → просто гаснет.
-      if (optionEls && correctList) {
+      // Правильный ответ берём из ОТВЕТА СЕРВЕРА (result.correct_answer) —
+      // до ответа ученику он не отдаётся вообще, поэтому раскрашивать по
+      // "заранее известному" answer нельзя, его там никогда не было.
+      if (optionEls) {
         const selectedSet = new Set(Array.isArray(answer) ? answer : [answer]);
-        const correctSet = new Set(correctList);
+        const correctAnswerList = Array.isArray(result.correct_answer) ? result.correct_answer : [result.correct_answer];
+        const correctSet = new Set(correctAnswerList);
         optionEls.forEach((btn) => {
           const opt = btn.querySelector('.option-text').textContent;
           const isSelected = selectedSet.has(opt);
@@ -1450,7 +1451,7 @@
     const card = document.createElement('div');
     card.className = 'result-card';
     const scoreLine = s.actual_score !== null && s.actual_score !== undefined
-      ? `<div class="result-score">${s.actual_score}</div><div class="field-hint" style="text-align:center;">тестовый балл (первичный: ${s.primary_score} из ${s.max_primary_score})</div>`
+      ? `<div class="result-score">${s.actual_score}</div><div class="field-hint" style="text-align:center;">тестовый балл</div>`
       : `<div class="result-score">${s.primary_score} / ${s.max_primary_score}</div><div class="field-hint" style="text-align:center;">первичный балл</div>`;
     card.innerHTML = `
       <div class="result-label">Результат</div>
@@ -1460,7 +1461,8 @@
         ${s.partial ? `<div class="result-stat mid"><div class="num">${s.partial}</div><div class="lbl">Частично</div></div>` : ''}
         <div class="result-stat bad"><div class="num">${s.wrong}</div><div class="lbl">Неверно</div></div>
       </div>
-      ${s.elapsed_str ? `<div class="field-hint" style="text-align:center;margin-top:10px;">⏱ Затрачено времени: ${s.elapsed_str}</div>` : ''}
+      ${s.actual_score !== null && s.actual_score !== undefined ? `<div class="field-hint" style="text-align:center;margin-top:10px;font-weight:700;">Первичный балл: ${s.primary_score}/${s.max_primary_score}</div>` : ''}
+      ${s.elapsed_str ? `<div class="field-hint" style="text-align:center;margin-top:6px;">⏱ Затрачено времени: ${s.elapsed_str}</div>` : ''}
     `;
 
     const reviewBtn = document.createElement('button');
