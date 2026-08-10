@@ -419,6 +419,14 @@
         list.appendChild(p);
       }
 
+      if (onAdd) {
+        const addBtn = document.createElement('button');
+        addBtn.className = 'add-row-btn';
+        addBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 20 20" fill="none"><path d="M10 4V16M4 10H16" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg> ' + addLabel;
+        addBtn.onclick = onAdd;
+        list.appendChild(addBtn);
+      }
+
       items.forEach((item, i) => {
         const row = document.createElement('div');
         row.className = 'row-card';
@@ -515,14 +523,6 @@
         row.appendChild(actions);
         list.appendChild(row);
       });
-
-      if (onAdd) {
-        const addBtn = document.createElement('button');
-        addBtn.className = 'add-row-btn';
-        addBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 20 20" fill="none"><path d="M10 4V16M4 10H16" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg> ' + addLabel;
-        addBtn.onclick = onAdd;
-        list.appendChild(addBtn);
-      }
 
       screen.appendChild(list);
     });
@@ -1031,11 +1031,28 @@
       const overlay = document.createElement('div');
       overlay.style.cssText = 'position:fixed;inset:0;background:var(--bg);z-index:40;display:flex;flex-direction:column;padding:16px;';
       overlay.innerHTML = '<div class="field-label" style="margin-bottom:10px;">' + labelText + '</div>';
+
+      const bigToolbar = document.createElement('div');
+      bigToolbar.className = 'format-toolbar';
+      const bigBoldBtn = document.createElement('button');
+      bigBoldBtn.type = 'button'; bigBoldBtn.className = 'format-btn'; bigBoldBtn.textContent = 'Ж'; bigBoldBtn.title = 'Жирный';
+      const bigItalicBtn = document.createElement('button');
+      bigItalicBtn.type = 'button'; bigItalicBtn.className = 'format-btn italic-btn'; bigItalicBtn.textContent = 'К'; bigItalicBtn.title = 'Курсив';
+      const bigCodeBtn = document.createElement('button');
+      bigCodeBtn.type = 'button'; bigCodeBtn.className = 'format-btn code-btn'; bigCodeBtn.textContent = '</>'; bigCodeBtn.title = 'Моноширинный';
+      bigToolbar.appendChild(bigBoldBtn); bigToolbar.appendChild(bigItalicBtn); bigToolbar.appendChild(bigCodeBtn);
+      overlay.appendChild(bigToolbar);
+
       const bigArea = document.createElement('textarea');
       bigArea.className = 'field-textarea';
       bigArea.style.cssText = 'flex:1;font-size:15px;line-height:1.6;resize:none;';
       bigArea.value = textarea.value;
       overlay.appendChild(bigArea);
+
+      bigBoldBtn.onclick = () => wrapSelection(bigArea, '*');
+      bigItalicBtn.onclick = () => wrapSelection(bigArea, '_');
+      bigCodeBtn.onclick = () => wrapSelection(bigArea, '`');
+
       const doneBtn = document.createElement('button');
       doneBtn.className = 'save-btn';
       doneBtn.textContent = 'Готово';
@@ -1049,19 +1066,19 @@
       bigArea.focus();
     };
 
-    function wrapSelection(marker) {
-      const start = textarea.selectionStart;
-      const end = textarea.selectionEnd;
-      const text = textarea.value;
+    function wrapSelection(targetTextarea, marker) {
+      const start = targetTextarea.selectionStart;
+      const end = targetTextarea.selectionEnd;
+      const text = targetTextarea.value;
       const selected = text.slice(start, end) || 'текст';
-      textarea.value = text.slice(0, start) + marker + selected + marker + text.slice(end);
-      textarea.focus();
-      textarea.selectionStart = start + marker.length;
-      textarea.selectionEnd = start + marker.length + selected.length;
+      targetTextarea.value = text.slice(0, start) + marker + selected + marker + text.slice(end);
+      targetTextarea.focus();
+      targetTextarea.selectionStart = start + marker.length;
+      targetTextarea.selectionEnd = start + marker.length + selected.length;
     }
-    boldBtn.onclick = () => wrapSelection('*');
-    italicBtn.onclick = () => wrapSelection('_');
-    codeBtn.onclick = () => wrapSelection('`');
+    boldBtn.onclick = () => wrapSelection(textarea, '*');
+    italicBtn.onclick = () => wrapSelection(textarea, '_');
+    codeBtn.onclick = () => wrapSelection(textarea, '`');
 
     if (hintText) {
       const hint = document.createElement('div');
@@ -1076,10 +1093,11 @@
   async function renderTaskForm(topicId, editId, isBack, templateFrom) {
     showLoadingMenu();
     let existing = null;
+    let allTasks = [];
     if (editId) {
       try {
-        const tasks = await apiGet(`/api/teacher/topics/${topicId}/tasks`);
-        existing = tasks.find(t => t.id === editId);
+        allTasks = await apiGet(`/api/teacher/topics/${topicId}/tasks`);
+        existing = allTasks.find(t => t.id === editId);
       } catch (err) { showErrorMsg(err, isBack); return; }
     }
 
@@ -1098,6 +1116,35 @@
     swapScreen((screen) => {
       const card = document.createElement('div');
       card.className = 'form-card';
+
+      // Стрелки для перелистывания на соседнее задание той же темы, не
+      // выходя из формы редактирования — только когда реально редактируем
+      // существующее (не при добавлении нового).
+      if (existing && allTasks.length > 1) {
+        const curIndex = allTasks.findIndex(t => t.id === editId);
+        const navRow = document.createElement('div');
+        navRow.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;';
+        const prevBtn = document.createElement('button');
+        prevBtn.type = 'button'; prevBtn.className = 'add-option-btn';
+        prevBtn.textContent = '← Предыдущее';
+        prevBtn.disabled = curIndex <= 0;
+        prevBtn.style.opacity = prevBtn.disabled ? '0.4' : '1';
+        prevBtn.onclick = () => renderTaskForm(topicId, allTasks[curIndex - 1].id, false);
+        navRow.appendChild(prevBtn);
+        const posLabel = document.createElement('span');
+        posLabel.className = 'field-hint';
+        posLabel.style.margin = '0';
+        posLabel.textContent = (curIndex + 1) + ' из ' + allTasks.length;
+        navRow.appendChild(posLabel);
+        const nextBtn = document.createElement('button');
+        nextBtn.type = 'button'; nextBtn.className = 'add-option-btn';
+        nextBtn.textContent = 'Следующее →';
+        nextBtn.disabled = curIndex >= allTasks.length - 1;
+        nextBtn.style.opacity = nextBtn.disabled ? '0.4' : '1';
+        nextBtn.onclick = () => renderTaskForm(topicId, allTasks[curIndex + 1].id, false);
+        navRow.appendChild(nextBtn);
+        card.appendChild(navRow);
+      }
 
       const typeField = document.createElement('div');
       typeField.className = 'field';
@@ -1325,6 +1372,19 @@
               input.oninput = () => { row.text = input.value; };
               r.appendChild(input);
 
+              const boldToggle = document.createElement('button');
+              boldToggle.type = 'button';
+              boldToggle.className = 'format-btn';
+              boldToggle.style.cssText = 'width:30px;height:30px;flex-shrink:0;';
+              boldToggle.textContent = 'Ж';
+              boldToggle.title = 'Жирный (весь вариант)';
+              boldToggle.onclick = () => {
+                const isWrapped = /^\*.*\*$/.test(input.value.trim());
+                input.value = isWrapped ? input.value.trim().slice(1, -1) : '*' + input.value + '*';
+                row.text = input.value;
+              };
+              r.appendChild(boldToggle);
+
               const removeBtn = document.createElement('button');
               removeBtn.type = 'button';
               removeBtn.className = 'option-remove';
@@ -1500,6 +1560,21 @@
         'В этом тесте пока нет вопросов.', 'Добавить вопрос',
         () => { stack.push({ level: 'testq_form', testId, editId: null, title: 'Новый вопрос' }); renderCrumbs(); render(false); },
         (item) => { stack.push({ level: 'testq_preview', testId, qId: item.id, title: 'Предпросмотр' }); renderCrumbs(); render(false); },
+        {
+          onReorder: async (fromIndex, toIndex) => {
+            // Переставлять можно только внутри своей части (А или В) —
+            // если сосед из другой части, просто ничего не делаем.
+            const partHere = labeled[fromIndex].part || 'A';
+            if ((labeled[toIndex]?.part || 'A') !== partHere) return;
+            const idsOfPart = labeled.filter(q => (q.part || 'A') === partHere).map(q => q.id);
+            const fromPos = idsOfPart.indexOf(labeled[fromIndex].id);
+            const toPos = idsOfPart.indexOf(labeled[toIndex].id);
+            const [moved] = idsOfPart.splice(fromPos, 1);
+            idsOfPart.splice(toPos, 0, moved);
+            await apiSend('POST', `/api/teacher/tests/${testId}/questions/reorder`, { part: partHere, order: idsOfPart });
+            render(false);
+          },
+        },
       );
 
       if (listScreen) {
@@ -1646,10 +1721,11 @@
   async function renderTestQForm(testId, editId, isBack, templateFrom) {
     showLoadingMenu();
     let existing = null;
+    let allQuestions = [];
     if (editId) {
       try {
-        const questions = await apiGet(`/api/teacher/tests/${testId}/questions`);
-        existing = questions.find(q => q.id === editId);
+        allQuestions = await apiGet(`/api/teacher/tests/${testId}/questions`);
+        existing = allQuestions.find(q => q.id === editId);
       } catch (err) { showErrorMsg(err, isBack); return; }
     }
 
@@ -1667,6 +1743,32 @@
     swapScreen((screen) => {
       const card = document.createElement('div');
       card.className = 'form-card';
+
+      if (existing && allQuestions.length > 1) {
+        const curIndex = allQuestions.findIndex(q => q.id === editId);
+        const navRow = document.createElement('div');
+        navRow.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;';
+        const prevBtn = document.createElement('button');
+        prevBtn.type = 'button'; prevBtn.className = 'add-option-btn';
+        prevBtn.textContent = '← Предыдущий';
+        prevBtn.disabled = curIndex <= 0;
+        prevBtn.style.opacity = prevBtn.disabled ? '0.4' : '1';
+        prevBtn.onclick = () => renderTestQForm(testId, allQuestions[curIndex - 1].id, false);
+        navRow.appendChild(prevBtn);
+        const posLabel = document.createElement('span');
+        posLabel.className = 'field-hint';
+        posLabel.style.margin = '0';
+        posLabel.textContent = (curIndex + 1) + ' из ' + allQuestions.length;
+        navRow.appendChild(posLabel);
+        const nextBtn = document.createElement('button');
+        nextBtn.type = 'button'; nextBtn.className = 'add-option-btn';
+        nextBtn.textContent = 'Следующий →';
+        nextBtn.disabled = curIndex >= allQuestions.length - 1;
+        nextBtn.style.opacity = nextBtn.disabled ? '0.4' : '1';
+        nextBtn.onclick = () => renderTestQForm(testId, allQuestions[curIndex + 1].id, false);
+        navRow.appendChild(nextBtn);
+        card.appendChild(navRow);
+      }
 
       const partField = document.createElement('div');
       partField.className = 'field';
@@ -1889,6 +1991,15 @@
               input.className = 'field-input'; input.placeholder = 'Вариант ' + (i + 1); input.value = row.text;
               input.oninput = () => { row.text = input.value; };
               r.appendChild(input);
+              const boldToggle = document.createElement('button');
+              boldToggle.type = 'button'; boldToggle.className = 'format-btn'; boldToggle.style.cssText = 'width:30px;height:30px;flex-shrink:0;';
+              boldToggle.textContent = 'Ж'; boldToggle.title = 'Жирный (весь вариант)';
+              boldToggle.onclick = () => {
+                const isWrapped = /^\*.*\*$/.test(input.value.trim());
+                input.value = isWrapped ? input.value.trim().slice(1, -1) : '*' + input.value + '*';
+                row.text = input.value;
+              };
+              r.appendChild(boldToggle);
               const removeBtn = document.createElement('button');
               removeBtn.type = 'button'; removeBtn.className = 'option-remove'; removeBtn.innerHTML = ICONS.trash;
               removeBtn.onclick = () => { optionRows.splice(i, 1); renderOptionRowsQ(); };
