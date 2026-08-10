@@ -1520,6 +1520,58 @@
           listScreen.insertBefore(templateBtn, listScreen.firstChild);
         }
 
+        const ioRow = document.createElement('div');
+        ioRow.style.cssText = 'display:flex;gap:8px;margin-bottom:12px;';
+
+        const exportBtn = document.createElement('button');
+        exportBtn.className = 'add-row-btn';
+        exportBtn.style.flex = '1';
+        exportBtn.textContent = '⬇️ Экспорт в .docx';
+        exportBtn.onclick = () => {
+          const url = API_BASE_URL + `/api/teacher/tests/${testId}/export?init_data=` + encodeURIComponent(tg?.initData || '');
+          // На iPhone скачивание через fetch+blob не работает — открываем
+          // ссылку в системном браузере, там скачивание работает как надо.
+          if (tg?.openLink) tg.openLink(url); else window.open(url, '_blank');
+        };
+        ioRow.appendChild(exportBtn);
+
+        const importBtn = document.createElement('button');
+        importBtn.className = 'add-row-btn';
+        importBtn.style.flex = '1';
+        importBtn.textContent = '⬆️ Импорт из .docx';
+        const importInput = document.createElement('input');
+        importInput.type = 'file';
+        importInput.accept = '.docx';
+        importInput.style.display = 'none';
+        importInput.onchange = async () => {
+          const file = importInput.files[0];
+          if (!file) return;
+          importBtn.disabled = true;
+          importBtn.textContent = 'Загружаю…';
+          try {
+            const formData = new FormData();
+            formData.append('file', file);
+            const res = await fetch(API_BASE_URL + `/api/teacher/tests/${testId}/import`, {
+              method: 'POST',
+              headers: { 'X-Telegram-Init-Data': tg?.initData || '' },
+              body: formData,
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) throw new Error(data.message || data.detail || ('Сервер ответил с ошибкой: ' + res.status));
+            showToast(`Добавлено вопросов: ${data.added}` + (data.errors?.length ? `, не распознано: ${data.errors.length}` : ''));
+            render(false);
+          } catch (err) {
+            importBtn.disabled = false;
+            importBtn.textContent = '⬆️ Импорт из .docx';
+            showToast('Не получилось импортировать: ' + err.message);
+          }
+        };
+        importBtn.onclick = () => importInput.click();
+        ioRow.appendChild(importBtn);
+        ioRow.appendChild(importInput);
+
+        listScreen.insertBefore(ioRow, listScreen.firstChild);
+
         const settingsCard = document.createElement('div');
         settingsCard.className = 'form-card';
         settingsCard.style.marginBottom = '14px';
