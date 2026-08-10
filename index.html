@@ -728,14 +728,21 @@
       screen.appendChild(retryBtn);
 
       const currentScope = stack[stack.length - 1];
-      if (currentScope?.scope === 'topic' && currentScope.scopeId) {
+      if (currentScope?.scope && currentScope.scopeId) {
         const reviewBtn = document.createElement('button');
         reviewBtn.className = 'skip-btn';
         reviewBtn.style.maxWidth = '260px';
         reviewBtn.style.margin = '0 auto';
         reviewBtn.style.display = 'block';
         reviewBtn.textContent = '🔍 Пересмотреть свои ответы';
-        reviewBtn.onclick = () => { stack.push({ level: 'topic_review', topicId: currentScope.scopeId, title: 'Разбор ответов' }); renderCrumbs(); render(false); };
+        reviewBtn.onclick = () => {
+          stack.push({
+            level: currentScope.scope === 'section' ? 'section_review' : 'topic_review',
+            topicId: currentScope.scopeId, sectionId: currentScope.scopeId, title: 'Разбор ответов',
+          });
+          renderCrumbs();
+          render(false);
+        };
         screen.appendChild(reviewBtn);
       }
       return;
@@ -1092,6 +1099,8 @@
         renderTestReview(current.attemptId, current.questions, isBack);
       } else if (current.level === 'topic_review') {
         renderTopicReview(current.topicId, isBack);
+      } else if (current.level === 'section_review') {
+        renderTopicReview(current.sectionId, isBack, true);
       } else if (current.level === 'rule_view') {
         renderRuleView(current.rule, isBack);
       }
@@ -1477,16 +1486,17 @@
   // --- Разбор своих ответов в тесте: список вопросов -> открыть любой,
   // увидеть свой ответ / правильный / объяснение (как просили) ---
   // --- Разбор своих ответов по обычным заданиям темы ---
-  async function renderTopicReview(topicId, isBack) {
+  async function renderTopicReview(scopeId, isBack, isSection) {
     showLoading('Загружаем', isBack);
     try {
-      const summary = await apiGet(`/api/topics/${topicId}/review`);
+      const base = isSection ? `/api/sections/${scopeId}` : `/api/topics/${scopeId}`;
+      const summary = await apiGet(`${base}/review`);
       renderList(
         summary.questions.map(([num, correct]) => ({ id: num, title: 'Задание ' + num + (correct ? ' ✅' : ' ❌') })),
         async (item) => {
           showLoading('Загружаем', false);
           try {
-            const detail = await apiGet(`/api/topics/${topicId}/review/${item.id}`);
+            const detail = await apiGet(`${base}/review/${item.id}`);
             stack.push({ level: 'review_detail', title: 'Разбор ответа' });
             renderCrumbs();
             renderReviewDetail({
