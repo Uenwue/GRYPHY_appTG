@@ -846,6 +846,21 @@
     testsChoice.onclick = () => { stack.push({ level: 'tests', title: 'Тесты' }); renderCrumbs(); render(false); };
     wrap.appendChild(testsChoice);
 
+    const viewAsStudentChoice = document.createElement('button');
+    viewAsStudentChoice.className = 'choice-card';
+    viewAsStudentChoice.style.animationDelay = '0.1s';
+    viewAsStudentChoice.innerHTML = '<svg class="choice-icon" viewBox="0 0 20 20" fill="none"><path d="M1 10C1 10 4.5 4 10 4C15.5 4 19 10 19 10C19 10 15.5 16 10 16C4.5 16 1 10 1 10Z" stroke="#58A700" stroke-width="1.5" stroke-linejoin="round"/><circle cx="10" cy="10" r="2.6" stroke="#58A700" stroke-width="1.5"/></svg><div class="choice-title">👀 Смотреть как ученик</div>';
+    viewAsStudentChoice.onclick = () => {
+      if (tg?.showConfirm) {
+        tg.showConfirm('Откроется настоящий ученический вид — можно пройти любое задание и тест по-настоящему, с таймером и подсчётом баллов. Учтите: ваши ответы тоже сохранятся в статистике, как у обычного ученика.', (ok) => {
+          if (ok) window.location.href = 'index.html';
+        });
+      } else {
+        window.location.href = 'index.html';
+      }
+    };
+    wrap.appendChild(viewAsStudentChoice);
+
     swapScreen((screen) => { screen.appendChild(wrap); }, isBack);
   }
 
