@@ -185,6 +185,7 @@
     color: var(--blue-dark); background: var(--blue-tint); padding: 3px 9px; border-radius: 8px;
     margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.03em;
   }
+  .question-label.part-b { color: #8A6D00; background: var(--yellow-tint); }
   .task-description {
     font-size: 14.5px; color: var(--text-soft); font-weight: 600; line-height: 1.55;
     margin: 0 0 20px; padding: 12px 14px; background: var(--bg-soft); border-radius: 12px;
@@ -712,7 +713,15 @@
       const p = document.createElement('p');
       p.className = 'state-msg';
       const correctCount = currentTasks.filter(t => t.is_correct).length;
-      p.textContent = `🏁 Все задания решены! Верно: ${correctCount} из ${currentTasks.length}.`;
+      const partialCount = currentTasks.filter(t => {
+        if (t.is_correct || t.type !== 'multi' || !t.given_answer || !t.correct_answer_final) return false;
+        const givenSet = new Set(String(t.given_answer).split(',').map(x => x.trim().toLowerCase()));
+        const correctSet = new Set(String(t.correct_answer_final).split(',').map(x => x.trim().toLowerCase()));
+        const missing = [...correctSet].filter(x => !givenSet.has(x)).length;
+        const extra = [...givenSet].filter(x => !correctSet.has(x)).length;
+        return (missing + extra) === 1;
+      }).length;
+      p.textContent = `🏁 Все задания решены! Верно: ${correctCount} из ${currentTasks.length}` + (partialCount ? `, частично верно: ${partialCount}` : '') + '.';
       screen.appendChild(p);
 
       const retryBtn = document.createElement('button');
@@ -888,7 +897,7 @@
       const result = await apiPost(`/api/tasks/${taskId}/answer`, { answer });
 
       const taskRef = currentTasks.find(t => t.id === taskId);
-      if (taskRef) { taskRef.answered = true; taskRef.is_correct = result.correct; taskRef.given_answer = answer; }
+      if (taskRef) { taskRef.answered = true; taskRef.is_correct = result.correct; taskRef.given_answer = answer; taskRef.correct_answer_final = result.correct_answer; }
 
       // Режим "с промежутком" — ответ сохраняется, но верно/неверно не
       // показываем сразу, сразу идём к следующему заданию (итог — только
@@ -1314,7 +1323,7 @@
 
     if (q.label) {
       const label = document.createElement('span');
-      label.className = 'question-label';
+      label.className = 'question-label' + (q.label.startsWith('В') ? ' part-b' : '');
       label.textContent = q.label;
       card.appendChild(label);
     }
@@ -1491,8 +1500,9 @@
     try {
       const base = isSection ? `/api/sections/${scopeId}` : `/api/topics/${scopeId}`;
       const summary = await apiGet(`${base}/review`);
+      const statusIcon = { correct: ' ✅', partial: ' 🟡', wrong: ' ❌' };
       renderList(
-        summary.questions.map(([num, correct]) => ({ id: num, title: 'Задание ' + num + (correct ? ' ✅' : ' ❌') })),
+        summary.questions.map(([num, status]) => ({ id: num, title: 'Задание ' + num + (statusIcon[status] || ' ❌') })),
         async (item) => {
           showLoading('Загружаем', false);
           try {
@@ -1592,12 +1602,16 @@
         });
       }
 
-      const isPartial = detail.earned_score !== undefined && detail.earned_score > 0 && detail.earned_score < detail.max_score;
+      const isPartialTest = detail.earned_score !== undefined && detail.earned_score > 0 && detail.earned_score < detail.max_score;
+      const isPartialTask = detail.status === 'partial';
+      const isPartial = isPartialTest || isPartialTask;
       const feedback = document.createElement('div');
       feedback.className = 'feedback ' + (isPartial ? 'mid' : (detail.is_correct ? 'ok' : 'bad'));
       const title = document.createElement('p');
       title.className = 'feedback-title';
-      title.textContent = isPartial ? `🟡 Частично верно (${detail.earned_score} из ${detail.max_score})` : (detail.is_correct ? '✅ Верно' : '❌ Неверно');
+      title.textContent = isPartialTest ? `🟡 Частично верно (${detail.earned_score} из ${detail.max_score})`
+        : isPartialTask ? '🟡 Частично верно (была 1 ошибка в выборе)'
+        : (detail.is_correct ? '✅ Верно' : '❌ Неверно');
       feedback.appendChild(title);
       if (detail.type === 'text' || !detail.options) {
         const body = document.createElement('p');
