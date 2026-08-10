@@ -805,7 +805,7 @@
     } else if (current.level === 'test_detail') {
       renderTestDetail(current.testId, current.title, isBack);
     } else if (current.level === 'testq_form') {
-      renderTestQForm(current.testId, current.editId, isBack);
+      renderTestQForm(current.testId, current.editId, isBack, current.templateFrom);
     } else if (current.level === 'testq_preview') {
       renderTestQPreviewReal(current.testId, current.qId, isBack);
     } else if (current.level === 'scales') {
@@ -1488,6 +1488,23 @@
       );
 
       if (listScreen) {
+        if (questions.length) {
+          const templateBtn = document.createElement('button');
+          templateBtn.className = 'add-row-btn';
+          templateBtn.style.cssText = 'width:100%;margin-bottom:12px;color:var(--blue-dark);';
+          templateBtn.textContent = '📋 Добавить похожий вопрос';
+          templateBtn.onclick = () => {
+            const last = questions[questions.length - 1];
+            stack.push({
+              level: 'testq_form', testId, editId: null, title: 'Новый вопрос',
+              templateFrom: { question: last.question, type: last.type, options: last.options, part: last.part, max_score: last.max_score },
+            });
+            renderCrumbs();
+            render(false);
+          };
+          listScreen.insertBefore(templateBtn, listScreen.firstChild);
+        }
+
         const settingsCard = document.createElement('div');
         settingsCard.className = 'form-card';
         settingsCard.style.marginBottom = '14px';
@@ -1559,7 +1576,7 @@
   }
 
   // --- Форма вопроса теста — та же форма, что у задания, плюс часть (А/В) и баллы ---
-  async function renderTestQForm(testId, editId, isBack) {
+  async function renderTestQForm(testId, editId, isBack, templateFrom) {
     showLoadingMenu();
     let existing = null;
     if (editId) {
@@ -1569,13 +1586,15 @@
       } catch (err) { showErrorMsg(err, isBack); return; }
     }
 
-    let type = existing ? existing.type : 'text';
-    let part = existing ? (existing.part || 'A') : 'A';
-    let maxScore = existing ? (existing.max_score || 1) : 1;
+    let type = existing ? existing.type : (templateFrom ? templateFrom.type : 'text');
+    let part = existing ? (existing.part || 'A') : (templateFrom ? (templateFrom.part || 'A') : 'A');
+    let maxScore = existing ? (existing.max_score || 1) : (templateFrom ? (templateFrom.max_score || 1) : 1);
     let optionRows = [];
     if (existing && existing.type !== 'text') {
       const correctSet = new Set(Array.isArray(existing.answer) ? existing.answer : [existing.answer]);
       optionRows = existing.options.map(o => ({ text: o, correct: correctSet.has(o) }));
+    } else if (!existing && templateFrom && templateFrom.type !== 'text') {
+      optionRows = templateFrom.options.map(o => ({ text: o, correct: false }));
     }
 
     swapScreen((screen) => {
@@ -1624,7 +1643,7 @@
       typeField.appendChild(seg);
       card.appendChild(typeField);
 
-      const qFieldObj = makeFormattedField('Вопрос', null, existing ? existing.question : '', 'Текст вопроса');
+      const qFieldObj = makeFormattedField('Вопрос', null, existing ? existing.question : (templateFrom ? templateFrom.question : ''), 'Текст вопроса');
       const qInput = qFieldObj.textarea;
       card.appendChild(qFieldObj.wrapper);
 
