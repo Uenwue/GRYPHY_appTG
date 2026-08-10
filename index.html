@@ -216,6 +216,8 @@
   html[data-theme="dark"] .feedback.ok, html:not([data-theme="light"]) .feedback.ok { background: var(--green-tint); }
   @media (prefers-color-scheme: dark) { html:not([data-theme="light"]) .feedback.ok { background: var(--green-tint); } }
   .feedback.bad { background: var(--red-tint); border-color: var(--red); }
+  .feedback.mid { background: var(--yellow-tint); border-color: var(--yellow); }
+  .feedback.mid .feedback-title { color: #8A6D00; }
   .feedback-title { font-family: 'Jost', sans-serif; font-weight: 700; font-size: 16px; margin: 0 0 6px; }
   .feedback.ok .feedback-title { color: var(--green-dark); }
   .feedback.bad .feedback-title { color: var(--red-dark); }
@@ -281,6 +283,7 @@
   .result-stat .num { font-family: 'Jost', sans-serif; font-size: 20px; font-weight: 700; }
   .result-stat.ok .num { color: var(--green-dark); }
   .result-stat.bad .num { color: var(--red-dark); }
+  .result-stat.mid .num { color: #B8860B; }
   .result-stat .lbl { font-size: 11px; color: var(--text-soft); font-weight: 700; }
 
   /* --- Профиль --- */
@@ -1436,6 +1439,7 @@
       ${scoreLine}
       <div class="result-breakdown" style="margin-top:14px;">
         <div class="result-stat ok"><div class="num">${s.correct}</div><div class="lbl">Верно</div></div>
+        ${s.partial ? `<div class="result-stat mid"><div class="num">${s.partial}</div><div class="lbl">Частично</div></div>` : ''}
         <div class="result-stat bad"><div class="num">${s.wrong}</div><div class="lbl">Неверно</div></div>
       </div>
       ${s.elapsed_str ? `<div class="field-hint" style="text-align:center;margin-top:10px;">⏱ Затрачено времени: ${s.elapsed_str}</div>` : ''}
@@ -1505,7 +1509,8 @@
   function renderTestReview(attemptId, questions, isBack) {
     renderList(
       questions.map(q => ({
-        id: q.label, title: q.label + (q.correct ? ' ✅' : ' ❌'),
+        id: q.label,
+        title: q.label + (q.correct ? ' ✅' : (q.earned > 0 ? ' 🟡' : ' ❌')),
         sub: q.earned + ' из ' + q.max + ' балл(ов)', part: q.label[0] === 'А' ? 'A' : 'B',
         position: parseInt(q.label.slice(1), 10),
       })),
@@ -1577,11 +1582,12 @@
         });
       }
 
+      const isPartial = detail.earned_score !== undefined && detail.earned_score > 0 && detail.earned_score < detail.max_score;
       const feedback = document.createElement('div');
-      feedback.className = 'feedback ' + (detail.is_correct ? 'ok' : 'bad');
+      feedback.className = 'feedback ' + (isPartial ? 'mid' : (detail.is_correct ? 'ok' : 'bad'));
       const title = document.createElement('p');
       title.className = 'feedback-title';
-      title.textContent = detail.is_correct ? '✅ Верно' : '❌ Неверно';
+      title.textContent = isPartial ? `🟡 Частично верно (${detail.earned_score} из ${detail.max_score})` : (detail.is_correct ? '✅ Верно' : '❌ Неверно');
       feedback.appendChild(title);
       if (detail.type === 'text' || !detail.options) {
         const body = document.createElement('p');
