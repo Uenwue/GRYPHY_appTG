@@ -1617,20 +1617,14 @@
       );
 
       if (listScreen) {
-        // Раскрашиваем метку части у каждой строки: А — синим, В — жёлтым.
-        const rowTitles = listScreen.querySelectorAll('.row-title');
-        rowTitles.forEach((el, i) => {
+        // Иконка слева — синяя для части А, жёлтая для части В.
+        const rowIcons = listScreen.querySelectorAll('.row-icon');
+        rowIcons.forEach((el, i) => {
           const q = labeled[i];
           if (!q) return;
           const isB = (q.part || 'A') === 'B';
-          const prefix = isB ? 'В' : 'А';
-          const rest = el.textContent.replace(/^[АВ]\d+:/, '');
-          el.innerHTML = '';
-          const badge = document.createElement('span');
-          badge.style.cssText = 'color:' + (isB ? '#8A6D00' : 'var(--blue-dark)') + ';font-weight:800;';
-          badge.textContent = el.textContent.match(/^[АВ]\d+:/)?.[0] || (prefix + ':');
-          el.appendChild(badge);
-          el.appendChild(document.createTextNode(rest));
+          el.classList.remove('blue', 'yellow');
+          el.classList.add(isB ? 'yellow' : 'blue');
         });
 
         if (questions.length) {
