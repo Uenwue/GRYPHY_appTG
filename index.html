@@ -1341,6 +1341,26 @@
       card.appendChild(d);
     }
 
+    if (q.image_file_id) {
+      renderTaskImage(card, q.image_file_id);
+    }
+
+    if (q.table_data && q.table_data.length) {
+      const table = document.createElement('table');
+      table.style.cssText = 'width:100%;border-collapse:collapse;margin-bottom:16px;table-layout:fixed;';
+      q.table_data.forEach(row => {
+        const tr = document.createElement('tr');
+        row.forEach(cell => {
+          const td = document.createElement('td');
+          td.style.cssText = 'border:1px solid var(--border);padding:8px 10px;font-size:13.5px;word-break:break-word;';
+          td.textContent = cell;
+          tr.appendChild(td);
+        });
+        table.appendChild(tr);
+      });
+      card.appendChild(table);
+    }
+
     const answerArea = document.createElement('div');
     card.appendChild(answerArea);
 
@@ -1511,12 +1531,7 @@
             const detail = await apiGet(`${base}/review/${item.id}`);
             stack.push({ level: 'review_detail', title: 'Разбор ответа' });
             renderCrumbs();
-            renderReviewDetail({
-              question: detail.question, description: detail.description,
-              given_answer: detail.given_answer, correct_answer: detail.correct_answer,
-              explanation: detail.explanation, is_correct: detail.is_correct,
-              type: detail.type, options: detail.options,
-            }, false);
+            renderReviewDetail(detail, false);
           } catch (err) {
             showState('Не получилось загрузить. ' + err.message, true, true);
           }
@@ -1566,6 +1581,26 @@
         d.className = 'task-description';
         d.innerHTML = renderMarkdownText(detail.description);
         card.appendChild(d);
+      }
+
+      if (detail.image_file_id) {
+        renderTaskImage(card, detail.image_file_id);
+      }
+
+      if (detail.table_data && detail.table_data.length) {
+        const table = document.createElement('table');
+        table.style.cssText = 'width:100%;border-collapse:collapse;margin-bottom:16px;table-layout:fixed;';
+        detail.table_data.forEach(row => {
+          const tr = document.createElement('tr');
+          row.forEach(cell => {
+            const td = document.createElement('td');
+            td.style.cssText = 'border:1px solid var(--border);padding:8px 10px;font-size:13.5px;word-break:break-word;';
+            td.textContent = cell;
+            tr.appendChild(td);
+          });
+          table.appendChild(tr);
+        });
+        card.appendChild(table);
       }
 
       // Если у задания были варианты (кнопки/несколько верных) — показываем
