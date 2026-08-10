@@ -715,8 +715,8 @@
       const correctCount = currentTasks.filter(t => t.is_correct).length;
       const partialCount = currentTasks.filter(t => {
         if (t.is_correct || t.type !== 'multi' || !t.given_answer || !t.correct_answer_final) return false;
-        const givenSet = new Set(String(t.given_answer).split(',').map(x => x.trim().toLowerCase()));
-        const correctSet = new Set(String(t.correct_answer_final).split(',').map(x => x.trim().toLowerCase()));
+        const givenSet = new Set(String(t.given_answer).split(';').map(x => x.trim().toLowerCase()));
+        const correctSet = new Set(String(t.correct_answer_final).split(';').map(x => x.trim().toLowerCase()));
         const missing = [...correctSet].filter(x => !givenSet.has(x)).length;
         const extra = [...givenSet].filter(x => !correctSet.has(x)).length;
         return (missing + extra) === 1;
@@ -1572,9 +1572,9 @@
       // их так же, как на экране решения: кто что выбрал, что было верно.
       if ((detail.type === 'buttons' || detail.type === 'multi') && detail.options && detail.options.length) {
         const correctList = Array.isArray(detail.correct_answer) ? detail.correct_answer
-          : (typeof detail.correct_answer === 'string' && detail.type === 'multi' ? detail.correct_answer.split(',') : [detail.correct_answer]);
+          : (typeof detail.correct_answer === 'string' && detail.type === 'multi' ? detail.correct_answer.split(';') : [detail.correct_answer]);
         const givenList = Array.isArray(detail.given_answer) ? detail.given_answer
-          : (typeof detail.given_answer === 'string' ? detail.given_answer.split(',') : []);
+          : (typeof detail.given_answer === 'string' ? detail.given_answer.split(';') : []);
         const selectedSet = new Set(givenList.map(x => (x || '').trim()));
         const correctSet = new Set(correctList.map(x => (x || '').trim()));
 
