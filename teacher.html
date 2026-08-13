@@ -708,23 +708,6 @@
           (item) => { stack.push({ level: 'task_preview', topicId: current.topicId, taskId: item.id, title: 'Предпросмотр' }); renderCrumbs(); render(false); },
         );
         if (listScreen) {
-          if (tasks.length) {
-            const templateBtn = document.createElement('button');
-            templateBtn.className = 'add-row-btn';
-            templateBtn.style.cssText = 'width:100%;margin-bottom:12px;color:var(--blue-dark);';
-            templateBtn.textContent = '📋 Добавить похожее на последнее';
-            templateBtn.onclick = () => {
-              const last = tasks[tasks.length - 1];
-              stack.push({
-                level: 'task_form', topicId: current.topicId, editId: null, title: 'Новое задание',
-                templateFrom: { question: last.question, type: last.type, options: last.options },
-              });
-              renderCrumbs();
-              render(false);
-            };
-            listScreen.insertBefore(templateBtn, listScreen.firstChild);
-          }
-
           const ioRow = document.createElement('div');
           ioRow.style.cssText = 'display:flex;gap:8px;margin-bottom:12px;';
 
@@ -815,6 +798,10 @@
               const [moved] = ids.splice(fromIndex, 1);
               ids.splice(toIndex, 0, moved);
               await apiSend('POST', `/api/teacher/subjects/${currentSubjectId}/tests/reorder`, { order: ids });
+              render(false);
+            },
+            onToggleExplanations: async (item) => {
+              await apiSend('PATCH', `/api/teacher/tests/${item.id}`, { show_explanations: item.show_explanations === false });
               render(false);
             },
           },
@@ -1707,23 +1694,6 @@
           el.classList.add(isB ? 'yellow' : 'blue');
         });
 
-        if (questions.length) {
-          const templateBtn = document.createElement('button');
-          templateBtn.className = 'add-row-btn';
-          templateBtn.style.cssText = 'width:100%;margin-bottom:12px;color:var(--blue-dark);';
-          templateBtn.textContent = '📋 Добавить похожий вопрос';
-          templateBtn.onclick = () => {
-            const last = questions[questions.length - 1];
-            stack.push({
-              level: 'testq_form', testId, editId: null, title: 'Новый вопрос',
-              templateFrom: { question: last.question, type: last.type, options: last.options, part: last.part, max_score: last.max_score },
-            });
-            renderCrumbs();
-            render(false);
-          };
-          listScreen.insertBefore(templateBtn, listScreen.firstChild);
-        }
-
         const ioRow = document.createElement('div');
         ioRow.style.cssText = 'display:flex;gap:8px;margin-bottom:12px;';
 
@@ -1812,26 +1782,6 @@
         scaleField.appendChild(scaleSelect);
         settingsCard.appendChild(scaleField);
 
-        const explField = document.createElement('div');
-        explField.className = 'field';
-        explField.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:10px;';
-        const explLabel = document.createElement('label');
-        explLabel.className = 'field-label';
-        explLabel.style.margin = '0';
-        explLabel.textContent = 'Показывать объяснения ученикам';
-        explField.appendChild(explLabel);
-        const explToggle = document.createElement('button');
-        explToggle.type = 'button';
-        let showExplanations = test.show_explanations !== false;
-        function renderExplToggle() {
-          explToggle.className = 'correct-toggle' + (showExplanations ? ' on' : '');
-          explToggle.innerHTML = ICONS.check;
-        }
-        renderExplToggle();
-        explToggle.onclick = () => { showExplanations = !showExplanations; renderExplToggle(); };
-        explField.appendChild(explToggle);
-        settingsCard.appendChild(explField);
-
         const saveSettingsBtn = document.createElement('button');
         saveSettingsBtn.className = 'save-btn';
         saveSettingsBtn.textContent = 'Сохранить настройки теста';
@@ -1842,7 +1792,6 @@
             await apiSend('PATCH', `/api/teacher/tests/${testId}`, {
               time_limit_minutes: timerInput.value ? parseInt(timerInput.value, 10) : null,
               scale_id: scaleSelect.value ? parseInt(scaleSelect.value, 10) : null,
-              show_explanations: showExplanations,
             });
             showToast('Настройки сохранены');
           } catch (err) {
