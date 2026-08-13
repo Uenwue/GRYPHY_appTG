@@ -808,6 +808,16 @@
             await apiSend('POST', `/api/teacher/subjects/${currentSubjectId}/tests`, { title: val });
             render(false);
           }),
+          undefined,
+          {
+            onReorder: async (fromIndex, toIndex) => {
+              const ids = tests.map(t => t.id);
+              const [moved] = ids.splice(fromIndex, 1);
+              ids.splice(toIndex, 0, moved);
+              await apiSend('POST', `/api/teacher/subjects/${currentSubjectId}/tests/reorder`, { order: ids });
+              render(false);
+            },
+          },
         );
         if (listScreen) {
           const scalesBtn = document.createElement('button');
