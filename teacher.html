@@ -115,7 +115,7 @@
   .row-card {
     position: relative;
     background: var(--bg); border: 2px solid var(--border); border-radius: 14px;
-    padding: 13px 14px; display: flex; align-items: center; gap: 12px;
+    padding: 13px 14px; display: flex; align-items: flex-start; gap: 12px;
     opacity: 0; animation: card-in 0.3s var(--bounce) both;
   }
   @keyframes card-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
@@ -129,15 +129,16 @@
   .row-icon.yellow { background: var(--yellow-tint); }
   .row-icon svg { width: 17px; height: 17px; }
 
-  .row-body { flex: 1; min-width: 0; cursor: pointer; }
+  .row-body { flex: 1; min-width: 0; cursor: pointer; padding-top: 5px; }
   .row-title { font-family: 'Jost', sans-serif; font-size: 15px; font-weight: 700; }
   .row-sub { font-size: 12px; color: var(--text-soft); font-weight: 600; margin-top: 1px; }
 
-  .row-actions { display: flex; gap: 4px; flex-shrink: 0; }
+  .row-actions { display: flex; flex-wrap: wrap; gap: 4px; flex-shrink: 0; width: 68px; justify-content: flex-end; }
   .icon-btn {
     width: 30px; height: 30px; border-radius: 8px; border: none; background: var(--bg-soft);
     display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--text-soft);
     transition: transform 0.12s var(--bounce), background 0.15s ease;
+    flex-shrink: 0;
   }
   .icon-btn svg { width: 15px; height: 15px; }
   .icon-btn:active { transform: scale(0.88); }
@@ -446,7 +447,7 @@
 
         if (onReorder) {
           const reorderCol = document.createElement('div');
-          reorderCol.style.cssText = 'display:flex;flex-direction:column;gap:2px;flex-shrink:0;';
+          reorderCol.style.cssText = 'display:flex;flex-direction:column;gap:2px;flex-shrink:0;margin-top:2px;';
           const upBtn = document.createElement('button');
           upBtn.className = 'icon-btn';
           upBtn.style.cssText = 'width:22px;height:18px;';
