@@ -819,6 +819,8 @@
       renderTestDetail(current.testId, current.title, isBack);
     } else if (current.level === 'subject_blocks') {
       renderSubjectBlocks(isBack);
+    } else if (current.level === 'schedule') {
+      renderSchedule(isBack);
     } else if (current.level === 'testq_form') {
       renderTestQForm(current.testId, current.editId, isBack, current.templateFrom);
     } else if (current.level === 'testq_preview') {
@@ -882,6 +884,13 @@
     settingsChoice.innerHTML = '<svg class="choice-icon" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="2.5" stroke="#8B93A3" stroke-width="1.5"/><path d="M10 2V4M10 16V18M18 10H16M4 10H2M15.5 4.5L14 6M6 14L4.5 15.5M15.5 15.5L14 14M6 6L4.5 4.5" stroke="#8B93A3" stroke-width="1.5" stroke-linecap="round"/></svg><div class="choice-title">⚙️ Настройки предмета</div>';
     settingsChoice.onclick = () => { stack.push({ level: 'subject_blocks', title: 'Настройки предмета' }); renderCrumbs(); render(false); };
     wrap.appendChild(settingsChoice);
+
+    const scheduleChoice = document.createElement('button');
+    scheduleChoice.className = 'choice-card';
+    scheduleChoice.style.animationDelay = '0.2s';
+    scheduleChoice.innerHTML = '<svg class="choice-icon" viewBox="0 0 20 20" fill="none"><rect x="3" y="4" width="14" height="13" rx="2" stroke="#5B8DEF" stroke-width="1.5"/><path d="M3 8H17M7 2V5M13 2V5" stroke="#5B8DEF" stroke-width="1.5" stroke-linecap="round"/></svg><div class="choice-title">📅 Расписание занятий</div>';
+    scheduleChoice.onclick = () => { stack.push({ level: 'schedule', title: 'Расписание занятий' }); renderCrumbs(); render(false); };
+    wrap.appendChild(scheduleChoice);
 
     swapScreen((screen) => { screen.appendChild(wrap); }, isBack);
   }
@@ -1016,6 +1025,138 @@
         errBox.style.display = 'block';
       }
     };
+  }
+
+  function promptScheduleEvent(existing, onSave) {
+    lockBodyScroll();
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center;z-index:30;padding:20px;';
+    overlay.innerHTML = '<div style="background:var(--bg);border-radius:16px;padding:18px;max-width:360px;width:100%;">' +
+      '<div class="field-label">Название занятия</div>' +
+      '<input class="field-input" id="schTitle" style="margin-bottom:14px;">' +
+      '<div class="field-label">Дата и время</div>' +
+      '<input class="field-input" id="schTime" type="datetime-local" style="margin-bottom:14px;">' +
+      '<div class="field-label">Ссылка на занятие (необязательно)</div>' +
+      '<input class="field-input" id="schLink" placeholder="https://..." style="margin-bottom:14px;">' +
+      '<div id="schErr" style="color:#EA2B2B;font-size:12.5px;font-weight:700;margin-bottom:8px;display:none;"></div>' +
+      '<div style="display:flex;gap:8px;">' +
+      '<button class="back-btn" id="schCancel" style="flex:1;">Отмена</button>' +
+      '<button class="save-btn" id="schSave" style="flex:1;margin-top:0;">Сохранить</button>' +
+      '</div></div>';
+    document.body.appendChild(overlay);
+    const titleInput = overlay.querySelector('#schTitle');
+    const timeInput = overlay.querySelector('#schTime');
+    const linkInput = overlay.querySelector('#schLink');
+    const errBox = overlay.querySelector('#schErr');
+    const saveBtn = overlay.querySelector('#schSave');
+    if (existing) {
+      titleInput.value = existing.title || '';
+      linkInput.value = existing.link || '';
+      // event_time хранится как "YYYY-MM-DD HH:MM" — datetime-local ждёт "YYYY-MM-DDTHH:MM"
+      timeInput.value = (existing.event_time || '').replace(' ', 'T');
+    }
+    titleInput.focus();
+    function closeOverlay() { unlockBodyScroll(); overlay.remove(); }
+    overlay.querySelector('#schCancel').onclick = closeOverlay;
+    saveBtn.onclick = async () => {
+      const title = titleInput.value.trim();
+      const time = timeInput.value.trim();
+      if (!title || !time) {
+        errBox.textContent = 'Укажите название и дату/время.';
+        errBox.style.display = 'block';
+        return;
+      }
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Сохраняю…';
+      errBox.style.display = 'none';
+      try {
+        await onSave({
+          title,
+          link: linkInput.value.trim(),
+          event_time: time.replace('T', ' '),
+        });
+        closeOverlay();
+      } catch (err) {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Сохранить';
+        errBox.textContent = 'Не получилось: ' + err.message;
+        errBox.style.display = 'block';
+      }
+    };
+  }
+
+  async function renderSchedule(isBack) {
+    showLoadingMenu();
+    try {
+      const events = await apiGet(`/api/teacher/subjects/${currentSubjectId}/schedule`);
+      swapScreen((screen) => {
+        const list = document.createElement('div');
+        list.className = 'list';
+
+        const addBtn = document.createElement('button');
+        addBtn.className = 'add-row-btn';
+        addBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 20 20" fill="none"><path d="M10 4V16M4 10H16" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg> Добавить занятие';
+        addBtn.onclick = () => {
+          promptScheduleEvent(null, async (data) => {
+            await apiSend('POST', `/api/teacher/subjects/${currentSubjectId}/schedule`, data);
+            render(false);
+          });
+        };
+        list.appendChild(addBtn);
+
+        if (!events.length) {
+          const p = document.createElement('p');
+          p.className = 'state-msg';
+          p.textContent = 'Пока нет запланированных занятий.';
+          list.appendChild(p);
+        }
+
+        events.forEach((ev) => {
+          const row = document.createElement('div');
+          row.className = 'row-card';
+          const info = document.createElement('div');
+          info.style.flex = '1';
+          const t = document.createElement('div');
+          t.className = 'row-title';
+          t.textContent = ev.title;
+          info.appendChild(t);
+          const sub = document.createElement('div');
+          sub.className = 'row-sub';
+          sub.textContent = '🕒 ' + ev.event_time + (ev.link ? ' · 🔗 есть ссылка' : '');
+          info.appendChild(sub);
+          row.appendChild(info);
+
+          const actions = document.createElement('div');
+          actions.className = 'row-actions';
+          const editBtn = document.createElement('button');
+          editBtn.className = 'icon-btn';
+          editBtn.innerHTML = ICONS.edit;
+          editBtn.onclick = (e) => {
+            e.stopPropagation();
+            promptScheduleEvent(ev, async (data) => {
+              await apiSend('PATCH', `/api/teacher/schedule/${ev.id}`, data);
+              render(false);
+            });
+          };
+          actions.appendChild(editBtn);
+          const delBtn = document.createElement('button');
+          delBtn.className = 'icon-btn';
+          delBtn.innerHTML = ICONS.trash;
+          delBtn.onclick = (e) => {
+            e.stopPropagation();
+            confirmDelete('Удалить занятие «' + ev.title + '»?', async () => {
+              await apiSend('DELETE', `/api/teacher/schedule/${ev.id}`);
+              render(false);
+            });
+          };
+          actions.appendChild(delBtn);
+          row.appendChild(actions);
+          list.appendChild(row);
+        });
+
+        screen.appendChild(list);
+      }, isBack);
+    } catch (err) { showErrorMsg(err, isBack); }
   }
 
   // Спрашивает текст сообщения для замка (можно оставить пустым — тогда
