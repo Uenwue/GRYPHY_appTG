@@ -277,6 +277,32 @@
     background: var(--bg); border: 2px solid var(--border); border-radius: 20px;
     padding: 26px 20px; text-align: center; animation: card-in 0.36s var(--bounce) both;
   }
+
+  .cal-wrap { background: var(--bg); border: 2px solid var(--border); border-radius: 16px; padding: 14px; margin-bottom: 16px; }
+  .cal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .cal-title { font-family: 'Jost', sans-serif; font-size: 15.5px; font-weight: 800; text-transform: capitalize; }
+  .cal-nav-btn {
+    width: 30px; height: 30px; border-radius: 8px; border: none; background: var(--bg-soft);
+    display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--text);
+  }
+  .cal-nav-btn:active { transform: scale(0.88); }
+  .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; }
+  .cal-daylabel { text-align: center; font-size: 10.5px; font-weight: 700; color: var(--text-soft); padding-bottom: 4px; }
+  .cal-day {
+    position: relative; aspect-ratio: 1; display: flex; align-items: center; justify-content: center;
+    border-radius: 9px; font-size: 12.5px; font-weight: 700; cursor: pointer; background: transparent;
+    border: none; color: var(--text);
+  }
+  .cal-day.empty { cursor: default; }
+  .cal-day.today { border: 2px solid var(--blue); }
+  .cal-day.selected { background: var(--blue); color: white; }
+  .cal-day.has-event::after {
+    content: ''; position: absolute; bottom: 3px; left: 50%; transform: translateX(-50%);
+    width: 5px; height: 5px; border-radius: 50%; background: var(--yellow);
+    animation: dot-pulse 1.6s ease-in-out infinite;
+  }
+  .cal-day.selected.has-event::after { background: white; }
+  @keyframes dot-pulse { 0%, 100% { opacity: 1; transform: translateX(-50%) scale(1); } 50% { opacity: 0.4; transform: translateX(-50%) scale(1.3); } }
   .result-score { font-family: 'Jost', sans-serif; font-size: 40px; font-weight: 700; color: var(--green-dark); margin: 6px 0; }
   .result-label { font-size: 13px; font-weight: 700; color: var(--text-soft); text-transform: uppercase; letter-spacing: 0.03em; }
   .result-breakdown { display: flex; justify-content: center; gap: 18px; margin-top: 16px; }
@@ -1762,19 +1788,97 @@
     }
   }
 
+  let calYear, calMonth, calSelected;
+
+  function buildCalendarGrid(year, month, eventDatesSet, selectedDate, onDayClick, onPrev, onNext) {
+    const wrap = document.createElement('div');
+    wrap.className = 'cal-wrap';
+
+    const head = document.createElement('div');
+    head.className = 'cal-head';
+    const prevBtn = document.createElement('button');
+    prevBtn.className = 'cal-nav-btn';
+    prevBtn.innerHTML = '‹';
+    prevBtn.onclick = onPrev;
+    const title = document.createElement('div');
+    title.className = 'cal-title';
+    const monthNames = ['январь', 'февраль', 'март', 'апрель', 'май', 'июнь', 'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь'];
+    title.textContent = monthNames[month] + ' ' + year;
+    const nextBtn = document.createElement('button');
+    nextBtn.className = 'cal-nav-btn';
+    nextBtn.innerHTML = '›';
+    nextBtn.onclick = onNext;
+    head.appendChild(prevBtn);
+    head.appendChild(title);
+    head.appendChild(nextBtn);
+    wrap.appendChild(head);
+
+    const grid = document.createElement('div');
+    grid.className = 'cal-grid';
+    ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'].forEach((d) => {
+      const lbl = document.createElement('div');
+      lbl.className = 'cal-daylabel';
+      lbl.textContent = d;
+      grid.appendChild(lbl);
+    });
+
+    const now = new Date();
+    const todayStr = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
+    const firstDay = new Date(year, month, 1);
+    let startOffset = firstDay.getDay() - 1;
+    if (startOffset < 0) startOffset = 6;
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+    for (let i = 0; i < startOffset; i++) {
+      const empty = document.createElement('div');
+      empty.className = 'cal-day empty';
+      grid.appendChild(empty);
+    }
+    for (let d = 1; d <= daysInMonth; d++) {
+      const dateStr = year + '-' + String(month + 1).padStart(2, '0') + '-' + String(d).padStart(2, '0');
+      const cell = document.createElement('button');
+      cell.type = 'button';
+      cell.className = 'cal-day';
+      if (eventDatesSet.has(dateStr)) cell.classList.add('has-event');
+      if (dateStr === todayStr) cell.classList.add('today');
+      if (dateStr === selectedDate) cell.classList.add('selected');
+      cell.textContent = d;
+      cell.onclick = () => onDayClick(dateStr);
+      grid.appendChild(cell);
+    }
+    wrap.appendChild(grid);
+    return wrap;
+  }
+
   async function renderStudentSchedule() {
     showLoading('Загружаем расписание', false);
     try {
       const events = await apiGet('/api/schedule');
+      const now = new Date();
+      if (calYear === undefined) {
+        calYear = now.getFullYear();
+        calMonth = now.getMonth();
+        calSelected = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
+      }
+      const eventDates = new Set(events.map((ev) => ev.event_time.slice(0, 10)));
+
       swapScreen((screen) => {
-        if (!events.length) {
+        const cal = buildCalendarGrid(calYear, calMonth, eventDates, calSelected,
+          (dateStr) => { calSelected = dateStr; renderStudentSchedule(); },
+          () => { calMonth--; if (calMonth < 0) { calMonth = 11; calYear--; } renderStudentSchedule(); },
+          () => { calMonth++; if (calMonth > 11) { calMonth = 0; calYear++; } renderStudentSchedule(); },
+        );
+        screen.appendChild(cal);
+
+        const dayEvents = events.filter((ev) => ev.event_time.slice(0, 10) === calSelected);
+        if (!dayEvents.length) {
           const p = document.createElement('p');
           p.className = 'state-msg';
-          p.textContent = 'Пока нет запланированных занятий.';
+          p.textContent = 'На этот день занятий не запланировано.';
           screen.appendChild(p);
           return;
         }
-        events.forEach((ev) => {
+        dayEvents.forEach((ev) => {
           const card = document.createElement('div');
           card.className = 'result-card';
           card.style.cssText = 'text-align:left;margin-bottom:14px;';
@@ -1789,7 +1893,7 @@
           card.appendChild(t);
           const time = document.createElement('div');
           time.style.cssText = 'font-weight:700;color:var(--text-soft);margin-bottom:10px;';
-          time.textContent = '🕒 ' + ev.event_time;
+          time.textContent = '🕒 ' + ev.event_time.slice(11);
           card.appendChild(time);
           if (ev.link) {
             const linkBtn = document.createElement('a');
