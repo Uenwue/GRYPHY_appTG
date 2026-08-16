@@ -9,22 +9,23 @@
 <link href="https://fonts.googleapis.com/css2?family=Jost:wght@400;500;600;700&family=Nunito:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #FFFFFF;
-    --bg-soft: #F7F7F7;
-    --border: #E5E5E5;
-    --text: #3C3C3C;
-    --text-soft: #777777;
-    --green: #58CC02;
-    --green-dark: #58A700;
-    --green-tint: #D7FFB8;
-    --blue: #1CB0F6;
-    --blue-dark: #1899D6;
-    --blue-tint: #DDF4FF;
-    --red: #FF4B4B;
-    --red-dark: #EA2B2B;
-    --red-tint: #FFDFE0;
-    --yellow: #FFC800;
-    --yellow-tint: #FFF1C2;
+    --bg: #FFFFF5;
+    --bg-soft: #FFF7D7;
+    --border: #ECDDB0;
+    --text: #312C2C;
+    --text-soft: #514A4A;
+    --green: #9AAB63;
+    --green-dark: #798C46;
+    --green-tint: #CCD5AF;
+    --blue: #E4809A;
+    --blue-dark: #C15E78;
+    --blue-tint: #F3C6D2;
+    --red: #E85D5D;
+    --red-dark: #C43E3E;
+    --red-tint: #F8D6D6;
+    --yellow: #F5D867;
+    --yellow-dark: #B8860B;
+    --yellow-tint: #F9EBAD;
     --card-shadow: 0 2px 0 var(--border);
     --bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
   }
@@ -32,28 +33,28 @@
   /* Тёмная тема — включается автоматически по системной настройке... */
   @media (prefers-color-scheme: dark) {
     html:not([data-theme="light"]) {
-      --bg: #14181F;
-      --bg-soft: #1C222C;
-      --border: #2B323F;
-      --text: #F1F3F6;
-      --text-soft: #8B93A3;
-      --green-tint: rgba(88, 204, 2, 0.16);
-      --blue-tint: rgba(28, 176, 246, 0.16);
-      --red-tint: rgba(255, 75, 75, 0.16);
-      --yellow-tint: rgba(255, 200, 0, 0.16);
+      --bg: #312C2C;
+      --bg-soft: #4A4242;
+      --border: #6B6262;
+      --text: #FFFFF5;
+      --text-soft: #D9CFCF;
+      --green-tint: rgba(154, 171, 99, 0.22);
+      --blue-tint: rgba(228, 128, 154, 0.22);
+      --red-tint: rgba(232, 93, 93, 0.22);
+      --yellow-tint: rgba(245, 216, 103, 0.2);
     }
   }
   /* ...или вручную через переключатель (сохраняется в localStorage) */
   html[data-theme="dark"] {
-    --bg: #14181F;
-    --bg-soft: #1C222C;
-    --border: #2B323F;
-    --text: #F1F3F6;
-    --text-soft: #8B93A3;
-    --green-tint: rgba(88, 204, 2, 0.16);
-    --blue-tint: rgba(28, 176, 246, 0.16);
-    --red-tint: rgba(255, 75, 75, 0.16);
-    --yellow-tint: rgba(255, 200, 0, 0.16);
+    --bg: #312C2C;
+    --bg-soft: #4A4242;
+    --border: #6B6262;
+    --text: #FFFFF5;
+    --text-soft: #D9CFCF;
+    --green-tint: rgba(154, 171, 99, 0.22);
+    --blue-tint: rgba(228, 128, 154, 0.22);
+    --red-tint: rgba(232, 93, 93, 0.22);
+    --yellow-tint: rgba(245, 216, 103, 0.2);
   }
 
   .theme-toggle {
@@ -83,7 +84,7 @@
   .demo-flag {
     max-width: 420px; margin: 0 auto 14px;
     background: var(--yellow); border: none; border-radius: 12px;
-    padding: 8px 12px; font-size: 12.5px; font-weight: 700; color: #5B4700; text-align: center;
+    padding: 8px 12px; font-size: 12.5px; font-weight: 700; color: var(--yellow-dark); text-align: center;
   }
 
   .wrap { max-width: 420px; margin: 0 auto; }
@@ -123,13 +124,22 @@
   .item-card {
     position: relative;
     background: var(--bg-soft); border: none;
-    border-radius: 18px; box-shadow: none; padding: 20px 56px 20px 18px;
+    border-radius: 18px; box-shadow: 0 2px 8px rgba(49, 44, 44, 0.05); padding: 20px 56px 20px 18px;
     display: flex; align-items: center; justify-content: space-between; gap: 10px;
     cursor: pointer; text-align: left; width: 100%; font-family: 'Nunito', sans-serif; color: var(--text);
     opacity: 0;
     animation: card-in 0.36s var(--bounce) both;
     transition: transform 0.1s ease, background 0.15s ease;
   }
+
+  .row-card {
+    background: var(--bg); border: 2px solid var(--border); border-radius: 14px;
+    padding: 13px 14px; display: flex; align-items: flex-start; gap: 12px;
+    margin-bottom: 8px; box-shadow: 0 2px 8px rgba(49, 44, 44, 0.05);
+    opacity: 0; animation: card-in 0.32s var(--bounce) both;
+  }
+  .row-title { font-family: 'Jost', sans-serif; font-size: 15px; font-weight: 700; }
+  .row-sub { font-size: 12px; color: var(--text-soft); font-weight: 600; margin-top: 1px; }
 
   @keyframes card-in { from { opacity: 0; transform: translateY(10px) scale(0.97); } to { opacity: 1; transform: translateY(0) scale(1); } }
 
@@ -188,7 +198,7 @@
 
   .task-card {
     background: var(--bg); border: 2px solid var(--border); border-radius: 20px;
-    box-shadow: none; padding: 20px 18px;
+    box-shadow: 0 4px 14px rgba(49, 44, 44, 0.07); padding: 20px 18px;
     animation: card-in 0.36s var(--bounce) both;
   }
 
@@ -198,7 +208,7 @@
     color: var(--blue-dark); background: var(--blue-tint); padding: 3px 9px; border-radius: 8px;
     margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.03em;
   }
-  .question-label.part-b { color: #8A6D00; background: var(--yellow-tint); }
+  .question-label.part-b { color: var(--yellow-dark); background: var(--yellow-tint); }
   .task-description {
     font-size: 14.5px; color: var(--text-soft); font-weight: 600; line-height: 1.55;
     margin: 0 0 20px; padding: 12px 14px; background: var(--bg-soft); border-radius: 12px;
@@ -226,12 +236,12 @@
 
   .feedback { margin-top: 18px; padding: 14px 16px; border-radius: 16px; border: 2px solid; animation: feedback-in 0.3s var(--bounce) both; }
   @keyframes feedback-in { from { opacity: 0; transform: translateY(-6px) scale(0.96); } to { opacity: 1; transform: translateY(0) scale(1); } }
-  .feedback.ok { background: #F1FBE8; border-color: var(--green); }
+  .feedback.ok { background: var(--green-tint); border-color: var(--green); }
   html[data-theme="dark"] .feedback.ok, html:not([data-theme="light"]) .feedback.ok { background: var(--green-tint); }
   @media (prefers-color-scheme: dark) { html:not([data-theme="light"]) .feedback.ok { background: var(--green-tint); } }
   .feedback.bad { background: var(--red-tint); border-color: var(--red); }
   .feedback.mid { background: var(--yellow-tint); border-color: var(--yellow); }
-  .feedback.mid .feedback-title { color: #8A6D00; }
+  .feedback.mid .feedback-title { color: var(--yellow-dark); }
   .feedback-title { font-family: 'Jost', sans-serif; font-weight: 700; font-size: 16px; margin: 0 0 6px; }
   .feedback.ok .feedback-title { color: var(--green-dark); }
   .feedback.bad .feedback-title { color: var(--red-dark); }
@@ -278,10 +288,11 @@
   .choice-card {
     background: var(--bg); border: 2px solid var(--border); border-bottom: 3px solid var(--border);
     border-radius: 14px; padding: 14px 16px; text-align: center; cursor: pointer;
-    font-family: 'Nunito', sans-serif; transition: transform 0.12s var(--bounce);
+    font-family: 'Nunito', sans-serif; transition: transform 0.12s var(--bounce), box-shadow 0.12s ease;
     animation: card-in 0.36s var(--bounce) both;
+    box-shadow: 0 3px 10px rgba(49, 44, 44, 0.06);
   }
-  .choice-card:active { transform: translateY(2px); border-bottom-width: 1px; }
+  .choice-card:active { transform: translateY(2px); border-bottom-width: 1px; box-shadow: 0 1px 4px rgba(49, 44, 44, 0.06); }
   .choice-card .choice-icon { width: 28px; height: 28px; margin: 0 auto 6px; }
   .choice-card .choice-title { font-family: 'Jost', sans-serif; font-size: 15px; font-weight: 600; color: var(--text); }
 
@@ -289,6 +300,7 @@
   .result-card {
     background: var(--bg); border: 2px solid var(--border); border-radius: 20px;
     padding: 26px 20px; text-align: center; animation: card-in 0.36s var(--bounce) both;
+    box-shadow: 0 4px 14px rgba(49, 44, 44, 0.07);
   }
 
 
@@ -305,7 +317,7 @@
   .field-input:focus, .field-textarea:focus { outline: none; border-color: var(--blue); background: var(--bg); }
   .field-textarea { resize: vertical; min-height: 60px; font-family: 'Nunito', sans-serif; }
 
-  .cal-wrap { background: var(--bg); border: 2px solid var(--border); border-radius: 16px; padding: 14px; margin-bottom: 16px; }
+  .cal-wrap { background: var(--bg); border: 2px solid var(--border); border-radius: 16px; padding: 14px; margin-bottom: 16px; box-shadow: 0 3px 10px rgba(49, 44, 44, 0.06); }
   .cal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
   .cal-title { font-family: 'Jost', sans-serif; font-size: 15.5px; font-weight: 800; text-transform: capitalize; }
   .cal-nav-btn {
@@ -334,13 +346,14 @@
   .result-stat .num { font-family: 'Jost', sans-serif; font-size: 20px; font-weight: 700; }
   .result-stat.ok .num { color: var(--green-dark); }
   .result-stat.bad .num { color: var(--red-dark); }
-  .result-stat.mid .num { color: #B8860B; }
+  .result-stat.mid .num { color: var(--yellow-dark); }
   .result-stat .lbl { font-size: 11px; color: var(--text-soft); font-weight: 700; }
 
   /* --- Профиль --- */
   .profile-card {
     background: var(--bg); border: 2px solid var(--border); border-radius: 16px;
     padding: 14px 16px; margin-bottom: 10px; animation: card-in 0.36s var(--bounce) both;
+    box-shadow: 0 2px 8px rgba(49, 44, 44, 0.05);
   }
   .profile-card .p-title { font-family: 'Jost', sans-serif; font-size: 15px; font-weight: 700; }
   .profile-card .p-date { font-size: 12px; color: var(--text-soft); font-weight: 600; margin: 2px 0 8px; }
@@ -494,21 +507,21 @@
 
   const ICONS = {
     subjects: `<svg class="level-icon" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-      <circle cx="10" cy="10" r="7.2" stroke="#58A700" stroke-width="1.8"/>
-      <circle cx="10" cy="10" r="3.2" stroke="#58A700" stroke-width="1.4"/>
+      <circle cx="10" cy="10" r="7.2" stroke="var(--green-dark)" stroke-width="1.8"/>
+      <circle cx="10" cy="10" r="3.2" stroke="var(--green-dark)" stroke-width="1.4"/>
     </svg>`,
     sections: `<svg class="level-icon" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-      <path d="M2 6.5C2 5.67 2.67 5 3.5 5H8L9.5 6.5H16.5C17.33 6.5 18 7.17 18 8V14.5C18 15.33 17.33 16 16.5 16H3.5C2.67 16 2 15.33 2 14.5V6.5Z" stroke="#1899D6" stroke-width="1.7" stroke-linejoin="round"/>
+      <path d="M2 6.5C2 5.67 2.67 5 3.5 5H8L9.5 6.5H16.5C17.33 6.5 18 7.17 18 8V14.5C18 15.33 17.33 16 16.5 16H3.5C2.67 16 2 15.33 2 14.5V6.5Z" stroke="var(--blue-dark)" stroke-width="1.7" stroke-linejoin="round"/>
     </svg>`,
     topics: `<svg class="level-icon" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-      <path d="M5 3H15V17L10 14.2L5 17V3Z" stroke="#B8860B" stroke-width="1.7" stroke-linejoin="round"/>
+      <path d="M5 3H15V17L10 14.2L5 17V3Z" stroke="var(--yellow-dark)" stroke-width="1.7" stroke-linejoin="round"/>
     </svg>`,
     tests: `<svg class="level-icon" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-      <path d="M6 3H14L14 17L10 14.5L6 17V3Z" stroke="#B8860B" stroke-width="1.7" stroke-linejoin="round"/>
+      <path d="M6 3H14L14 17L10 14.5L6 17V3Z" stroke="var(--yellow-dark)" stroke-width="1.7" stroke-linejoin="round"/>
     </svg>`,
     rules: `<svg class="level-icon" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-      <path d="M4 4C4 3 4.9 2 6 2H15V18H6C4.9 18 4 17 4 16V4Z" stroke="#58A700" stroke-width="1.7" stroke-linejoin="round"/>
-      <path d="M4 16C4 15 4.9 14 6 14H15" stroke="#58A700" stroke-width="1.7"/>
+      <path d="M4 4C4 3 4.9 2 6 2H15V18H6C4.9 18 4 17 4 16V4Z" stroke="var(--green-dark)" stroke-width="1.7" stroke-linejoin="round"/>
+      <path d="M4 16C4 15 4.9 14 6 14H15" stroke="var(--green-dark)" stroke-width="1.7"/>
     </svg>`
   };
 
@@ -1018,7 +1031,7 @@
       '<img id="repPhotoPreview" style="max-width:100%;border-radius:12px;display:block;">' +
       '<button id="repPhotoRemove" type="button" style="position:absolute;top:6px;right:6px;width:26px;height:26px;border-radius:50%;background:rgba(0,0,0,0.6);color:white;border:none;font-size:14px;cursor:pointer;">✕</button>' +
       '</div>' +
-      '<div id="repErr" style="color:#EA2B2B;font-size:12.5px;font-weight:700;margin-bottom:8px;display:none;"></div>' +
+      '<div id="repErr" style="color:var(--red-dark);font-size:12.5px;font-weight:700;margin-bottom:8px;display:none;"></div>' +
       '<div style="display:flex;gap:8px;">' +
       '<button class="back-btn" id="repCancel" style="flex:1;">Отмена</button>' +
       '<button class="submit-btn" id="repSend" style="flex:1;margin-top:0;">Отправить</button>' +
@@ -2212,7 +2225,7 @@
           calTitle.textContent = '📅 Календарь занятий';
           screen.appendChild(calTitle);
 
-          const subjectColors = ['var(--green)', 'var(--blue)', 'var(--yellow)', 'var(--red)', '#9B59B6', '#FF8C42'];
+          const subjectColors = ['var(--green)', 'var(--blue)', 'var(--yellow)', 'var(--red)', '#C97B3D', '#7A8F47'];
           const colorBySubject = {};
           subjects.forEach((s, i) => { colorBySubject[s.title] = subjectColors[i % subjectColors.length]; });
 
@@ -2332,7 +2345,7 @@
         const challengesChoice = document.createElement('button');
         challengesChoice.className = 'choice-card';
         challengesChoice.innerHTML = `
-          <svg class="choice-icon" viewBox="0 0 20 20" fill="none"><path d="M10 2L10 12M10 12L14 8M10 12L6 8" stroke="#58CC02" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><rect x="4" y="14" width="12" height="4" rx="1" stroke="#58CC02" stroke-width="1.5"/></svg>
+          <svg class="choice-icon" viewBox="0 0 20 20" fill="none"><path d="M10 2L10 12M10 12L14 8M10 12L6 8" stroke="#798C46" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><rect x="4" y="14" width="12" height="4" rx="1" stroke="#798C46" stroke-width="1.5"/></svg>
           <div class="choice-title">🎯 Задания месяца</div>`;
         challengesChoice.onclick = () => { profileStack.push({ level: 'profile_challenges', subjectId: current.subjectId, title: 'Задания месяца' }); renderProfileCrumbs(); renderProfile(false); };
         wrap.appendChild(challengesChoice);
@@ -2341,7 +2354,7 @@
         reportChoice.className = 'choice-card';
         reportChoice.style.animationDelay = '0.05s';
         reportChoice.innerHTML = `
-          <svg class="choice-icon" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="7" stroke="#EA2B2B" stroke-width="1.5"/><path d="M10 7V10.5M10 13.2V13.3" stroke="#EA2B2B" stroke-width="1.5" stroke-linecap="round"/></svg>
+          <svg class="choice-icon" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="7" stroke="#C43E3E" stroke-width="1.5"/><path d="M10 7V10.5M10 13.2V13.3" stroke="#C43E3E" stroke-width="1.5" stroke-linecap="round"/></svg>
           <div class="choice-title">\uD83D\uDC1E Сообщить об ошибке</div>`;
         reportChoice.onclick = () => promptReportError({ subject_id: current.subjectId });
         wrap.appendChild(reportChoice);
@@ -2462,7 +2475,7 @@
             info.appendChild(t);
             item.appendChild(info);
             const pts = document.createElement('div');
-            pts.style.cssText = 'font-family:\'Jost\',sans-serif;font-weight:800;font-size:14px;color:var(--yellow-dark,#B8860B);flex-shrink:0;';
+            pts.style.cssText = 'font-family:\'Jost\',sans-serif;font-weight:800;font-size:14px;color:var(--yellow-dark);flex-shrink:0;';
             pts.textContent = row.points + ' \u2b50';
             item.appendChild(pts);
             list.appendChild(item);
@@ -2512,7 +2525,7 @@
             barTrack.style.cssText = 'background:var(--bg-soft);border-radius:10px;height:16px;overflow:hidden;margin:8px 0 6px;';
             const barFill = document.createElement('div');
             const pct = Math.min(100, Math.round((it.progress / it.target) * 100));
-            barFill.style.cssText = `height:100%;width:${pct}%;background:${done ? 'var(--green,#58CC02)' : 'var(--yellow)'};border-radius:10px;transition:width 0.4s var(--bounce);`;
+            barFill.style.cssText = `height:100%;width:${pct}%;background:${done ? 'var(--green)' : 'var(--yellow)'};border-radius:10px;transition:width 0.4s var(--bounce);`;
             barTrack.appendChild(barFill);
             card.appendChild(barTrack);
             const label = document.createElement('div');
@@ -2722,7 +2735,7 @@
     const cityInput = makeField('Город', 'Например, Минск');
 
     const errBox = document.createElement('div');
-    errBox.style.cssText = 'color:#EA2B2B;font-size:12.5px;font-weight:700;margin-bottom:8px;display:none;';
+    errBox.style.cssText = 'color:var(--red-dark);font-size:12.5px;font-weight:700;margin-bottom:8px;display:none;';
     card.appendChild(errBox);
 
     const saveBtn = document.createElement('button');
