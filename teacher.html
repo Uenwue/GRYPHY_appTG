@@ -863,6 +863,10 @@
       renderSchedule(isBack);
     } else if (current.level === 'error_reports') {
       renderErrorReports(isBack);
+    } else if (current.level === 'leaderboard') {
+      renderLeaderboard(isBack);
+    } else if (current.level === 'challenges') {
+      renderChallenges(isBack);
     } else if (current.level === 'testq_form') {
       renderTestQForm(current.testId, current.editId, isBack, current.templateFrom);
     } else if (current.level === 'testq_preview') {
@@ -948,6 +952,20 @@
       reportsChoice.style.position = 'relative';
       reportsChoice.appendChild(badge);
     }).catch(() => {});
+
+    const ratingChoice = document.createElement('button');
+    ratingChoice.className = 'choice-card';
+    ratingChoice.style.animationDelay = '0.3s';
+    ratingChoice.innerHTML = '<svg class="choice-icon" viewBox="0 0 20 20" fill="none"><path d="M10 3L12.2 7.6L17.3 8.3L13.6 11.9L14.5 17L10 14.5L5.5 17L6.4 11.9L2.7 8.3L7.8 7.6L10 3Z" stroke="#F5A623" stroke-width="1.5" stroke-linejoin="round"/></svg><div class="choice-title">🏆 Рейтинг участников</div>';
+    ratingChoice.onclick = () => { stack.push({ level: 'leaderboard', title: 'Рейтинг участников' }); renderCrumbs(); render(false); };
+    wrap.appendChild(ratingChoice);
+
+    const challengesChoice = document.createElement('button');
+    challengesChoice.className = 'choice-card';
+    challengesChoice.style.animationDelay = '0.35s';
+    challengesChoice.innerHTML = '<svg class="choice-icon" viewBox="0 0 20 20" fill="none"><path d="M10 2L10 12M10 12L14 8M10 12L6 8" stroke="#58CC02" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><rect x="4" y="14" width="12" height="4" rx="1" stroke="#58CC02" stroke-width="1.5"/></svg><div class="choice-title">🎯 Задания месяца</div>';
+    challengesChoice.onclick = () => { stack.push({ level: 'challenges', title: 'Задания месяца' }); renderCrumbs(); render(false); };
+    wrap.appendChild(challengesChoice);
 
     swapScreen((screen) => { screen.appendChild(wrap); }, isBack);
   }
@@ -1367,6 +1385,197 @@
           card.appendChild(actions);
 
           list.appendChild(card);
+        });
+
+        screen.appendChild(list);
+      }, isBack);
+    } catch (err) { showErrorMsg(err, isBack); }
+  }
+
+  async function renderLeaderboard(isBack) {
+    showLoadingMenu();
+    try {
+      const rows = await apiGet(`/api/subjects/${currentSubjectId}/leaderboard`);
+      swapScreen((screen) => {
+        if (!rows.length) {
+          const p = document.createElement('p');
+          p.className = 'state-msg';
+          p.textContent = 'Пока никто не решил ни одного задания.';
+          screen.appendChild(p);
+          return;
+        }
+
+        const podium = rows.slice(0, 3);
+        const rest = rows.slice(3);
+
+        if (podium.length) {
+          const podiumWrap = document.createElement('div');
+          podiumWrap.style.cssText = 'display:flex;align-items:flex-end;justify-content:center;gap:8px;margin-bottom:20px;';
+          const order = podium.length >= 2 ? [1, 0, 2] : [0];
+          const heights = { 0: 92, 1: 72, 2: 58 };
+          const medals = { 0: '\ud83e\udd47', 1: '\ud83e\udd48', 2: '\ud83e\udd49' };
+          order.forEach((idx) => {
+            const p = podium[idx];
+            if (!p) return;
+            const col = document.createElement('div');
+            col.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;max-width:110px;';
+            const medal = document.createElement('div');
+            medal.style.fontSize = '26px';
+            medal.textContent = medals[idx];
+            col.appendChild(medal);
+            const name = document.createElement('div');
+            name.style.cssText = 'font-family:\'Jost\',sans-serif;font-weight:800;font-size:12.5px;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%;';
+            name.textContent = p.name;
+            col.appendChild(name);
+            const bar = document.createElement('div');
+            bar.style.cssText = `width:100%;height:${heights[idx]}px;background:var(--yellow-tint);border:2px solid var(--yellow);border-radius:10px 10px 0 0;display:flex;align-items:center;justify-content:center;font-family:'Jost',sans-serif;font-weight:800;font-size:15px;`;
+            bar.textContent = p.points;
+            col.appendChild(bar);
+            podiumWrap.appendChild(col);
+          });
+          screen.appendChild(podiumWrap);
+        }
+
+        if (rest.length) {
+          const list = document.createElement('div');
+          list.className = 'list';
+          rest.forEach((row) => {
+            const item = document.createElement('div');
+            item.className = 'row-card';
+            const place = document.createElement('div');
+            place.style.cssText = 'font-family:\'Jost\',sans-serif;font-weight:800;font-size:14px;color:var(--text-soft);width:26px;flex-shrink:0;';
+            place.textContent = '#' + row.place;
+            item.appendChild(place);
+            const info = document.createElement('div');
+            info.style.flex = '1';
+            const t = document.createElement('div');
+            t.className = 'row-title';
+            t.textContent = row.name;
+            info.appendChild(t);
+            item.appendChild(info);
+            const pts = document.createElement('div');
+            pts.style.cssText = 'font-family:\'Jost\',sans-serif;font-weight:800;font-size:14px;color:#B8860B;flex-shrink:0;';
+            pts.textContent = row.points + ' \u2b50';
+            item.appendChild(pts);
+            list.appendChild(item);
+          });
+          screen.appendChild(list);
+        }
+      }, isBack);
+    } catch (err) { showErrorMsg(err, isBack); }
+  }
+
+  function promptChallenge(onSave) {
+    lockBodyScroll();
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center;z-index:30;padding:20px;overflow-y:auto;';
+    const catOptions = '<option value="day">День</option><option value="week">Неделя</option><option value="weekend">Выходные</option><option value="month">Месяц</option>';
+    const typeOptions = '<option value="streak">Дней подряд (стрик)</option><option value="tasks_count">Решить N заданий</option><option value="tests_count">Пройти N тестов</option>';
+    overlay.innerHTML = '<div style="background:var(--bg);border-radius:16px;padding:18px;max-width:360px;width:100%;margin:20px 0;">' +
+      '<div class="field-label">\u041d\u0430\u0437\u0432\u0430\u043d\u0438\u0435</div>' +
+      '<input class="field-input" id="chTitle" style="margin-bottom:12px;" placeholder="\u0417\u0430\u043d\u0438\u043c\u0430\u0439\u0442\u0435\u0441\u044c 7 \u0434\u043d\u0435\u0439 \u043f\u043e\u0434\u0440\u044f\u0434">' +
+      '<div class="field-label">\u041e\u043f\u0438\u0441\u0430\u043d\u0438\u0435 (\u043d\u0435\u043e\u0431\u044f\u0437\u0430\u0442\u0435\u043b\u044c\u043d\u043e)</div>' +
+      '<textarea class="field-input" id="chDesc" rows="2" style="resize:vertical;margin-bottom:12px;"></textarea>' +
+      '<div class="field-label">\u041a\u0430\u0442\u0435\u0433\u043e\u0440\u0438\u044f</div>' +
+      '<select class="field-input" id="chCategory" style="margin-bottom:12px;">' + catOptions + '</select>' +
+      '<div class="field-label">\u0422\u0438\u043f \u0437\u0430\u0434\u0430\u043d\u0438\u044f</div>' +
+      '<select class="field-input" id="chType" style="margin-bottom:12px;">' + typeOptions + '</select>' +
+      '<div class="field-label">\u0426\u0435\u043b\u0435\u0432\u043e\u0435 \u0447\u0438\u0441\u043b\u043e (\u043d\u0430\u043f\u0440\u0438\u043c\u0435\u0440, 7)</div>' +
+      '<input class="field-input" id="chTarget" type="number" min="1" style="margin-bottom:12px;">' +
+      '<div id="chErr" style="color:#EA2B2B;font-size:12.5px;font-weight:700;margin-bottom:8px;display:none;"></div>' +
+      '<div style="display:flex;gap:8px;">' +
+      '<button class="back-btn" id="chCancel" style="flex:1;">\u041e\u0442\u043c\u0435\u043d\u0430</button>' +
+      '<button class="save-btn" id="chSave" style="flex:1;margin-top:0;">\u0421\u043e\u0437\u0434\u0430\u0442\u044c</button>' +
+      '</div></div>';
+    document.body.appendChild(overlay);
+    const titleInput = overlay.querySelector('#chTitle');
+    const descInput = overlay.querySelector('#chDesc');
+    const catSelect = overlay.querySelector('#chCategory');
+    const typeSelect = overlay.querySelector('#chType');
+    const targetInput = overlay.querySelector('#chTarget');
+    const errBox = overlay.querySelector('#chErr');
+    const saveBtn = overlay.querySelector('#chSave');
+    titleInput.focus();
+    function closeOverlay() { unlockBodyScroll(); overlay.remove(); }
+    overlay.querySelector('#chCancel').onclick = closeOverlay;
+    saveBtn.onclick = async () => {
+      const title = titleInput.value.trim();
+      const target = parseInt(targetInput.value, 10);
+      if (!title || !target || target < 1) {
+        errBox.textContent = '\u0417\u0430\u043f\u043e\u043b\u043d\u0438\u0442\u0435 \u043d\u0430\u0437\u0432\u0430\u043d\u0438\u0435 \u0438 \u0446\u0435\u043b\u0435\u0432\u043e\u0435 \u0447\u0438\u0441\u043b\u043e.';
+        errBox.style.display = 'block';
+        return;
+      }
+      saveBtn.disabled = true;
+      saveBtn.textContent = '\u0421\u043e\u0437\u0434\u0430\u044e\u2026';
+      try {
+        await onSave({
+          title, description: descInput.value.trim(), category: catSelect.value,
+          challenge_type: typeSelect.value, target,
+        });
+        closeOverlay();
+      } catch (err) {
+        saveBtn.disabled = false;
+        saveBtn.textContent = '\u0421\u043e\u0437\u0434\u0430\u0442\u044c';
+        errBox.textContent = '\u041d\u0435 \u043f\u043e\u043b\u0443\u0447\u0438\u043b\u043e\u0441\u044c: ' + err.message;
+        errBox.style.display = 'block';
+      }
+    };
+  }
+
+  async function renderChallenges(isBack) {
+    showLoadingMenu();
+    try {
+      const items = await apiGet(`/api/subjects/${currentSubjectId}/challenges`);
+      const catLabels = { day: '\u0414\u0435\u043d\u044c', week: '\u041d\u0435\u0434\u0435\u043b\u044f', weekend: '\u0412\u044b\u0445\u043e\u0434\u043d\u044b\u0435', month: '\u041c\u0435\u0441\u044f\u0446' };
+      swapScreen((screen) => {
+        const list = document.createElement('div');
+        list.className = 'list';
+
+        const addBtn = document.createElement('button');
+        addBtn.className = 'add-row-btn';
+        addBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 20 20" fill="none"><path d="M10 4V16M4 10H16" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg> \u0414\u043e\u0431\u0430\u0432\u0438\u0442\u044c \u0437\u0430\u0434\u0430\u043d\u0438\u0435';
+        addBtn.onclick = () => {
+          promptChallenge(async (data) => {
+            await apiSend('POST', `/api/teacher/subjects/${currentSubjectId}/challenges`, data);
+            render(false);
+          });
+        };
+        list.appendChild(addBtn);
+
+        if (!items.length) {
+          const p = document.createElement('p');
+          p.className = 'state-msg';
+          p.textContent = '\u041f\u043e\u043a\u0430 \u043d\u0435\u0442 \u0437\u0430\u0434\u0430\u043d\u0438\u0439 \u043c\u0435\u0441\u044f\u0446\u0430.';
+          list.appendChild(p);
+        }
+
+        items.forEach((it) => {
+          const row = document.createElement('div');
+          row.className = 'row-card';
+          const info = document.createElement('div');
+          info.style.flex = '1';
+          const t = document.createElement('div');
+          t.className = 'row-title';
+          t.textContent = it.title;
+          info.appendChild(t);
+          const sub = document.createElement('div');
+          sub.className = 'row-sub';
+          sub.textContent = catLabels[it.category] + ' \u00b7 \u0446\u0435\u043b\u044c: ' + it.target + (it.description ? ' \u00b7 ' + it.description : '');
+          info.appendChild(sub);
+          row.appendChild(info);
+
+          const delBtn = document.createElement('button');
+          delBtn.className = 'icon-btn';
+          delBtn.innerHTML = ICONS.trash;
+          delBtn.onclick = () => {
+            confirmDelete('\u0423\u0434\u0430\u043b\u0438\u0442\u044c \u0437\u0430\u0434\u0430\u043d\u0438\u0435 \u00ab' + it.title + '\u00bb?', async () => {
+              await apiSend('DELETE', `/api/teacher/challenges/${it.id}`);
+              render(false);
+            });
+          };
+          row.appendChild(delBtn);
+          list.appendChild(row);
         });
 
         screen.appendChild(list);
