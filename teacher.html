@@ -101,9 +101,13 @@
     border-radius: 12px; padding: 6px 14px; font-family: 'Nunito', sans-serif; font-size: 13px; font-weight: 700;
     color: var(--text-soft); cursor: pointer; transition: transform 0.12s var(--bounce);
     text-transform: uppercase; letter-spacing: 0.02em;
+    flex-shrink: 0; white-space: nowrap;
   }
   .back-btn:active { transform: translateY(3px); border-bottom-width: 1px; }
-  .crumb-title { font-family: 'Jost', sans-serif; font-size: 16px; font-weight: 700; }
+  .crumb-title {
+    font-family: 'Jost', sans-serif; font-size: 16px; font-weight: 700;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0;
+  }
 
   .screen { animation: screen-in 0.3s var(--bounce) both; }
   .screen.back { animation: screen-in-back 0.3s var(--bounce) both; }
@@ -857,6 +861,8 @@
       renderSubjectBlocks(isBack);
     } else if (current.level === 'schedule') {
       renderSchedule(isBack);
+    } else if (current.level === 'error_reports') {
+      renderErrorReports(isBack);
     } else if (current.level === 'testq_form') {
       renderTestQForm(current.testId, current.editId, isBack, current.templateFrom);
     } else if (current.level === 'testq_preview') {
@@ -927,6 +933,21 @@
     scheduleChoice.innerHTML = '<svg class="choice-icon" viewBox="0 0 20 20" fill="none"><rect x="3" y="4" width="14" height="13" rx="2" stroke="#5B8DEF" stroke-width="1.5"/><path d="M3 8H17M7 2V5M13 2V5" stroke="#5B8DEF" stroke-width="1.5" stroke-linecap="round"/></svg><div class="choice-title">📅 Расписание занятий</div>';
     scheduleChoice.onclick = () => { stack.push({ level: 'schedule', title: 'Расписание занятий' }); renderCrumbs(); render(false); };
     wrap.appendChild(scheduleChoice);
+
+    const reportsChoice = document.createElement('button');
+    reportsChoice.className = 'choice-card';
+    reportsChoice.style.animationDelay = '0.25s';
+    reportsChoice.innerHTML = '<svg class="choice-icon" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="7" stroke="#EA2B2B" stroke-width="1.5"/><path d="M10 7V10.5M10 13.2V13.3" stroke="#EA2B2B" stroke-width="1.5" stroke-linecap="round"/></svg><div class="choice-title">🐞 Сообщения об ошибках</div>';
+    reportsChoice.onclick = () => { stack.push({ level: 'error_reports', title: 'Сообщения об ошибках' }); renderCrumbs(); render(false); };
+    wrap.appendChild(reportsChoice);
+    apiGet(`/api/teacher/subjects/${currentSubjectId}/error-reports?status=new`).then((reports) => {
+      if (!reports.length) return;
+      const badge = document.createElement('span');
+      badge.textContent = reports.length;
+      badge.style.cssText = 'position:absolute;top:8px;right:8px;background:var(--red-dark);color:white;border-radius:10px;padding:1px 7px;font-size:11px;font-weight:800;';
+      reportsChoice.style.position = 'relative';
+      reportsChoice.appendChild(badge);
+    }).catch(() => {});
 
     swapScreen((screen) => { screen.appendChild(wrap); }, isBack);
   }
@@ -1266,6 +1287,86 @@
           actions.appendChild(delBtn);
           row.appendChild(actions);
           list.appendChild(row);
+        });
+
+        screen.appendChild(list);
+      }, isBack);
+    } catch (err) { showErrorMsg(err, isBack); }
+  }
+
+  async function renderErrorReports(isBack) {
+    showLoadingMenu();
+    try {
+      const reports = await apiGet(`/api/teacher/subjects/${currentSubjectId}/error-reports`);
+      swapScreen((screen) => {
+        if (!reports.length) {
+          const p = document.createElement('p');
+          p.className = 'state-msg';
+          p.textContent = 'Пока нет сообщений об ошибках.';
+          screen.appendChild(p);
+          return;
+        }
+        const list = document.createElement('div');
+        list.className = 'list';
+
+        reports.forEach((rep) => {
+          const card = document.createElement('div');
+          card.className = 'row-card';
+          card.style.cssText = 'flex-direction:column;align-items:stretch;gap:8px;' + (rep.status === 'resolved' ? 'opacity:0.55;' : '');
+
+          const topRow = document.createElement('div');
+          topRow.style.cssText = 'display:flex;justify-content:space-between;align-items:flex-start;gap:8px;';
+          const info = document.createElement('div');
+          const who = document.createElement('div');
+          who.className = 'row-title';
+          who.textContent = rep.user_name;
+          info.appendChild(who);
+          const context = document.createElement('div');
+          context.className = 'row-sub';
+          const ctxText = rep.task_question ? '📝 ' + rep.task_question : (rep.test_question ? '🧪 ' + rep.test_question : '💬 Общий отзыв по работе');
+          context.textContent = ctxText + ' · ' + rep.created_at.slice(0, 16);
+          info.appendChild(context);
+          topRow.appendChild(info);
+
+          if (rep.status !== 'resolved') {
+            const badge = document.createElement('span');
+            badge.textContent = 'новое';
+            badge.style.cssText = 'background:var(--red-tint);color:var(--red-dark);border-radius:8px;padding:2px 8px;font-size:11px;font-weight:800;white-space:nowrap;flex-shrink:0;';
+            topRow.appendChild(badge);
+          }
+          card.appendChild(topRow);
+
+          const msg = document.createElement('div');
+          msg.style.cssText = 'font-size:13.5px;line-height:1.4;';
+          msg.textContent = rep.message;
+          card.appendChild(msg);
+
+          const actions = document.createElement('div');
+          actions.style.cssText = 'display:flex;gap:8px;';
+          if (rep.status !== 'resolved') {
+            const resolveBtn = document.createElement('button');
+            resolveBtn.className = 'skip-btn';
+            resolveBtn.style.cssText = 'flex:1;padding:8px;font-size:12px;';
+            resolveBtn.textContent = '✅ Отметить решённым';
+            resolveBtn.onclick = async () => {
+              await apiSend('PATCH', `/api/teacher/error-reports/${rep.id}`, { status: 'resolved' });
+              render(false);
+            };
+            actions.appendChild(resolveBtn);
+          }
+          const delBtn = document.createElement('button');
+          delBtn.className = 'icon-btn';
+          delBtn.innerHTML = ICONS.trash;
+          delBtn.onclick = () => {
+            confirmDelete('Удалить это сообщение?', async () => {
+              await apiSend('DELETE', `/api/teacher/error-reports/${rep.id}`);
+              render(false);
+            });
+          };
+          actions.appendChild(delBtn);
+          card.appendChild(actions);
+
+          list.appendChild(card);
         });
 
         screen.appendChild(list);
