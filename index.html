@@ -2651,6 +2651,9 @@
   }
 
   function renderProfileSetupForm() {
+    // Пока анкета не заполнена, ученик не должен иметь возможность уйти
+    // никуда ещё — прячем нижнюю навигацию и хлебные крошки полностью.
+    document.querySelector('nav.tab-bar').style.display = 'none';
     crumbsEl.innerHTML = '';
     screenHost.innerHTML = '';
     const screen = document.createElement('div');
@@ -2766,6 +2769,7 @@
       saveBtn.textContent = 'Сохраняю…';
       try {
         await apiPost('/api/me/profile-info', { surname, given_name, patronymic, status: selectedStatus, grade, city });
+        document.querySelector('nav.tab-bar').style.display = '';
         pickDefaultSubjectAndStart();
       } catch (err) {
         saveBtn.disabled = false;
