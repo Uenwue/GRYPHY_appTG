@@ -2027,6 +2027,24 @@
         testChoice.onclick = () => { profileStack.push({ level: 'profile_tests', subjectId: current.subjectId, title: 'Тесты' }); renderProfileCrumbs(); renderProfile(false); };
         wrap.appendChild(testChoice);
 
+        const ratingChoice = document.createElement('button');
+        ratingChoice.className = 'choice-card';
+        ratingChoice.style.animationDelay = '0.08s';
+        ratingChoice.innerHTML = `
+          <svg class="choice-icon" viewBox="0 0 20 20" fill="none"><path d="M10 3L12.2 7.6L17.3 8.3L13.6 11.9L14.5 17L10 14.5L5.5 17L6.4 11.9L2.7 8.3L7.8 7.6L10 3Z" stroke="#F5A623" stroke-width="1.5" stroke-linejoin="round"/></svg>
+          <div class="choice-title">🏆 Рейтинг участников</div>`;
+        ratingChoice.onclick = () => { profileStack.push({ level: 'profile_leaderboard', subjectId: current.subjectId, title: 'Рейтинг' }); renderProfileCrumbs(); renderProfile(false); };
+        wrap.appendChild(ratingChoice);
+
+        const challengesChoice = document.createElement('button');
+        challengesChoice.className = 'choice-card';
+        challengesChoice.style.animationDelay = '0.09s';
+        challengesChoice.innerHTML = `
+          <svg class="choice-icon" viewBox="0 0 20 20" fill="none"><path d="M10 2L10 12M10 12L14 8M10 12L6 8" stroke="#58CC02" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><rect x="4" y="14" width="12" height="4" rx="1" stroke="#58CC02" stroke-width="1.5"/></svg>
+          <div class="choice-title">🎯 Задания месяца</div>`;
+        challengesChoice.onclick = () => { profileStack.push({ level: 'profile_challenges', subjectId: current.subjectId, title: 'Задания месяца' }); renderProfileCrumbs(); renderProfile(false); };
+        wrap.appendChild(challengesChoice);
+
         const reportChoice = document.createElement('button');
         reportChoice.className = 'choice-card';
         reportChoice.style.animationDelay = '0.1s';
@@ -2037,6 +2055,130 @@
         wrap.appendChild(reportChoice);
 
         screen.appendChild(wrap);
+      }, isBack);
+    } else if (current.level === 'profile_leaderboard') {
+      const rows = await apiGet(`/api/subjects/${current.subjectId}/leaderboard`);
+      const myId = String(tg?.initDataUnsafe?.user?.id || '');
+      swapScreen((screen) => {
+        if (!rows.length) {
+          const p = document.createElement('p');
+          p.className = 'state-msg';
+          p.textContent = 'Пока никто не решил ни одного задания — станьте первым!';
+          screen.appendChild(p);
+          return;
+        }
+
+        const podium = rows.slice(0, 3);
+        const rest = rows.slice(3);
+
+        if (podium.length) {
+          const podiumWrap = document.createElement('div');
+          podiumWrap.style.cssText = 'display:flex;align-items:flex-end;justify-content:center;gap:8px;margin-bottom:20px;';
+          const order = podium.length >= 2 ? [1, 0, 2] : [0];
+          const heights = { 0: 92, 1: 72, 2: 58 };
+          const medals = { 0: '🥇', 1: '🥈', 2: '🥉' };
+          order.forEach((idx) => {
+            const p = podium[idx];
+            if (!p) return;
+            const col = document.createElement('div');
+            col.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;max-width:110px;';
+            const medal = document.createElement('div');
+            medal.style.fontSize = '26px';
+            medal.textContent = medals[idx];
+            col.appendChild(medal);
+            const name = document.createElement('div');
+            name.style.cssText = 'font-family:\'Jost\',sans-serif;font-weight:800;font-size:12.5px;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%;';
+            name.textContent = p.name;
+            col.appendChild(name);
+            const bar = document.createElement('div');
+            bar.style.cssText = `width:100%;height:${heights[idx]}px;background:var(--yellow-tint);border:2px solid var(--yellow);border-radius:10px 10px 0 0;display:flex;align-items:center;justify-content:center;font-family:'Jost',sans-serif;font-weight:800;font-size:15px;`;
+            bar.textContent = p.points;
+            col.appendChild(bar);
+            podiumWrap.appendChild(col);
+          });
+          screen.appendChild(podiumWrap);
+        }
+
+        if (rest.length) {
+          const list = document.createElement('div');
+          list.className = 'list';
+          rest.forEach((row) => {
+            const item = document.createElement('div');
+            const isMe = String(row.telegram_id) === myId;
+            item.className = 'row-card';
+            item.style.cssText = isMe ? 'border-color:var(--blue);background:var(--blue-tint);' : '';
+            const place = document.createElement('div');
+            place.style.cssText = 'font-family:\'Jost\',sans-serif;font-weight:800;font-size:14px;color:var(--text-soft);width:26px;flex-shrink:0;';
+            place.textContent = '#' + row.place;
+            item.appendChild(place);
+            const info = document.createElement('div');
+            info.style.flex = '1';
+            const t = document.createElement('div');
+            t.className = 'row-title';
+            t.textContent = row.name + (isMe ? ' (вы)' : '');
+            info.appendChild(t);
+            item.appendChild(info);
+            const pts = document.createElement('div');
+            pts.style.cssText = 'font-family:\'Jost\',sans-serif;font-weight:800;font-size:14px;color:var(--yellow-dark,#B8860B);flex-shrink:0;';
+            pts.textContent = row.points + ' \u2b50';
+            item.appendChild(pts);
+            list.appendChild(item);
+          });
+          screen.appendChild(list);
+        }
+      }, isBack);
+    } else if (current.level === 'profile_challenges') {
+      const items = await apiGet(`/api/subjects/${current.subjectId}/challenges`);
+      const catLabels = { day: 'День', week: 'Неделя', weekend: 'Выходные', month: 'Месяц' };
+      swapScreen((screen) => {
+        if (!items.length) {
+          const p = document.createElement('p');
+          p.className = 'state-msg';
+          p.textContent = 'Пока нет активных заданий месяца.';
+          screen.appendChild(p);
+          return;
+        }
+        const byCategory = {};
+        items.forEach((it) => { (byCategory[it.category] = byCategory[it.category] || []).push(it); });
+        ['month', 'week', 'weekend', 'day'].forEach((cat) => {
+          const group = byCategory[cat];
+          if (!group) return;
+          const catTitle = document.createElement('div');
+          catTitle.className = 'field-hint';
+          catTitle.style.cssText = 'margin:0 0 8px;text-transform:uppercase;font-weight:800;letter-spacing:0.03em;';
+          catTitle.textContent = catLabels[cat];
+          screen.appendChild(catTitle);
+
+          group.forEach((it) => {
+            const card = document.createElement('div');
+            card.className = 'result-card';
+            card.style.cssText = 'text-align:left;margin-bottom:14px;';
+            const done = it.progress >= it.target;
+            const t = document.createElement('div');
+            t.style.cssText = 'font-family:\'Jost\',sans-serif;font-weight:800;font-size:16px;margin-bottom:4px;';
+            t.textContent = (done ? '✅ ' : '') + it.title;
+            card.appendChild(t);
+            if (it.description) {
+              const d = document.createElement('div');
+              d.className = 'field-hint';
+              d.style.margin = '0 0 10px';
+              d.textContent = it.description;
+              card.appendChild(d);
+            }
+            const barTrack = document.createElement('div');
+            barTrack.style.cssText = 'background:var(--bg-soft);border-radius:10px;height:16px;overflow:hidden;margin:8px 0 6px;';
+            const barFill = document.createElement('div');
+            const pct = Math.min(100, Math.round((it.progress / it.target) * 100));
+            barFill.style.cssText = `height:100%;width:${pct}%;background:${done ? 'var(--green,#58CC02)' : 'var(--yellow)'};border-radius:10px;transition:width 0.4s var(--bounce);`;
+            barTrack.appendChild(barFill);
+            card.appendChild(barTrack);
+            const label = document.createElement('div');
+            label.style.cssText = 'text-align:center;font-family:\'Jost\',sans-serif;font-weight:800;font-size:13px;color:var(--text-soft);';
+            label.textContent = it.progress + ' / ' + it.target;
+            card.appendChild(label);
+            screen.appendChild(card);
+          });
+        });
       }, isBack);
     } else if (current.level === 'profile_tasks') {
       const stats = await apiGet(`/api/subjects/${current.subjectId}/profile`);
