@@ -122,20 +122,20 @@
 
   .item-card {
     position: relative;
-    background: var(--bg); border: 2px solid var(--border); border-bottom: 4px solid var(--border);
-    border-radius: 16px; box-shadow: none; padding: 14px 16px 14px 60px;
+    background: var(--bg-soft); border: none;
+    border-radius: 16px; box-shadow: none; padding: 14px 52px 14px 60px;
     display: flex; align-items: center; justify-content: space-between; gap: 10px;
     cursor: pointer; text-align: left; width: 100%; font-family: 'Nunito', sans-serif; color: var(--text);
     opacity: 0;
     animation: card-in 0.36s var(--bounce) both;
-    transition: transform 0.12s var(--bounce), border-color 0.15s ease;
+    transition: transform 0.1s ease, background 0.15s ease;
   }
 
   @keyframes card-in { from { opacity: 0; transform: translateY(10px) scale(0.97); } to { opacity: 1; transform: translateY(0) scale(1); } }
 
-  .item-card:hover { border-color: var(--green); }
+  .item-card:hover { background: var(--bg-soft2, var(--bg-soft)); }
   .item-card:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
-  .item-card:active { transform: translateY(3px); border-bottom-width: 2px; }
+  .item-card:active { transform: scale(0.985); }
 
   .level-icon-wrap {
     position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
@@ -149,9 +149,18 @@
   .level-icon-wrap.rules { background: var(--green-tint); }
   .level-icon { width: 18px; height: 18px; }
 
-  .item-title { font-family: 'Jost', sans-serif; font-size: 16.5px; font-weight: 700; }
-  .item-sub { font-size: 12.5px; color: var(--text-soft); margin-top: 2px; font-weight: 600; }
+  .item-eyebrow { font-size: 11px; font-weight: 800; color: var(--text-soft); text-transform: uppercase; letter-spacing: 0.03em; margin-bottom: 1px; }
+  .item-title { font-family: 'Jost', sans-serif; font-size: 15.5px; font-weight: 700; line-height: 1.25; }
+  .item-sub { font-size: 12.5px; color: var(--text-soft); margin-top: 3px; font-weight: 600; }
   .item-arrow { color: var(--border); font-size: 20px; flex-shrink: 0; font-weight: 700; }
+  .item-status {
+    position: absolute; right: 14px; top: 50%; transform: translateY(-50%);
+    width: 26px; height: 26px; border-radius: 50%; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .item-status.done { background: var(--green); color: white; }
+  .item-status.locked { background: var(--border); color: var(--text-soft); }
+  .item-status svg { width: 14px; height: 14px; }
   .badge {
     display: inline-block; background: var(--green-tint); border: none;
     border-radius: 20px; padding: 4px 12px; font-size: 12px; font-weight: 700; color: var(--green-dark); white-space: nowrap;
@@ -589,14 +598,21 @@
       card.innerHTML = `<span class="level-icon-wrap ${levelKey}">${ICONS[levelKey] || ''}</span>`;
 
       const left = document.createElement('div');
+      if (item.eyebrow) {
+        const e = document.createElement('div');
+        e.className = 'item-eyebrow';
+        e.textContent = item.eyebrow;
+        left.appendChild(e);
+      }
       const t = document.createElement('div');
       t.className = 'item-title';
       t.textContent = item.title;
       left.appendChild(t);
-      if (item.sub) {
+      const subText = item.sub || (item.task_count > 0 ? (item.correct_count || 0) + ' из ' + item.task_count + ' верно' : (item.task_count === 0 ? '0 вопросов' : ''));
+      if (subText) {
         const s = document.createElement('div');
         s.className = 'item-sub';
-        s.textContent = item.sub;
+        s.textContent = subText;
         left.appendChild(s);
       }
       card.appendChild(left);
@@ -607,28 +623,31 @@
         b.textContent = item.badge;
         card.appendChild(b);
       } else {
-        const arrow = document.createElement('span');
-        arrow.className = 'item-arrow';
-        arrow.textContent = '›';
-        card.appendChild(arrow);
+        const isDone = item.task_count > 0 && (item.correct_count || 0) >= item.task_count;
+        const status = document.createElement('span');
+        if (item.is_locked) {
+          status.className = 'item-status locked';
+          status.innerHTML = '<svg viewBox="0 0 20 20" fill="none"><rect x="5" y="9" width="10" height="8" rx="1.5" stroke="currentColor" stroke-width="1.6"/><path d="M7 9V6.5a3 3 0 0 1 6 0V9" stroke="currentColor" stroke-width="1.6"/></svg>';
+        } else if (isDone) {
+          status.className = 'item-status done';
+          status.innerHTML = '<svg viewBox="0 0 20 20" fill="none"><path d="M5 10.5L8.2 14L15 6.5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+        } else {
+          status.className = 'item-arrow';
+          status.style.cssText = 'position:absolute;right:16px;top:50%;transform:translateY(-50%);';
+          status.textContent = '›';
+        }
+        card.appendChild(status);
       }
 
       if (item.is_locked) {
-        card.style.background = 'var(--border)';
+        card.style.opacity = '0.9';
         card.style.cursor = 'default';
-        card.style.boxShadow = 'none';
-        const arrowEl = card.querySelector('.item-arrow');
-        if (arrowEl) arrowEl.remove();
         const titleEl = card.querySelector('.item-title');
         titleEl.style.color = 'var(--text-soft)';
         const subEl = card.querySelector('.item-sub');
-        if (subEl) subEl.style.color = 'var(--text-soft)';
+        if (subEl) { subEl.textContent = item.lock_message || 'Пока недоступно.'; subEl.style.color = 'var(--text-soft)'; }
         const iconWrap = card.querySelector('.level-icon-wrap');
         if (iconWrap) { iconWrap.style.background = 'var(--bg)'; iconWrap.style.color = 'var(--text-soft)'; }
-        const lockBadge = document.createElement('span');
-        lockBadge.textContent = '🔒';
-        lockBadge.style.marginLeft = '6px';
-        titleEl.appendChild(lockBadge);
         card.onclick = () => {
           const msg = item.lock_message || 'Пока недоступно.';
           if (tg?.showAlert) tg.showAlert(msg); else alert(msg);
@@ -642,6 +661,13 @@
   }
 
   function findNextUnanswered() { return currentTasks.findIndex(t => !t.answered); }
+
+  function formatDateRu(dateStr) {
+    if (!dateStr) return '';
+    const months = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
+    const [y, m, d] = dateStr.split('-').map(Number);
+    return d + ' ' + months[m - 1];
+  }
 
   function escapeHtml(s) {
     return (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -1196,9 +1222,11 @@
       } else if (current.level === 'topics') {
         const topics = await apiGet(`/api/sections/${current.sectionId}/topics`);
         const purpose = current.purpose;
-        const listScreen = renderList(topics.map(t => ({
+        const listScreen = renderList(topics.map((t, i) => ({
             id: t.id, title: t.title, is_locked: t.is_locked, lock_message: t.lock_message,
-            badge: purpose === 'tasks' ? (t.task_count + ' зад.') : undefined,
+            eyebrow: purpose === 'tasks' ? 'Тема ' + (i + 1) : undefined,
+            task_count: purpose === 'tasks' ? t.task_count : undefined,
+            correct_count: purpose === 'tasks' ? t.correct_count : undefined,
           })),
           async (item) => {
             if (purpose === 'rules') {
@@ -2013,13 +2041,92 @@
         (item) => { profileStack.push({ level: 'profile_subject_home', subjectId: item.id, title: item.title }); renderProfileCrumbs(); renderProfile(false); },
         'subjects', isBack);
     } else if (current.level === 'profile_subject_home') {
-      const stats = await apiGet(`/api/subjects/${current.subjectId}/profile`);
+      const [stats, dailyStats, allSubjects, scheduleEvents] = await Promise.all([
+        apiGet(`/api/subjects/${current.subjectId}/profile`),
+        apiGet(`/api/subjects/${current.subjectId}/daily-stats`),
+        apiGet('/api/subjects'),
+        apiGet('/api/schedule'),
+      ]);
       swapScreen((screen) => {
+        if (allSubjects.length > 1) {
+          const switcher = document.createElement('div');
+          switcher.style.cssText = 'display:flex;gap:6px;margin-bottom:16px;overflow-x:auto;padding-bottom:2px;';
+          allSubjects.forEach((s) => {
+            const btn = document.createElement('button');
+            const active = s.id === current.subjectId;
+            btn.textContent = s.title;
+            btn.style.cssText = `flex-shrink:0;padding:8px 14px;border-radius:20px;border:2px solid ${active ? 'var(--blue)' : 'var(--border)'};background:${active ? 'var(--blue-tint)' : 'var(--bg)'};color:${active ? 'var(--blue-dark)' : 'var(--text-soft)'};font-family:'Jost',sans-serif;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;`;
+            btn.onclick = () => {
+              current.subjectId = s.id;
+              current.title = s.title;
+              renderProfileCrumbs();
+              renderProfile(false);
+            };
+            switcher.appendChild(btn);
+          });
+          screen.appendChild(switcher);
+        }
+
         if (stats.streak_days > 0) {
           const streakCard = document.createElement('div');
           streakCard.style.cssText = 'background:var(--yellow-tint);border-radius:14px;padding:14px;text-align:center;margin-bottom:14px;';
           streakCard.innerHTML = `<div style="font-size:24px;">🔥 ${stats.streak_days}</div><div class="field-hint" style="margin:0;">${stats.streak_days === 1 ? 'день подряд в приложении' : 'дней подряд в приложении'}</div>`;
           screen.appendChild(streakCard);
+        }
+
+        const solvedTotal = stats.tasks.reduce((sum, t) => sum + t.correct + t.wrong, 0);
+        const correctTotal = stats.tasks.reduce((sum, t) => sum + t.correct, 0);
+        const accuracy = solvedTotal > 0 ? Math.round((correctTotal / solvedTotal) * 100) : 0;
+        const r = dailyStats.records;
+
+        if (solvedTotal > 0 || stats.tests.length > 0) {
+          const grid = document.createElement('div');
+          grid.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;';
+          const statCard = (label, value, sub) => {
+            const c = document.createElement('div');
+            c.style.cssText = 'background:var(--bg);border:2px solid var(--border);border-radius:14px;padding:12px 14px;';
+            c.innerHTML = `<div style="font-family:'Jost',sans-serif;font-size:22px;font-weight:800;">${value}</div><div class="field-hint" style="margin:2px 0 0;">${label}</div>` + (sub ? `<div class="field-hint" style="margin:1px 0 0;opacity:0.7;">${sub}</div>` : '');
+            return c;
+          };
+          grid.appendChild(statCard('Решено заданий', solvedTotal));
+          grid.appendChild(statCard('Точность', accuracy + '%'));
+          screen.appendChild(grid);
+
+          const recordsTitle = document.createElement('div');
+          recordsTitle.className = 'field-hint';
+          recordsTitle.style.cssText = 'margin:6px 0 8px;text-transform:uppercase;font-weight:800;letter-spacing:0.03em;';
+          recordsTitle.textContent = '🏆 Личные рекорды за день';
+          screen.appendChild(recordsTitle);
+
+          const recordsGrid = document.createElement('div');
+          recordsGrid.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;';
+          const recordCard = (label, value, date) => {
+            const c = document.createElement('button');
+            c.style.cssText = 'background:var(--green-tint);border:2px solid var(--green);border-radius:14px;padding:12px 14px;text-align:left;cursor:pointer;';
+            c.innerHTML = `<div style="font-family:'Jost',sans-serif;font-size:20px;font-weight:800;color:var(--green-dark);">${value}</div><div class="field-hint" style="margin:2px 0 0;">${label}</div>` + (date ? `<div class="field-hint" style="margin:1px 0 0;opacity:0.7;">${formatDateRu(date)}</div>` : '');
+            c.onclick = () => { profileStack.push({ level: 'profile_daily_breakdown', subjectId: current.subjectId, title: 'Статистика по дням' }); renderProfileCrumbs(); renderProfile(false); };
+            return c;
+          };
+          recordsGrid.appendChild(recordCard('Лучший день по тестам', r.best_test_score || 0, r.best_test_day));
+          recordsGrid.appendChild(recordCard('Больше всего верных за день', r.best_correct_count || 0, r.best_correct_day));
+          const totalRecordCard = recordCard('Больше всего решено за день', r.best_total_count || 0, r.best_total_day);
+          totalRecordCard.style.gridColumn = 'span 2';
+          recordsGrid.appendChild(totalRecordCard);
+          screen.appendChild(recordsGrid);
+        }
+
+        if (scheduleEvents.length) {
+          const calTitle = document.createElement('div');
+          calTitle.className = 'field-hint';
+          calTitle.style.cssText = 'margin:0 0 8px;text-transform:uppercase;font-weight:800;letter-spacing:0.03em;';
+          calTitle.textContent = '📅 Ближайшие занятия';
+          screen.appendChild(calTitle);
+          const eventDates = new Set(scheduleEvents.map((ev) => ev.event_time.slice(0, 10)));
+          const now = new Date();
+          const cal = buildCalendarGrid(now.getFullYear(), now.getMonth(), eventDates, null, () => {
+            switchTab('schedule');
+          }, () => { switchTab('schedule'); }, () => { switchTab('schedule'); });
+          screen.appendChild(cal);
         }
 
         const wrap = document.createElement('div');
@@ -2070,6 +2177,39 @@
         wrap.appendChild(reportChoice);
 
         screen.appendChild(wrap);
+      }, isBack);
+    } else if (current.level === 'profile_daily_breakdown') {
+      const dailyStats = await apiGet(`/api/subjects/${current.subjectId}/daily-stats`);
+      swapScreen((screen) => {
+        if (!dailyStats.days.length) {
+          const p = document.createElement('p');
+          p.className = 'state-msg';
+          p.textContent = 'Пока нет данных по дням.';
+          screen.appendChild(p);
+          return;
+        }
+        const list = document.createElement('div');
+        list.className = 'list';
+        dailyStats.days.forEach((d) => {
+          const card = document.createElement('div');
+          card.className = 'row-card';
+          const info = document.createElement('div');
+          info.style.flex = '1';
+          const t = document.createElement('div');
+          t.className = 'row-title';
+          t.textContent = formatDateRu(d.date);
+          info.appendChild(t);
+          const sub = document.createElement('div');
+          sub.className = 'row-sub';
+          const parts = [];
+          if (d.total_solved) parts.push(`Решено: ${d.total_solved} (верно ${d.correct_solved})`);
+          if (d.best_test_score !== null && d.best_test_score !== undefined) parts.push(`Тест: ${d.best_test_score} балл.`);
+          sub.textContent = parts.join(' · ');
+          info.appendChild(sub);
+          card.appendChild(info);
+          list.appendChild(card);
+        });
+        screen.appendChild(list);
       }, isBack);
     } else if (current.level === 'profile_leaderboard') {
       if (leaderboardType === undefined) leaderboardType = 'correct_tasks';
