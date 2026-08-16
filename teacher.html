@@ -1392,11 +1392,30 @@
     } catch (err) { showErrorMsg(err, isBack); }
   }
 
+  let teacherLeaderboardType = 'correct_tasks';
+
   async function renderLeaderboard(isBack) {
     showLoadingMenu();
     try {
-      const rows = await apiGet(`/api/subjects/${currentSubjectId}/leaderboard`);
+      const rows = await apiGet(`/api/subjects/${currentSubjectId}/leaderboard?type=${teacherLeaderboardType}`);
       swapScreen((screen) => {
+        const tabs = document.createElement('div');
+        tabs.style.cssText = 'display:flex;gap:6px;margin-bottom:16px;';
+        const tabDefs = [
+          { key: 'total_tasks', label: 'Решено всего' },
+          { key: 'correct_tasks', label: 'Верно решено' },
+          { key: 'test_scores', label: 'Баллы тестов' },
+        ];
+        tabDefs.forEach((tab) => {
+          const btn = document.createElement('button');
+          const active = teacherLeaderboardType === tab.key;
+          btn.textContent = tab.label;
+          btn.style.cssText = `flex:1;padding:9px 6px;border-radius:10px;border:2px solid ${active ? 'var(--blue)' : 'var(--border)'};background:${active ? 'var(--blue-tint)' : 'var(--bg)'};color:${active ? 'var(--blue-dark)' : 'var(--text-soft)'};font-family:'Jost',sans-serif;font-size:11.5px;font-weight:800;cursor:pointer;`;
+          btn.onclick = () => { teacherLeaderboardType = tab.key; render(false); };
+          tabs.appendChild(btn);
+        });
+        screen.appendChild(tabs);
+
         if (!rows.length) {
           const p = document.createElement('p');
           p.className = 'state-msg';
