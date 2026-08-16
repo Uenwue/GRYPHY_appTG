@@ -104,10 +104,14 @@
     padding: 6px 14px; font-family: 'Nunito', sans-serif; font-size: 13px; font-weight: 700;
     color: var(--text-soft); cursor: pointer; transition: transform 0.12s var(--bounce);
     text-transform: uppercase; letter-spacing: 0.02em;
+    flex-shrink: 0; white-space: nowrap;
   }
   .back-btn:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
   .back-btn:active { transform: translateY(3px); border-bottom-width: 1px; }
-  .crumb-title { font-family: 'Jost', sans-serif; font-size: 16px; font-weight: 700; color: var(--text); }
+  .crumb-title {
+    font-family: 'Jost', sans-serif; font-size: 16px; font-weight: 700; color: var(--text);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0;
+  }
 
   .screen { animation: screen-in 0.32s var(--bounce) both; }
   .screen.back { animation: screen-in-back 0.32s var(--bounce) both; }
@@ -952,6 +956,59 @@
     }
 
     screen.appendChild(card);
+    screen.appendChild(buildReportErrorButton({ task_id: task.id }));
+  }
+
+  function buildReportErrorButton(context) {
+    const wrap = document.createElement('div');
+    wrap.style.cssText = 'text-align:center;margin-top:10px;';
+    const btn = document.createElement('button');
+    btn.style.cssText = 'background:none;border:none;color:var(--text-soft);font-size:12px;font-weight:700;cursor:pointer;padding:6px;';
+    btn.textContent = '\uD83D\uDC1E Сообщить об ошибке';
+    btn.onclick = () => promptReportError(context);
+    wrap.appendChild(btn);
+    return wrap;
+  }
+
+  function promptReportError(context) {
+    lockBodyScroll();
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center;z-index:30;padding:20px;';
+    overlay.innerHTML = '<div style="background:var(--bg);border-radius:16px;padding:18px;max-width:360px;width:100%;">' +
+      '<div class="field-label">' + (context.task_id || context.test_question_id ? 'Что не так в этом задании?' : 'Расскажите, что не так') + '</div>' +
+      '<textarea class="field-input" id="repMsg" rows="4" style="resize:vertical;margin-bottom:10px;" placeholder="Опишите ошибку своими словами…"></textarea>' +
+      '<div id="repErr" style="color:#EA2B2B;font-size:12.5px;font-weight:700;margin-bottom:8px;display:none;"></div>' +
+      '<div style="display:flex;gap:8px;">' +
+      '<button class="back-btn" id="repCancel" style="flex:1;">Отмена</button>' +
+      '<button class="submit-btn" id="repSend" style="flex:1;margin-top:0;">Отправить</button>' +
+      '</div></div>';
+    document.body.appendChild(overlay);
+    const msgInput = overlay.querySelector('#repMsg');
+    const errBox = overlay.querySelector('#repErr');
+    const sendBtn = overlay.querySelector('#repSend');
+    msgInput.focus();
+    function closeOverlay() { unlockBodyScroll(); overlay.remove(); }
+    overlay.querySelector('#repCancel').onclick = closeOverlay;
+    sendBtn.onclick = async () => {
+      const message = msgInput.value.trim();
+      if (!message) {
+        errBox.textContent = 'Опишите проблему хотя бы в двух словах.';
+        errBox.style.display = 'block';
+        return;
+      }
+      sendBtn.disabled = true;
+      sendBtn.textContent = 'Отправляю…';
+      try {
+        await apiSend('POST', '/api/report-error', { ...context, message });
+        closeOverlay();
+        showToast('Спасибо! Мы получили сообщение.');
+      } catch (err) {
+        sendBtn.disabled = false;
+        sendBtn.textContent = 'Отправить';
+        errBox.textContent = 'Не получилось отправить: ' + err.message;
+        errBox.style.display = 'block';
+      }
+    };
   }
 
   let taskFeedbackMode = 'immediate';
@@ -1542,6 +1599,7 @@
     }
 
     screen.appendChild(card);
+    screen.appendChild(buildReportErrorButton({ test_question_id: q.id }));
   }
 
   async function finishCurrentTest() {
@@ -1968,6 +2026,15 @@
           <div class="choice-title">🧪 Статистика по тестам</div>`;
         testChoice.onclick = () => { profileStack.push({ level: 'profile_tests', subjectId: current.subjectId, title: 'Тесты' }); renderProfileCrumbs(); renderProfile(false); };
         wrap.appendChild(testChoice);
+
+        const reportChoice = document.createElement('button');
+        reportChoice.className = 'choice-card';
+        reportChoice.style.animationDelay = '0.1s';
+        reportChoice.innerHTML = `
+          <svg class="choice-icon" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="7" stroke="#EA2B2B" stroke-width="1.5"/><path d="M10 7V10.5M10 13.2V13.3" stroke="#EA2B2B" stroke-width="1.5" stroke-linecap="round"/></svg>
+          <div class="choice-title">\uD83D\uDC1E Сообщить об ошибке</div>`;
+        reportChoice.onclick = () => promptReportError({ subject_id: current.subjectId });
+        wrap.appendChild(reportChoice);
 
         screen.appendChild(wrap);
       }, isBack);
