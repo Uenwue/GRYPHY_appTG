@@ -438,17 +438,21 @@
 
   <nav class="tab-bar">
     <div class="tab-bar-inner">
-      <button class="tab-btn" id="tabProfile" onclick="switchTab('profile')">
-        <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="2"/><path d="M4 20C4 16.7 7.6 14 12 14C16.4 14 20 16.7 20 20" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-        Профиль
-      </button>
       <button class="tab-btn active" id="tabStudy" onclick="switchTab('study')">
         <svg viewBox="0 0 24 24" fill="none"><path d="M4 6C4 4.9 4.9 4 6 4H18C19.1 4 20 4.9 20 6V20L12 16L4 20V6Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
         Учёба
       </button>
-      <button class="tab-btn" id="tabSchedule" onclick="switchTab('schedule')">
-        <svg viewBox="0 0 24 24" fill="none"><rect x="3" y="5" width="18" height="16" rx="2" stroke="currentColor" stroke-width="2"/><path d="M3 10H21M8 3V6M16 3V6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-        Расписание
+      <button class="tab-btn" id="tabRating" onclick="switchTab('rating')">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M12 3L14.6 8.9L21 9.6L16.2 13.9L17.6 20.3L12 17L6.4 20.3L7.8 13.9L3 9.6L9.4 8.9L12 3Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+        Рейтинги
+      </button>
+      <button class="tab-btn" id="tabStats" onclick="switchTab('stats')">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M4 20V13M11 20V8M18 20V4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        Статистика
+      </button>
+      <button class="tab-btn" id="tabProfile" onclick="switchTab('profile')">
+        <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="2"/><path d="M4 20C4 16.7 7.6 14 12 14C16.4 14 20 16.7 20 20" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        Профиль
       </button>
     </div>
   </nav>
@@ -1902,12 +1906,20 @@
   let activeTab = 'study';
   let profileStack = [{ level: 'profile_subjects', title: 'Статистика' }];
 
+  async function getDefaultSubject() {
+    const subjects = await apiGet('/api/subjects');
+    if (!subjects.length) return null;
+    const rus = subjects.find((s) => /русск/i.test(s.title));
+    return rus || subjects[0];
+  }
+
   function switchTab(tab) {
     if (activeTab === tab) return;
     activeTab = tab;
     document.getElementById('tabStudy').classList.toggle('active', tab === 'study');
+    document.getElementById('tabRating').classList.toggle('active', tab === 'rating');
+    document.getElementById('tabStats').classList.toggle('active', tab === 'stats');
     document.getElementById('tabProfile').classList.toggle('active', tab === 'profile');
-    document.getElementById('tabSchedule').classList.toggle('active', tab === 'schedule');
     if (tab === 'study') {
       renderCrumbs();
       render(false);
@@ -1915,13 +1927,21 @@
       profileStack = [{ level: 'profile_subjects', title: 'Статистика' }];
       renderProfileCrumbs();
       renderProfile(false);
-    } else {
-      crumbsEl.innerHTML = '';
-      const title = document.createElement('span');
-      title.className = 'crumb-title';
-      title.textContent = 'Расписание занятий';
-      crumbsEl.appendChild(title);
-      renderStudentSchedule();
+    } else if (tab === 'rating' || tab === 'stats') {
+      showLoading('Загружаем', false);
+      getDefaultSubject().then((subject) => {
+        if (!subject) {
+          showState('Нет доступных предметов.', false, false);
+          return;
+        }
+        profileStack = tab === 'rating'
+          ? [{ level: 'profile_leaderboard', subjectId: subject.id, title: 'Рейтинг' }]
+          : [{ level: 'profile_subject_home', subjectId: subject.id, title: subject.title }];
+        renderProfileCrumbs();
+        renderProfile(false);
+      }).catch((err) => {
+        showState('Не получилось загрузить. ' + err.message, true, true);
+      });
     }
   }
 
@@ -2212,9 +2232,47 @@
           }
 
           const now = new Date();
-          const cal = buildCalendarGrid(now.getFullYear(), now.getMonth(), eventColors, null,
-            () => { switchTab('schedule'); }, () => { switchTab('schedule'); }, () => { switchTab('schedule'); });
+          if (calYear === undefined) {
+            calYear = now.getFullYear();
+            calMonth = now.getMonth();
+            calSelected = null;
+          }
+          const cal = buildCalendarGrid(calYear, calMonth, eventColors, calSelected,
+            (dateStr) => { calSelected = calSelected === dateStr ? null : dateStr; renderProfile(false); },
+            () => { calMonth--; if (calMonth < 0) { calMonth = 11; calYear--; } renderProfile(false); },
+            () => { calMonth++; if (calMonth > 11) { calMonth = 0; calYear++; } renderProfile(false); },
+          );
           screen.appendChild(cal);
+
+          if (calSelected) {
+            const dayEvents = scheduleEvents.filter((ev) => ev.event_time.slice(0, 10) === calSelected);
+            const dayWrap = document.createElement('div');
+            dayWrap.style.cssText = 'margin-top:12px;';
+            if (!dayEvents.length) {
+              const p = document.createElement('p');
+              p.className = 'field-hint';
+              p.style.cssText = 'text-align:center;padding:10px;';
+              p.textContent = 'На этот день занятий нет.';
+              dayWrap.appendChild(p);
+            } else {
+              dayEvents.forEach((ev) => {
+                const evCard = document.createElement('div');
+                evCard.style.cssText = 'background:var(--bg);border:2px solid var(--border);border-radius:12px;padding:10px 12px;margin-bottom:8px;';
+                evCard.innerHTML = `<div style="font-family:'Jost',sans-serif;font-weight:800;font-size:14px;">${ev.title}</div><div class="field-hint" style="margin:2px 0 0;">${ev.subject_title} · 🕒 ${ev.event_time.slice(11)}</div>`;
+                if (ev.link) {
+                  const linkBtn = document.createElement('a');
+                  linkBtn.href = ev.link;
+                  linkBtn.target = '_blank';
+                  linkBtn.style.cssText = 'display:inline-block;margin-top:6px;font-size:12px;font-weight:700;color:var(--blue-dark);text-decoration:none;';
+                  linkBtn.textContent = '🔗 Перейти к занятию';
+                  linkBtn.onclick = (e) => { if (tg?.openLink) { e.preventDefault(); tg.openLink(ev.link); } };
+                  evCard.appendChild(linkBtn);
+                }
+                dayWrap.appendChild(evCard);
+              });
+            }
+            screen.appendChild(dayWrap);
+          }
         }
       }, isBack);
     } else if (current.level === 'profile_subject_home') {
