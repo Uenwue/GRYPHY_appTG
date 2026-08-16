@@ -2553,35 +2553,74 @@
     hint.textContent = 'Расскажите немного о себе — это займёт одну минуту.';
     card.appendChild(hint);
 
-    const nameLabel = document.createElement('div');
-    nameLabel.className = 'field-label';
-    nameLabel.textContent = 'Фамилия Имя Отчество';
-    card.appendChild(nameLabel);
-    const nameInput = document.createElement('input');
-    nameInput.className = 'field-input';
-    nameInput.placeholder = 'Иванова Мария Сергеевна';
-    nameInput.style.marginBottom = '14px';
-    card.appendChild(nameInput);
+    const makeField = (labelText, placeholder) => {
+      const label = document.createElement('div');
+      label.className = 'field-label';
+      label.textContent = labelText;
+      card.appendChild(label);
+      const input = document.createElement('input');
+      input.className = 'field-input';
+      input.placeholder = placeholder;
+      input.style.marginBottom = '14px';
+      card.appendChild(input);
+      return input;
+    };
 
-    const gradeLabel = document.createElement('div');
-    gradeLabel.className = 'field-label';
-    gradeLabel.textContent = 'Класс';
-    card.appendChild(gradeLabel);
-    const gradeInput = document.createElement('input');
-    gradeInput.className = 'field-input';
-    gradeInput.placeholder = 'Например, 11';
-    gradeInput.style.marginBottom = '14px';
-    card.appendChild(gradeInput);
+    const surnameInput = makeField('Фамилия', 'Иванова');
+    const givenNameInput = makeField('Имя', 'Мария');
+    const patronymicInput = makeField('Отчество (если есть)', 'Сергеевна');
 
-    const cityLabel = document.createElement('div');
-    cityLabel.className = 'field-label';
-    cityLabel.textContent = 'Город';
-    card.appendChild(cityLabel);
-    const cityInput = document.createElement('input');
-    cityInput.className = 'field-input';
-    cityInput.placeholder = 'Например, Минск';
-    cityInput.style.marginBottom = '14px';
-    card.appendChild(cityInput);
+    const statusLabel = document.createElement('div');
+    statusLabel.className = 'field-label';
+    statusLabel.textContent = 'Вы сейчас';
+    card.appendChild(statusLabel);
+
+    const statusGrid = document.createElement('div');
+    statusGrid.style.cssText = 'display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px;';
+    const statusOptions = [
+      { key: 'school', label: 'Учусь в школе' },
+      { key: 'college', label: 'Учусь в колледже/вузе' },
+      { key: 'work', label: 'Работаю' },
+    ];
+    let selectedStatus = null;
+    const statusButtons = {};
+    const gradeWrap = document.createElement('div');
+    let gradeInput = null;
+
+    function renderStatusButtons() {
+      statusGrid.innerHTML = '';
+      statusOptions.forEach((opt) => {
+        const btn = document.createElement('button');
+        const active = selectedStatus === opt.key;
+        btn.type = 'button';
+        btn.style.cssText = `padding:10px 4px;border-radius:12px;border:2px solid ${active ? 'var(--blue)' : 'var(--border)'};background:${active ? 'var(--blue-tint)' : 'var(--bg)'};color:${active ? 'var(--blue-dark)' : 'var(--text-soft)'};font-family:'Jost',sans-serif;font-size:12px;font-weight:700;cursor:pointer;line-height:1.25;`;
+        btn.textContent = opt.label;
+        btn.onclick = () => { selectedStatus = opt.key; renderStatusButtons(); renderGradeField(); };
+        statusButtons[opt.key] = btn;
+        statusGrid.appendChild(btn);
+      });
+    }
+    function renderGradeField() {
+      gradeWrap.innerHTML = '';
+      gradeInput = null;
+      if (selectedStatus === 'school') {
+        const label = document.createElement('div');
+        label.className = 'field-label';
+        label.textContent = 'Класс';
+        gradeWrap.appendChild(label);
+        gradeInput = document.createElement('input');
+        gradeInput.className = 'field-input';
+        gradeInput.placeholder = 'Например, 11';
+        gradeInput.style.marginBottom = '14px';
+        gradeWrap.appendChild(gradeInput);
+      }
+    }
+    renderStatusButtons();
+    card.appendChild(statusGrid);
+    card.appendChild(gradeWrap);
+    renderGradeField();
+
+    const cityInput = makeField('Город', 'Например, Минск');
 
     const errBox = document.createElement('div');
     errBox.style.cssText = 'color:#EA2B2B;font-size:12.5px;font-weight:700;margin-bottom:8px;display:none;';
@@ -2591,18 +2630,25 @@
     saveBtn.className = 'submit-btn';
     saveBtn.textContent = 'Продолжить';
     saveBtn.onclick = async () => {
-      const full_name = nameInput.value.trim();
-      const grade = gradeInput.value.trim();
+      const surname = surnameInput.value.trim();
+      const given_name = givenNameInput.value.trim();
+      const patronymic = patronymicInput.value.trim();
       const city = cityInput.value.trim();
-      if (!full_name || !grade || !city) {
-        errBox.textContent = 'Заполните все три поля.';
+      const grade = gradeInput ? gradeInput.value.trim() : '';
+      if (!surname || !given_name || !selectedStatus || !city) {
+        errBox.textContent = 'Заполните фамилию, имя, статус и город.';
+        errBox.style.display = 'block';
+        return;
+      }
+      if (selectedStatus === 'school' && !grade) {
+        errBox.textContent = 'Укажите класс.';
         errBox.style.display = 'block';
         return;
       }
       saveBtn.disabled = true;
       saveBtn.textContent = 'Сохраняю…';
       try {
-        await apiPost('/api/me/profile-info', { full_name, grade, city });
+        await apiPost('/api/me/profile-info', { surname, given_name, patronymic, status: selectedStatus, grade, city });
         render(false);
       } catch (err) {
         saveBtn.disabled = false;
