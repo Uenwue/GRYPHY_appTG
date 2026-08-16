@@ -282,6 +282,20 @@
     padding: 26px 20px; text-align: center; animation: card-in 0.36s var(--bounce) both;
   }
 
+
+  .field-label {
+    display: block; font-family: 'Jost', sans-serif; font-size: 13px; font-weight: 700;
+    color: var(--text); margin-bottom: 6px;
+  }
+  .field-hint { font-size: 11.5px; color: var(--text-soft); font-weight: 600; margin-top: 4px; }
+  .field-input, .field-textarea {
+    width: 100%; padding: 11px 13px; font-family: 'Nunito', sans-serif; font-size: 14.5px; font-weight: 600;
+    border: 2px solid var(--border); border-radius: 12px; background: var(--bg-soft); color: var(--text);
+    box-sizing: border-box;
+  }
+  .field-input:focus, .field-textarea:focus { outline: none; border-color: var(--blue); background: var(--bg); }
+  .field-textarea { resize: vertical; min-height: 60px; font-family: 'Nunito', sans-serif; }
+
   .cal-wrap { background: var(--bg); border: 2px solid var(--border); border-radius: 16px; padding: 14px; margin-bottom: 16px; }
   .cal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
   .cal-title { font-family: 'Jost', sans-serif; font-size: 15.5px; font-weight: 800; text-transform: capitalize; }
@@ -2256,7 +2270,106 @@
     applyIcon();
   })();
 
-  render(false);
+  async function checkProfileSetupThenStart() {
+    try {
+      const info = await apiGet('/api/me/profile-info');
+      if (info.filled) {
+        render(false);
+      } else {
+        renderProfileSetupForm();
+      }
+    } catch (err) {
+      // Если проверку анкеты не удалось выполнить (например, сеть) — не
+      // блокируем вход в приложение совсем, просто идём дальше как обычно.
+      render(false);
+    }
+  }
+
+  function renderProfileSetupForm() {
+    crumbsEl.innerHTML = '';
+    screenHost.innerHTML = '';
+    const screen = document.createElement('div');
+    screen.className = 'screen';
+    screen.id = 'content';
+
+    const card = document.createElement('div');
+    card.className = 'task-card';
+
+    const title = document.createElement('p');
+    title.className = 'task-question';
+    title.textContent = 'Давайте познакомимся!';
+    card.appendChild(title);
+
+    const hint = document.createElement('p');
+    hint.className = 'task-description';
+    hint.textContent = 'Расскажите немного о себе — это займёт одну минуту.';
+    card.appendChild(hint);
+
+    const nameLabel = document.createElement('div');
+    nameLabel.className = 'field-label';
+    nameLabel.textContent = 'Фамилия Имя Отчество';
+    card.appendChild(nameLabel);
+    const nameInput = document.createElement('input');
+    nameInput.className = 'field-input';
+    nameInput.placeholder = 'Иванова Мария Сергеевна';
+    nameInput.style.marginBottom = '14px';
+    card.appendChild(nameInput);
+
+    const gradeLabel = document.createElement('div');
+    gradeLabel.className = 'field-label';
+    gradeLabel.textContent = 'Класс';
+    card.appendChild(gradeLabel);
+    const gradeInput = document.createElement('input');
+    gradeInput.className = 'field-input';
+    gradeInput.placeholder = 'Например, 11';
+    gradeInput.style.marginBottom = '14px';
+    card.appendChild(gradeInput);
+
+    const cityLabel = document.createElement('div');
+    cityLabel.className = 'field-label';
+    cityLabel.textContent = 'Город';
+    card.appendChild(cityLabel);
+    const cityInput = document.createElement('input');
+    cityInput.className = 'field-input';
+    cityInput.placeholder = 'Например, Минск';
+    cityInput.style.marginBottom = '14px';
+    card.appendChild(cityInput);
+
+    const errBox = document.createElement('div');
+    errBox.style.cssText = 'color:#EA2B2B;font-size:12.5px;font-weight:700;margin-bottom:8px;display:none;';
+    card.appendChild(errBox);
+
+    const saveBtn = document.createElement('button');
+    saveBtn.className = 'submit-btn';
+    saveBtn.textContent = 'Продолжить';
+    saveBtn.onclick = async () => {
+      const full_name = nameInput.value.trim();
+      const grade = gradeInput.value.trim();
+      const city = cityInput.value.trim();
+      if (!full_name || !grade || !city) {
+        errBox.textContent = 'Заполните все три поля.';
+        errBox.style.display = 'block';
+        return;
+      }
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Сохраняю…';
+      try {
+        await apiPost('/api/me/profile-info', { full_name, grade, city });
+        render(false);
+      } catch (err) {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Продолжить';
+        errBox.textContent = 'Не получилось сохранить: ' + err.message;
+        errBox.style.display = 'block';
+      }
+    };
+    card.appendChild(saveBtn);
+
+    screen.appendChild(card);
+    screenHost.appendChild(screen);
+  }
+
+  checkProfileSetupThenStart();
 </script>
 
 </body>
