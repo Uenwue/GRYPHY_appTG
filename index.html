@@ -1904,7 +1904,7 @@
 
   // --- Вкладка "Профиль": Предмет -> Задания/Тесты -> статистика (как в боте) ---
   let activeTab = 'study';
-  let profileStack = [{ level: 'profile_subjects', title: 'Статистика' }];
+  let profileStack = [{ level: 'profile_subjects', title: '' }];
 
   async function getDefaultSubject() {
     const subjects = await apiGet('/api/subjects');
@@ -1926,7 +1926,7 @@
       renderCrumbs();
       render(false);
     } else if (tab === 'profile') {
-      profileStack = [{ level: 'profile_subjects', title: 'Статистика' }];
+      profileStack = [{ level: 'profile_subjects', title: '' }];
       renderProfileCrumbs();
       renderProfile(false);
     } else if (tab === 'rating' || tab === 'stats') {
@@ -2093,6 +2093,7 @@
 
   function renderProfileCrumbs() {
     crumbsEl.innerHTML = '';
+    const current = profileStack[profileStack.length - 1];
     if (profileStack.length > 1) {
       const btn = document.createElement('button');
       btn.className = 'back-btn';
@@ -2100,10 +2101,12 @@
       btn.onclick = () => { profileStack.pop(); renderProfileCrumbs(); renderProfile(true); };
       crumbsEl.appendChild(btn);
     }
-    const title = document.createElement('span');
-    title.className = 'crumb-title';
-    title.textContent = profileStack[profileStack.length - 1].title;
-    crumbsEl.appendChild(title);
+    if (current.title) {
+      const title = document.createElement('span');
+      title.className = 'crumb-title';
+      title.textContent = current.title;
+      crumbsEl.appendChild(title);
+    }
   }
 
   async function renderProfile(isBack) {
@@ -2197,7 +2200,7 @@
             status.style.cssText = 'position:absolute;right:16px;top:50%;transform:translateY(-50%);';
             status.textContent = '›';
             card.appendChild(status);
-            card.onclick = () => { profileStack.push({ level: 'profile_subject_home', subjectId: s.id, title: s.title }); renderProfileCrumbs(); renderProfile(false); };
+            card.onclick = () => { stack = [{ level: 'subject_home', subjectId: s.id, title: s.title }]; switchTab('study'); };
             list.appendChild(card);
           });
         }
@@ -2290,79 +2293,44 @@
           screen.appendChild(streakCard);
         }
 
-        const solvedTotal = stats.tasks.reduce((sum, t) => sum + t.correct + t.wrong, 0);
-        const correctTotal = stats.tasks.reduce((sum, t) => sum + t.correct, 0);
-        const accuracy = solvedTotal > 0 ? Math.round((correctTotal / solvedTotal) * 100) : 0;
-        const r = dailyStats.records;
+        const now = new Date();
+        const todayStr = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
+        const todayData = dailyStats.days.find((d) => d.date === todayStr);
 
-        if (solvedTotal > 0 || stats.tests.length > 0) {
-          const grid = document.createElement('div');
-          grid.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;';
-          const statCard = (label, value, sub) => {
-            const c = document.createElement('div');
-            c.style.cssText = 'background:var(--bg);border:2px solid var(--border);border-radius:14px;padding:12px 14px;';
-            c.innerHTML = `<div style="font-family:'Jost',sans-serif;font-size:22px;font-weight:800;">${value}</div><div class="field-hint" style="margin:2px 0 0;">${label}</div>` + (sub ? `<div class="field-hint" style="margin:1px 0 0;opacity:0.7;">${sub}</div>` : '');
-            return c;
-          };
-          grid.appendChild(statCard('Решено заданий', solvedTotal));
-          grid.appendChild(statCard('Точность', accuracy + '%'));
-          screen.appendChild(grid);
+        const recordsTitle = document.createElement('div');
+        recordsTitle.className = 'field-hint';
+        recordsTitle.style.cssText = 'margin:0 0 8px;text-transform:uppercase;font-weight:800;letter-spacing:0.03em;';
+        recordsTitle.textContent = 'Результаты сегодня';
+        screen.appendChild(recordsTitle);
 
-          const recordsTitle = document.createElement('div');
-          recordsTitle.className = 'field-hint';
-          recordsTitle.style.cssText = 'margin:6px 0 8px;text-transform:uppercase;font-weight:800;letter-spacing:0.03em;';
-          recordsTitle.textContent = '🏆 Личные рекорды за день';
-          screen.appendChild(recordsTitle);
+        const recordsGrid = document.createElement('div');
+        recordsGrid.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;';
+        const openBreakdown = () => { profileStack.push({ level: 'profile_daily_breakdown', subjectId: current.subjectId, title: 'Статистика по дням' }); renderProfileCrumbs(); renderProfile(false); };
+        const recordCard = (label, value, desc) => {
+          const c = document.createElement('button');
+          c.style.cssText = 'background:var(--green-tint);border:2px solid var(--green);border-radius:14px;padding:12px 14px;text-align:left;cursor:pointer;';
+          c.innerHTML = `<div style="font-family:'Jost',sans-serif;font-size:22px;font-weight:800;color:var(--green-dark);">${value}</div><div class="field-hint" style="margin:2px 0 0;">${label}</div><div class="field-hint" style="margin:1px 0 0;opacity:0.65;">${desc}</div>`;
+          c.onclick = openBreakdown;
+          return c;
+        };
+        recordsGrid.appendChild(recordCard('Лучший балл теста', todayData && todayData.best_test_score !== null && todayData.best_test_score !== undefined ? todayData.best_test_score : '–', 'за сегодняшние тесты'));
+        recordsGrid.appendChild(recordCard('Решено верно', todayData ? todayData.correct_solved : '–', 'заданий сегодня'));
+        const totalCard = recordCard('Решено всего', todayData ? todayData.total_solved : '–', 'заданий сегодня (включая неверные)');
+        totalCard.style.gridColumn = 'span 2';
+        recordsGrid.appendChild(totalCard);
+        screen.appendChild(recordsGrid);
 
-          const recordsGrid = document.createElement('div');
-          recordsGrid.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;';
-          const recordCard = (label, value, date) => {
-            const c = document.createElement('button');
-            c.style.cssText = 'background:var(--green-tint);border:2px solid var(--green);border-radius:14px;padding:12px 14px;text-align:left;cursor:pointer;';
-            c.innerHTML = `<div style="font-family:'Jost',sans-serif;font-size:20px;font-weight:800;color:var(--green-dark);">${value}</div><div class="field-hint" style="margin:2px 0 0;">${label}</div>` + (date ? `<div class="field-hint" style="margin:1px 0 0;opacity:0.7;">${formatDateRu(date)}</div>` : '');
-            c.onclick = () => { profileStack.push({ level: 'profile_daily_breakdown', subjectId: current.subjectId, title: 'Статистика по дням' }); renderProfileCrumbs(); renderProfile(false); };
-            return c;
-          };
-          recordsGrid.appendChild(recordCard('Лучший день по тестам', r.best_test_score || 0, r.best_test_day));
-          recordsGrid.appendChild(recordCard('Больше всего верных за день', r.best_correct_count || 0, r.best_correct_day));
-          const totalRecordCard = recordCard('Больше всего решено за день', r.best_total_count || 0, r.best_total_day);
-          totalRecordCard.style.gridColumn = 'span 2';
-          recordsGrid.appendChild(totalRecordCard);
-          screen.appendChild(recordsGrid);
-        }
+        const detailLink = document.createElement('button');
+        detailLink.style.cssText = 'background:none;border:none;color:var(--blue-dark);font-size:12.5px;font-weight:700;cursor:pointer;padding:0 0 16px;text-decoration:underline;';
+        detailLink.textContent = 'Подробная история по темам и тестам →';
+        detailLink.onclick = () => { profileStack.push({ level: 'profile_tasks', subjectId: current.subjectId, title: 'История' }); renderProfileCrumbs(); renderProfile(false); };
+        screen.appendChild(detailLink);
 
         const wrap = document.createElement('div');
         wrap.className = 'home-choice';
 
-        const taskChoice = document.createElement('button');
-        taskChoice.className = 'choice-card';
-        taskChoice.innerHTML = `
-          <svg class="choice-icon" viewBox="0 0 20 20" fill="none"><path d="M2 6.5C2 5.67 2.67 5 3.5 5H8L9.5 6.5H16.5C17.33 6.5 18 7.17 18 8V14.5C18 15.33 17.33 16 16.5 16H3.5C2.67 16 2 15.33 2 14.5V6.5Z" stroke="#1899D6" stroke-width="1.5" stroke-linejoin="round"/></svg>
-          <div class="choice-title">📝 Статистика по заданиям</div>`;
-        taskChoice.onclick = () => { profileStack.push({ level: 'profile_tasks', subjectId: current.subjectId, title: 'Задания' }); renderProfileCrumbs(); renderProfile(false); };
-        wrap.appendChild(taskChoice);
-
-        const testChoice = document.createElement('button');
-        testChoice.className = 'choice-card';
-        testChoice.style.animationDelay = '0.05s';
-        testChoice.innerHTML = `
-          <svg class="choice-icon" viewBox="0 0 20 20" fill="none"><path d="M6 3H14L14 17L10 14.5L6 17V3Z" stroke="#B8860B" stroke-width="1.5" stroke-linejoin="round"/></svg>
-          <div class="choice-title">🧪 Статистика по тестам</div>`;
-        testChoice.onclick = () => { profileStack.push({ level: 'profile_tests', subjectId: current.subjectId, title: 'Тесты' }); renderProfileCrumbs(); renderProfile(false); };
-        wrap.appendChild(testChoice);
-
-        const ratingChoice = document.createElement('button');
-        ratingChoice.className = 'choice-card';
-        ratingChoice.style.animationDelay = '0.08s';
-        ratingChoice.innerHTML = `
-          <svg class="choice-icon" viewBox="0 0 20 20" fill="none"><path d="M10 3L12.2 7.6L17.3 8.3L13.6 11.9L14.5 17L10 14.5L5.5 17L6.4 11.9L2.7 8.3L7.8 7.6L10 3Z" stroke="#F5A623" stroke-width="1.5" stroke-linejoin="round"/></svg>
-          <div class="choice-title">🏆 Рейтинг участников</div>`;
-        ratingChoice.onclick = () => { profileStack.push({ level: 'profile_leaderboard', subjectId: current.subjectId, title: 'Рейтинг' }); renderProfileCrumbs(); renderProfile(false); };
-        wrap.appendChild(ratingChoice);
-
         const challengesChoice = document.createElement('button');
         challengesChoice.className = 'choice-card';
-        challengesChoice.style.animationDelay = '0.09s';
         challengesChoice.innerHTML = `
           <svg class="choice-icon" viewBox="0 0 20 20" fill="none"><path d="M10 2L10 12M10 12L14 8M10 12L6 8" stroke="#58CC02" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><rect x="4" y="14" width="12" height="4" rx="1" stroke="#58CC02" stroke-width="1.5"/></svg>
           <div class="choice-title">🎯 Задания месяца</div>`;
@@ -2371,7 +2339,7 @@
 
         const reportChoice = document.createElement('button');
         reportChoice.className = 'choice-card';
-        reportChoice.style.animationDelay = '0.1s';
+        reportChoice.style.animationDelay = '0.05s';
         reportChoice.innerHTML = `
           <svg class="choice-icon" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="7" stroke="#EA2B2B" stroke-width="1.5"/><path d="M10 7V10.5M10 13.2V13.3" stroke="#EA2B2B" stroke-width="1.5" stroke-linecap="round"/></svg>
           <div class="choice-title">\uD83D\uDC1E Сообщить об ошибке</div>`;
@@ -2555,52 +2523,63 @@
           });
         });
       }, isBack);
-    } else if (current.level === 'profile_tasks') {
+    } else if (current.level === 'profile_tasks' || current.level === 'profile_tests') {
       const stats = await apiGet(`/api/subjects/${current.subjectId}/profile`);
       swapScreen((screen) => {
-        if (!stats.tasks.length) {
-          const p = document.createElement('p');
-          p.className = 'state-msg';
-          p.textContent = 'Пока нет пройденных тем или разделов по этому предмету.';
-          screen.appendChild(p);
-          return;
-        }
-        stats.tasks.forEach((item, i) => {
-          const card = document.createElement('div');
-          card.className = 'profile-card';
-          card.style.animationDelay = (i * 0.05) + 's';
-          card.innerHTML = `
-            <div class="p-title">${item.title}</div>
-            <div class="p-date">${item.date}</div>
-            <div class="p-row"><span class="p-ok">✅ ${item.correct}</span><span class="p-bad">❌ ${item.wrong}</span></div>
-          `;
-          screen.appendChild(card);
+        const tabs = document.createElement('div');
+        tabs.style.cssText = 'display:flex;gap:6px;margin-bottom:16px;';
+        [{ key: 'profile_tasks', label: 'Задания' }, { key: 'profile_tests', label: 'Тесты' }].forEach((t) => {
+          const btn = document.createElement('button');
+          const active = current.level === t.key;
+          btn.textContent = t.label;
+          btn.style.cssText = `flex:1;padding:9px 6px;border-radius:10px;border:2px solid ${active ? 'var(--blue)' : 'var(--border)'};background:${active ? 'var(--blue-tint)' : 'var(--bg)'};color:${active ? 'var(--blue-dark)' : 'var(--text-soft)'};font-family:'Jost',sans-serif;font-size:12.5px;font-weight:800;cursor:pointer;`;
+          btn.onclick = () => { profileStack[profileStack.length - 1] = { level: t.key, subjectId: current.subjectId, title: 'История' }; renderProfile(false); };
+          tabs.appendChild(btn);
         });
-      }, isBack);
-    } else if (current.level === 'profile_tests') {
-      const stats = await apiGet(`/api/subjects/${current.subjectId}/profile`);
-      swapScreen((screen) => {
-        if (!stats.tests.length) {
-          const p = document.createElement('p');
-          p.className = 'state-msg';
-          p.textContent = 'Пока нет пройденных тестов по этому предмету.';
-          screen.appendChild(p);
-          return;
+        screen.appendChild(tabs);
+
+        if (current.level === 'profile_tasks') {
+          if (!stats.tasks.length) {
+            const p = document.createElement('p');
+            p.className = 'state-msg';
+            p.textContent = 'Пока нет пройденных тем или разделов по этому предмету.';
+            screen.appendChild(p);
+            return;
+          }
+          stats.tasks.forEach((item, i) => {
+            const card = document.createElement('div');
+            card.className = 'profile-card';
+            card.style.animationDelay = (i * 0.05) + 's';
+            card.innerHTML = `
+              <div class="p-title">${item.title}</div>
+              <div class="p-date">${item.date}</div>
+              <div class="p-row"><span class="p-ok">✅ ${item.correct}</span><span class="p-bad">❌ ${item.wrong}</span></div>
+            `;
+            screen.appendChild(card);
+          });
+        } else {
+          if (!stats.tests.length) {
+            const p = document.createElement('p');
+            p.className = 'state-msg';
+            p.textContent = 'Пока нет пройденных тестов по этому предмету.';
+            screen.appendChild(p);
+            return;
+          }
+          stats.tests.forEach((item, i) => {
+            const card = document.createElement('div');
+            card.className = 'profile-card';
+            card.style.animationDelay = (i * 0.05) + 's';
+            const scoreText = (item.actual_score !== null && item.actual_score !== undefined)
+              ? `${item.actual_score} тест. балл (${item.primary_score} перв.)`
+              : `${item.primary_score} перв. балл`;
+            card.innerHTML = `
+              <div class="p-title">${item.test_title}</div>
+              <div class="p-date">${item.date}</div>
+              <div class="p-row">🏆 ${scoreText} · ✅ ${item.correct} ❌ ${item.wrong}</div>
+            `;
+            screen.appendChild(card);
+          });
         }
-        stats.tests.forEach((item, i) => {
-          const card = document.createElement('div');
-          card.className = 'profile-card';
-          card.style.animationDelay = (i * 0.05) + 's';
-          const scoreText = (item.actual_score !== null && item.actual_score !== undefined)
-            ? `${item.actual_score} тест. балл (${item.primary_score} перв.)`
-            : `${item.primary_score} перв. балл`;
-          card.innerHTML = `
-            <div class="p-title">${item.test_title}</div>
-            <div class="p-date">${item.date}</div>
-            <div class="p-row">🏆 ${scoreText} · ✅ ${item.correct} ❌ ${item.wrong}</div>
-          `;
-          screen.appendChild(card);
-        });
       }, isBack);
     }
     } catch (err) {
