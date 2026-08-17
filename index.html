@@ -2062,6 +2062,7 @@
       renderProfileCrumbs();
       renderProfile(false);
     } else if (tab === 'challenges') {
+      crumbsEl.innerHTML = '';
       showLoading('Загружаем', false);
       getDefaultSubject().then((subject) => {
         if (!subject) {
@@ -2080,7 +2081,7 @@
           return;
         }
         profileStack = tab === 'rating'
-          ? [{ level: 'profile_leaderboard', subjectId: subject.id, title: 'Рейтинг' }]
+          ? [{ level: 'profile_leaderboard', subjectId: subject.id, title: '' }]
           : [{ level: 'profile_subject_home', subjectId: subject.id, title: subject.title }];
         renderProfileCrumbs();
         renderProfile(false);
@@ -2263,10 +2264,6 @@
         apiGet('/api/schedule'),
       ]);
       swapScreen((screen) => {
-        const title = document.createElement('h2');
-        title.style.cssText = "font-family:'Jost',sans-serif;font-size:22px;font-weight:800;margin:0 0 2px;";
-        title.textContent = 'Профиль';
-        screen.appendChild(title);
         const subtitle = document.createElement('p');
         subtitle.className = 'field-hint';
         subtitle.style.cssText = 'margin:0 0 16px;font-size:13px;';
