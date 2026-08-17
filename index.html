@@ -14,18 +14,18 @@
     --border: #E5E5E5;
     --text: #3C3C3C;
     --text-soft: #777777;
-    --green: #9AAB63;
-    --green-dark: #798C46;
-    --green-tint: #CCD5AF;
-    --blue: #E4809A;
-    --blue-dark: #C15E78;
-    --blue-tint: #F3C6D2;
-    --red: #E85D5D;
-    --red-dark: #C43E3E;
-    --red-tint: #F8D6D6;
-    --yellow: #F5D867;
+    --green: #58CC02;
+    --green-dark: #58A700;
+    --green-tint: #D7FFB8;
+    --blue: #1CB0F6;
+    --blue-dark: #1899D6;
+    --blue-tint: #DDF4FF;
+    --red: #FF4B4B;
+    --red-dark: #EA2B2B;
+    --red-tint: #FFDFE0;
+    --yellow: #FFC800;
     --yellow-dark: #B8860B;
-    --yellow-tint: #F9EBAD;
+    --yellow-tint: #FFF1C2;
     --card-shadow: 0 2px 0 var(--border);
     --bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
   }
@@ -38,10 +38,10 @@
       --border: #2B323F;
       --text: #F1F3F6;
       --text-soft: #8B93A3;
-      --green-tint: rgba(154, 171, 99, 0.22);
-      --blue-tint: rgba(228, 128, 154, 0.22);
-      --red-tint: rgba(232, 93, 93, 0.22);
-      --yellow-tint: rgba(245, 216, 103, 0.2);
+      --green-tint: rgba(88, 204, 2, 0.16);
+      --blue-tint: rgba(28, 176, 246, 0.16);
+      --red-tint: rgba(255, 75, 75, 0.16);
+      --yellow-tint: rgba(255, 200, 0, 0.16);
     }
   }
   /* ...или вручную через переключатель (сохраняется в localStorage) */
@@ -51,10 +51,10 @@
     --border: #2B323F;
     --text: #F1F3F6;
     --text-soft: #8B93A3;
-    --green-tint: rgba(154, 171, 99, 0.22);
-    --blue-tint: rgba(228, 128, 154, 0.22);
-    --red-tint: rgba(232, 93, 93, 0.22);
-    --yellow-tint: rgba(245, 216, 103, 0.2);
+    --green-tint: rgba(88, 204, 2, 0.16);
+    --blue-tint: rgba(28, 176, 246, 0.16);
+    --red-tint: rgba(255, 75, 75, 0.16);
+    --yellow-tint: rgba(255, 200, 0, 0.16);
   }
 
   .theme-toggle {
@@ -274,12 +274,12 @@
   .tab-bar-inner { max-width: 420px; width: 100%; display: flex; }
   .tab-btn {
     flex: 1; background: none; border: none; cursor: pointer;
-    display: flex; flex-direction: column; align-items: center; gap: 3px;
-    padding: 6px 4px; font-family: 'Nunito', sans-serif; font-size: 11.5px; font-weight: 700;
+    display: flex; flex-direction: column; align-items: center; gap: 2px;
+    padding: 6px 2px; font-family: 'Nunito', sans-serif; font-size: 10px; font-weight: 700;
     color: var(--text-soft); transition: transform 0.12s var(--bounce);
-    text-transform: uppercase; letter-spacing: 0.02em;
+    text-transform: uppercase; letter-spacing: 0.01em;
   }
-  .tab-btn svg { width: 24px; height: 24px; }
+  .tab-btn svg { width: 21px; height: 21px; }
   .tab-btn.active { color: var(--green-dark); }
   .tab-btn:active { transform: scale(0.92); }
 
@@ -454,6 +454,10 @@
       <button class="tab-btn active" id="tabStudy" onclick="switchTab('study')">
         <svg viewBox="0 0 24 24" fill="none"><path d="M4 6C4 4.9 4.9 4 6 4H18C19.1 4 20 4.9 20 6V20L12 16L4 20V6Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
         Учёба
+      </button>
+      <button class="tab-btn" id="tabChallenges" onclick="switchTab('challenges')">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M12 2L14.4 8.6L21 9.3L16 13.6L17.5 20.2L12 16.8L6.5 20.2L8 13.6L3 9.3L9.6 8.6L12 2Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+        Задания
       </button>
       <button class="tab-btn" id="tabRating" onclick="switchTab('rating')">
         <svg viewBox="0 0 24 24" fill="none"><path d="M12 3L14.6 8.9L21 9.6L16.2 13.9L17.6 20.3L12 17L6.4 20.3L7.8 13.9L3 9.6L9.4 8.9L12 3Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
@@ -1926,14 +1930,112 @@
     return rus || subjects[0];
   }
 
+  const CHALLENGE_ICONS = { streak: '⚡', tasks_count: '📚', tests_count: '🏆' };
+  const CATEGORY_LABELS = { month: 'Задания месяца', week: 'Задания недели', weekend: 'Задания выходных', day: 'Задания дня' };
+  const MONTH_NAMES_GEN = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
+
+  async function renderChallengesTab(subject) {
+    try {
+      const items = await apiGet(`/api/subjects/${subject.id}/challenges`);
+      swapScreen((screen) => {
+        if (!items.length) {
+          const p = document.createElement('p');
+          p.className = 'state-msg';
+          p.textContent = 'Учитель пока не добавил заданий месяца.';
+          screen.appendChild(p);
+          return;
+        }
+
+        const byCategory = {};
+        items.forEach((it) => { (byCategory[it.category] = byCategory[it.category] || []).push(it); });
+
+        const now = new Date();
+        const daysLeftInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate() - now.getDate();
+        const hoursLeftInDay = 23 - now.getHours();
+
+        // Hero-карточка: главное задание месяца (если есть), иначе просто общий заголовок
+        const monthItems = byCategory.month || [];
+        const hero = document.createElement('div');
+        hero.style.cssText = 'background:var(--green);border-radius:20px;padding:20px;margin-bottom:20px;color:white;';
+        const heroTitle = document.createElement('div');
+        heroTitle.style.cssText = "font-family:'Jost',sans-serif;font-weight:800;font-size:22px;";
+        heroTitle.textContent = 'Задания ' + MONTH_NAMES_GEN[now.getMonth()];
+        hero.appendChild(heroTitle);
+        const heroSub = document.createElement('div');
+        heroSub.style.cssText = 'opacity:0.85;font-size:13px;font-weight:700;margin-top:4px;';
+        heroSub.textContent = '⏳ ' + daysLeftInMonth + (daysLeftInMonth === 1 ? ' день' : ' дней');
+        hero.appendChild(heroSub);
+
+        if (monthItems.length) {
+          const main = monthItems[0];
+          const pct = Math.min(100, Math.round((main.progress / main.target) * 100));
+          const innerCard = document.createElement('div');
+          innerCard.style.cssText = 'background:white;border-radius:14px;padding:16px;margin-top:16px;';
+          innerCard.innerHTML = `
+            <div style="font-family:'Jost',sans-serif;font-weight:800;font-size:15px;color:var(--text);">${main.title}</div>
+            <div style="background:var(--bg-soft);border-radius:10px;height:14px;overflow:hidden;margin:10px 0 6px;">
+              <div style="height:100%;width:${pct}%;background:var(--green);border-radius:10px;transition:width 0.4s var(--bounce);"></div>
+            </div>
+            <div style="text-align:center;font-family:'Jost',sans-serif;font-weight:800;font-size:12.5px;color:var(--text-soft);">${main.progress} / ${main.target}</div>
+          `;
+          hero.appendChild(innerCard);
+        }
+        screen.appendChild(hero);
+
+        ['day', 'week', 'weekend'].forEach((cat) => {
+          const group = byCategory[cat];
+          if (!group || !group.length) return;
+          const head = document.createElement('div');
+          head.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin:0 0 12px;';
+          const headLabel = document.createElement('span');
+          headLabel.style.cssText = "font-size:12px;font-weight:800;color:var(--text-soft);text-transform:uppercase;letter-spacing:0.03em;";
+          headLabel.textContent = CATEGORY_LABELS[cat];
+          head.appendChild(headLabel);
+          if (cat === 'day') {
+            const timeLabel = document.createElement('span');
+            timeLabel.style.cssText = 'font-size:12px;font-weight:800;color:var(--text-soft);';
+            timeLabel.textContent = '⏱ ' + hoursLeftInDay + ' ч';
+            head.appendChild(timeLabel);
+          }
+          screen.appendChild(head);
+
+          group.forEach((it, i) => {
+            const pct = Math.min(100, Math.round((it.progress / it.target) * 100));
+            const done = it.progress >= it.target;
+            const row = document.createElement('div');
+            row.style.cssText = 'display:flex;align-items:center;gap:14px;padding:14px 0;' + (i < group.length - 1 ? 'border-bottom:1px solid var(--border);' : '');
+            const info = document.createElement('div');
+            info.style.flex = '1';
+            info.innerHTML = `
+              <div style="font-family:'Jost',sans-serif;font-weight:700;font-size:15px;${done ? 'color:var(--green-dark);' : ''}">${done ? '✅ ' : ''}${it.title}</div>
+              <div style="background:var(--bg-soft);border-radius:10px;height:12px;overflow:hidden;margin:8px 0 4px;">
+                <div style="height:100%;width:${pct}%;background:${done ? 'var(--green)' : 'var(--yellow)'};border-radius:10px;transition:width 0.4s var(--bounce);"></div>
+              </div>
+              <div style="font-size:12px;font-weight:700;color:var(--text-soft);">${it.progress} / ${it.target}</div>
+            `;
+            row.appendChild(info);
+            const icon = document.createElement('div');
+            icon.style.cssText = 'font-size:30px;flex-shrink:0;';
+            icon.textContent = CHALLENGE_ICONS[it.challenge_type] || '🎁';
+            row.appendChild(icon);
+            screen.appendChild(row);
+          });
+        });
+      }, false);
+    } catch (err) {
+      showState('Не получилось загрузить задания. ' + err.message, true, true);
+    }
+  }
+
   function switchTab(tab) {
     if (activeTab === tab) return;
     activeTab = tab;
     document.getElementById('tabStudy').classList.toggle('active', tab === 'study');
+    document.getElementById('tabChallenges').classList.toggle('active', tab === 'challenges');
     document.getElementById('tabRating').classList.toggle('active', tab === 'rating');
     document.getElementById('tabStats').classList.toggle('active', tab === 'stats');
     document.getElementById('tabProfile').classList.toggle('active', tab === 'profile');
-    const tabTitles = { study: 'Учёба', rating: 'Рейтинги', stats: 'Статистика', profile: 'Профиль' };
+    const tabTitles = { study: 'Учёба', challenges: 'Задания', rating: 'Рейтинги', stats: 'Статистика', profile: 'Профиль' };
     document.getElementById('headerTitle').textContent = tabTitles[tab] || 'Учёба';
     if (tab === 'study') {
       renderCrumbs();
@@ -1942,6 +2044,17 @@
       profileStack = [{ level: 'profile_subjects', title: '' }];
       renderProfileCrumbs();
       renderProfile(false);
+    } else if (tab === 'challenges') {
+      showLoading('Загружаем', false);
+      getDefaultSubject().then((subject) => {
+        if (!subject) {
+          showState('Нет доступных предметов.', false, false);
+          return;
+        }
+        renderChallengesTab(subject);
+      }).catch((err) => {
+        showState('Не получилось загрузить. ' + err.message, true, true);
+      });
     } else if (tab === 'rating' || tab === 'stats') {
       showLoading('Загружаем', false);
       getDefaultSubject().then((subject) => {
@@ -2225,7 +2338,7 @@
           calTitle.textContent = '📅 Календарь занятий';
           screen.appendChild(calTitle);
 
-          const subjectColors = ['var(--green)', 'var(--blue)', 'var(--yellow)', 'var(--red)', '#C97B3D', '#7A8F47'];
+          const subjectColors = ['var(--green)', 'var(--blue)', 'var(--yellow)', 'var(--red)', '#9B59B6', '#FF8C42'];
           const colorBySubject = {};
           subjects.forEach((s, i) => { colorBySubject[s.title] = subjectColors[i % subjectColors.length]; });
 
@@ -2319,16 +2432,16 @@
         const recordsGrid = document.createElement('div');
         recordsGrid.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;';
         const openBreakdown = () => { profileStack.push({ level: 'profile_daily_breakdown', subjectId: current.subjectId, title: 'Статистика по дням' }); renderProfileCrumbs(); renderProfile(false); };
-        const recordCard = (label, value, desc) => {
+        const recordCard = (label, value, desc, accent) => {
           const c = document.createElement('button');
-          c.style.cssText = 'background:var(--green-tint);border:2px solid var(--green);border-radius:14px;padding:12px 14px;text-align:left;cursor:pointer;';
-          c.innerHTML = `<div style="font-family:'Jost',sans-serif;font-size:22px;font-weight:800;color:var(--green-dark);">${value}</div><div class="field-hint" style="margin:2px 0 0;">${label}</div><div class="field-hint" style="margin:1px 0 0;opacity:0.65;">${desc}</div>`;
+          c.style.cssText = `background:var(--bg);border:2px solid var(--border);border-radius:14px;padding:12px 14px;text-align:left;cursor:pointer;box-shadow:0 2px 8px rgba(60,60,60,0.05);`;
+          c.innerHTML = `<div style="font-family:'Jost',sans-serif;font-size:22px;font-weight:800;color:${accent};">${value}</div><div class="field-hint" style="margin:2px 0 0;">${label}</div><div class="field-hint" style="margin:1px 0 0;opacity:0.65;">${desc}</div>`;
           c.onclick = openBreakdown;
           return c;
         };
-        recordsGrid.appendChild(recordCard('Лучший балл теста', todayData && todayData.best_test_score !== null && todayData.best_test_score !== undefined ? todayData.best_test_score : '–', 'за сегодняшние тесты'));
-        recordsGrid.appendChild(recordCard('Решено верно', todayData ? todayData.correct_solved : '–', 'заданий сегодня'));
-        const totalCard = recordCard('Решено всего', todayData ? todayData.total_solved : '–', 'заданий сегодня (включая неверные)');
+        recordsGrid.appendChild(recordCard('Лучший балл теста', todayData && todayData.best_test_score !== null && todayData.best_test_score !== undefined ? todayData.best_test_score : '–', 'за сегодняшние тесты', 'var(--yellow-dark)'));
+        recordsGrid.appendChild(recordCard('Решено верно', todayData ? todayData.correct_solved : '–', 'заданий сегодня', 'var(--green-dark)'));
+        const totalCard = recordCard('Решено всего', todayData ? todayData.total_solved : '–', 'заданий сегодня (включая неверные)', 'var(--blue-dark)');
         totalCard.style.gridColumn = 'span 2';
         recordsGrid.appendChild(totalCard);
         screen.appendChild(recordsGrid);
@@ -2342,19 +2455,10 @@
         const wrap = document.createElement('div');
         wrap.className = 'home-choice';
 
-        const challengesChoice = document.createElement('button');
-        challengesChoice.className = 'choice-card';
-        challengesChoice.innerHTML = `
-          <svg class="choice-icon" viewBox="0 0 20 20" fill="none"><path d="M10 2L10 12M10 12L14 8M10 12L6 8" stroke="#798C46" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><rect x="4" y="14" width="12" height="4" rx="1" stroke="#798C46" stroke-width="1.5"/></svg>
-          <div class="choice-title">🎯 Задания месяца</div>`;
-        challengesChoice.onclick = () => { profileStack.push({ level: 'profile_challenges', subjectId: current.subjectId, title: 'Задания месяца' }); renderProfileCrumbs(); renderProfile(false); };
-        wrap.appendChild(challengesChoice);
-
         const reportChoice = document.createElement('button');
         reportChoice.className = 'choice-card';
-        reportChoice.style.animationDelay = '0.05s';
         reportChoice.innerHTML = `
-          <svg class="choice-icon" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="7" stroke="#C43E3E" stroke-width="1.5"/><path d="M10 7V10.5M10 13.2V13.3" stroke="#C43E3E" stroke-width="1.5" stroke-linecap="round"/></svg>
+          <svg class="choice-icon" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="7" stroke="#EA2B2B" stroke-width="1.5"/><path d="M10 7V10.5M10 13.2V13.3" stroke="#EA2B2B" stroke-width="1.5" stroke-linecap="round"/></svg>
           <div class="choice-title">\uD83D\uDC1E Сообщить об ошибке</div>`;
         reportChoice.onclick = () => promptReportError({ subject_id: current.subjectId });
         wrap.appendChild(reportChoice);
