@@ -639,8 +639,9 @@
       renderSubjectMenu(isBack);
     } else if (current.level === 'sections') {
       showLoadingMenu();
+      const kind = current.sectionsKind || 'trainer';
       try {
-        const sections = await apiGet(`/api/teacher/subjects/${currentSubjectId}/sections`);
+        const sections = await apiGet(`/api/teacher/subjects/${currentSubjectId}/sections?kind=${kind}`);
         renderRowList(
           sections, 'section', 'blue',
           (item) => { stack.push({ level: 'topics', sectionId: item.id, title: item.title }); renderCrumbs(); render(false); },
@@ -652,9 +653,10 @@
             await apiSend('DELETE', `/api/teacher/sections/${item.id}`);
             render(false);
           }),
-          'Пока нет ни одного раздела.', 'Добавить раздел',
-          () => promptRename('Название нового раздела', '', async (val) => {
-            await apiSend('POST', `/api/teacher/subjects/${currentSubjectId}/sections`, { title: val });
+          kind === 'homework' ? 'Пока нет ни одного раздела ДЗ.' : 'Пока нет ни одного раздела.',
+          kind === 'homework' ? 'Добавить раздел ДЗ' : 'Добавить раздел',
+          () => promptRename(kind === 'homework' ? 'Название раздела ДЗ' : 'Название нового раздела', '', async (val) => {
+            await apiSend('POST', `/api/teacher/subjects/${currentSubjectId}/sections`, { title: val, is_homework: kind === 'homework' });
             render(false);
           }),
           null,
@@ -909,83 +911,84 @@
 
     const sectionsChoice = document.createElement('button');
     sectionsChoice.className = 'choice-card';
-    sectionsChoice.innerHTML = '<svg class="choice-icon" viewBox="0 0 20 20" fill="none"><path d="M2 6.5C2 5.67 2.67 5 3.5 5H8L9.5 6.5H16.5C17.33 6.5 18 7.17 18 8V14.5C18 15.33 17.33 16 16.5 16H3.5C2.67 16 2 15.33 2 14.5V6.5Z" stroke="#1899D6" stroke-width="1.5" stroke-linejoin="round"/></svg><div class="choice-title">📂 Разделы и задания</div>';
-    sectionsChoice.onclick = () => { stack.push({ level: 'sections', title: 'Разделы' }); renderCrumbs(); render(false); };
+    sectionsChoice.innerHTML = '<svg class="choice-icon" viewBox="0 0 20 20" fill="none"><path d="M2 6.5C2 5.67 2.67 5 3.5 5H8L9.5 6.5H16.5C17.33 6.5 18 7.17 18 8V14.5C18 15.33 17.33 16 16.5 16H3.5C2.67 16 2 15.33 2 14.5V6.5Z" stroke="#1899D6" stroke-width="1.5" stroke-linejoin="round"/></svg><div class="choice-title">📂 Тренажёры</div>';
+    sectionsChoice.onclick = () => { stack.push({ level: 'sections', title: 'Тренажёры', sectionsKind: 'trainer' }); renderCrumbs(); render(false); };
     wrap.appendChild(sectionsChoice);
+
+    const homeworkChoice = document.createElement('button');
+    homeworkChoice.className = 'choice-card';
+    homeworkChoice.style.animationDelay = '0.04s';
+    homeworkChoice.innerHTML = '<svg class="choice-icon" viewBox="0 0 20 20" fill="none"><path d="M4 3.5C4 2.67 4.67 2 5.5 2H12L16 6V16.5C16 17.33 15.33 18 14.5 18H5.5C4.67 18 4 17.33 4 16.5V3.5Z" stroke="#58A700" stroke-width="1.5" stroke-linejoin="round"/><path d="M7 10H13M7 13H11" stroke="#58A700" stroke-width="1.5" stroke-linecap="round"/></svg><div class="choice-title">📓 ДЗ</div>';
+    homeworkChoice.onclick = () => { stack.push({ level: 'sections', title: 'ДЗ', sectionsKind: 'homework' }); renderCrumbs(); render(false); };
+    wrap.appendChild(homeworkChoice);
 
     const testsChoice = document.createElement('button');
     testsChoice.className = 'choice-card';
-    testsChoice.style.animationDelay = '0.05s';
+    testsChoice.style.animationDelay = '0.08s';
     testsChoice.innerHTML = '<svg class="choice-icon" viewBox="0 0 20 20" fill="none"><path d="M6 3H14L14 17L10 14.5L6 17V3Z" stroke="#B8860B" stroke-width="1.5" stroke-linejoin="round"/></svg><div class="choice-title">🧪 Тесты</div>';
     testsChoice.onclick = () => { stack.push({ level: 'tests', title: 'Тесты' }); renderCrumbs(); render(false); };
     wrap.appendChild(testsChoice);
 
-    const viewAsStudentChoice = document.createElement('button');
-    viewAsStudentChoice.className = 'choice-card';
-    viewAsStudentChoice.style.animationDelay = '0.1s';
-    viewAsStudentChoice.innerHTML = '<svg class="choice-icon" viewBox="0 0 20 20" fill="none"><path d="M1 10C1 10 4.5 4 10 4C15.5 4 19 10 19 10C19 10 15.5 16 10 16C4.5 16 1 10 1 10Z" stroke="#58A700" stroke-width="1.5" stroke-linejoin="round"/><circle cx="10" cy="10" r="2.6" stroke="#58A700" stroke-width="1.5"/></svg><div class="choice-title">👀 Смотреть как ученик</div>';
-    viewAsStudentChoice.onclick = () => {
-      if (tg?.showConfirm) {
-        tg.showConfirm('Откроется настоящий ученический вид — можно пройти любое задание и тест по-настоящему, с таймером и подсчётом баллов. Учтите: ваши ответы тоже сохранятся в статистике, как у обычного ученика.', (ok) => {
-          if (ok) window.location.href = 'index.html';
-        });
-      } else {
-        window.location.href = 'index.html';
-      }
-    };
-    wrap.appendChild(viewAsStudentChoice);
+    swapScreen((screen) => {
+      screen.appendChild(wrap);
 
-    const settingsChoice = document.createElement('button');
-    settingsChoice.className = 'choice-card';
-    settingsChoice.style.animationDelay = '0.15s';
-    settingsChoice.innerHTML = '<svg class="choice-icon" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="2.5" stroke="#8B93A3" stroke-width="1.5"/><path d="M10 2V4M10 16V18M18 10H16M4 10H2M15.5 4.5L14 6M6 14L4.5 15.5M15.5 15.5L14 14M6 6L4.5 4.5" stroke="#8B93A3" stroke-width="1.5" stroke-linecap="round"/></svg><div class="choice-title">⚙️ Настройки предмета</div>';
-    settingsChoice.onclick = () => { stack.push({ level: 'subject_blocks', title: 'Настройки предмета' }); renderCrumbs(); render(false); };
-    wrap.appendChild(settingsChoice);
+      const list = document.createElement('div');
+      list.className = 'list';
+      list.style.marginTop = '14px';
 
-    const scheduleChoice = document.createElement('button');
-    scheduleChoice.className = 'choice-card';
-    scheduleChoice.style.animationDelay = '0.2s';
-    scheduleChoice.innerHTML = '<svg class="choice-icon" viewBox="0 0 20 20" fill="none"><rect x="3" y="4" width="14" height="13" rx="2" stroke="#5B8DEF" stroke-width="1.5"/><path d="M3 8H17M7 2V5M13 2V5" stroke="#5B8DEF" stroke-width="1.5" stroke-linecap="round"/></svg><div class="choice-title">📅 Расписание занятий</div>';
-    scheduleChoice.onclick = () => { stack.push({ level: 'schedule', title: 'Расписание занятий' }); renderCrumbs(); render(false); };
-    wrap.appendChild(scheduleChoice);
+      const menuItems = [
+        { icon: 'M1 10C1 10 4.5 4 10 4C15.5 4 19 10 19 10C19 10 15.5 16 10 16C4.5 16 1 10 1 10Z', iconExtra: '<circle cx="10" cy="10" r="2.6" stroke="#58A700" stroke-width="1.5"/>', color: '#58A700', label: '👀 Смотреть как ученик', action: () => {
+          if (tg?.showConfirm) {
+            tg.showConfirm('Откроется настоящий ученический вид — можно пройти любое задание и тест по-настоящему, с таймером и подсчётом баллов. Учтите: ваши ответы тоже сохранятся в статистике, как у обычного ученика.', (ok) => { if (ok) window.location.href = 'index.html'; });
+          } else { window.location.href = 'index.html'; }
+        } },
+        { icon: 'M10 2V4M10 16V18M18 10H16M4 10H2M15.5 4.5L14 6M6 14L4.5 15.5M15.5 15.5L14 14M6 6L4.5 4.5', circle: true, color: '#8B93A3', label: '⚙️ Настройки предмета', level: 'subject_blocks', title: 'Настройки предмета' },
+        { icon: 'M3 8H17M7 2V5M13 2V5', rect: true, color: '#5B8DEF', label: '📅 Расписание занятий', level: 'schedule', title: 'Расписание занятий' },
+        { icon: 'M10 7V10.5M10 13.2V13.3', circleThin: true, color: '#EA2B2B', label: '🐞 Сообщения об ошибках', level: 'error_reports', title: 'Сообщения об ошибках', badge: true },
+        { icon: 'M10 3L12.2 7.6L17.3 8.3L13.6 11.9L14.5 17L10 14.5L5.5 17L6.4 11.9L2.7 8.3L7.8 7.6L10 3Z', color: '#F5A623', label: '🏆 Рейтинг участников', level: 'leaderboard', title: 'Рейтинг участников' },
+        { icon: 'M10 2L10 12M10 12L14 8M10 12L6 8', rectBottom: true, color: '#58CC02', label: '🎯 Задания месяца', level: 'challenges', title: 'Задания месяца' },
+        { icon: 'M4 17c0-3 2.7-5 6-5s6 2 6 5', people: true, color: '#1899D6', label: '👥 Ученики', level: 'students', title: 'Ученики' },
+      ];
 
-    const reportsChoice = document.createElement('button');
-    reportsChoice.className = 'choice-card';
-    reportsChoice.style.animationDelay = '0.25s';
-    reportsChoice.innerHTML = '<svg class="choice-icon" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="7" stroke="#EA2B2B" stroke-width="1.5"/><path d="M10 7V10.5M10 13.2V13.3" stroke="#EA2B2B" stroke-width="1.5" stroke-linecap="round"/></svg><div class="choice-title">🐞 Сообщения об ошибках</div>';
-    reportsChoice.onclick = () => { stack.push({ level: 'error_reports', title: 'Сообщения об ошибках' }); renderCrumbs(); render(false); };
-    wrap.appendChild(reportsChoice);
-    apiGet(`/api/teacher/subjects/${currentSubjectId}/error-reports?status=new`).then((reports) => {
-      if (!reports.length) return;
-      const badge = document.createElement('span');
-      badge.textContent = reports.length;
-      badge.style.cssText = 'position:absolute;top:8px;right:8px;background:var(--red-dark);color:white;border-radius:10px;padding:1px 7px;font-size:11px;font-weight:800;';
-      reportsChoice.style.position = 'relative';
-      reportsChoice.appendChild(badge);
-    }).catch(() => {});
+      menuItems.forEach((item) => {
+        const row = document.createElement('button');
+        row.className = 'row-card';
+        row.style.cssText = 'width:100%;cursor:pointer;align-items:center;';
+        const iconWrap = document.createElement('div');
+        iconWrap.style.cssText = `width:30px;height:30px;border-radius:8px;background:${item.color}22;display:flex;align-items:center;justify-content:center;flex-shrink:0;`;
+        let svgInner = `<path d="${item.icon}" stroke="${item.color}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>`;
+        if (item.circle) svgInner = `<circle cx="10" cy="10" r="2.5" stroke="${item.color}" stroke-width="1.5"/>` + svgInner;
+        if (item.circleThin) svgInner = `<circle cx="10" cy="10" r="7" stroke="${item.color}" stroke-width="1.5"/>` + svgInner;
+        if (item.rect) svgInner = `<rect x="3" y="4" width="14" height="13" rx="2" stroke="${item.color}" stroke-width="1.5"/>` + svgInner;
+        if (item.rectBottom) svgInner = svgInner + `<rect x="4" y="14" width="12" height="4" rx="1" stroke="${item.color}" stroke-width="1.5"/>`;
+        if (item.people) svgInner = `<circle cx="10" cy="7" r="3" stroke="${item.color}" stroke-width="1.5"/>` + svgInner;
+        iconWrap.innerHTML = `<svg width="16" height="16" viewBox="0 0 20 20" fill="none">${svgInner}</svg>`;
+        row.appendChild(iconWrap);
+        const lbl = document.createElement('div');
+        lbl.className = 'row-title';
+        lbl.style.cssText = 'flex:1;text-align:left;font-size:14px;';
+        lbl.textContent = item.label;
+        row.appendChild(lbl);
+        const arrow = document.createElement('span');
+        arrow.style.cssText = 'color:var(--border);font-size:18px;font-weight:700;flex-shrink:0;';
+        arrow.textContent = '›';
+        row.appendChild(arrow);
+        row.onclick = item.action || (() => { stack.push({ level: item.level, title: item.title }); renderCrumbs(); render(false); });
+        list.appendChild(row);
 
-    const ratingChoice = document.createElement('button');
-    ratingChoice.className = 'choice-card';
-    ratingChoice.style.animationDelay = '0.3s';
-    ratingChoice.innerHTML = '<svg class="choice-icon" viewBox="0 0 20 20" fill="none"><path d="M10 3L12.2 7.6L17.3 8.3L13.6 11.9L14.5 17L10 14.5L5.5 17L6.4 11.9L2.7 8.3L7.8 7.6L10 3Z" stroke="#F5A623" stroke-width="1.5" stroke-linejoin="round"/></svg><div class="choice-title">🏆 Рейтинг участников</div>';
-    ratingChoice.onclick = () => { stack.push({ level: 'leaderboard', title: 'Рейтинг участников' }); renderCrumbs(); render(false); };
-    wrap.appendChild(ratingChoice);
+        if (item.badge) {
+          apiGet(`/api/teacher/subjects/${currentSubjectId}/error-reports?status=new`).then((reports) => {
+            if (!reports.length) return;
+            const badge = document.createElement('span');
+            badge.textContent = reports.length;
+            badge.style.cssText = 'background:var(--red-dark);color:white;border-radius:10px;padding:1px 7px;font-size:11px;font-weight:800;flex-shrink:0;margin-right:4px;';
+            row.insertBefore(badge, arrow);
+          }).catch(() => {});
+        }
+      });
 
-    const challengesChoice = document.createElement('button');
-    challengesChoice.className = 'choice-card';
-    challengesChoice.style.animationDelay = '0.35s';
-    challengesChoice.innerHTML = '<svg class="choice-icon" viewBox="0 0 20 20" fill="none"><path d="M10 2L10 12M10 12L14 8M10 12L6 8" stroke="#58CC02" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><rect x="4" y="14" width="12" height="4" rx="1" stroke="#58CC02" stroke-width="1.5"/></svg><div class="choice-title">🎯 Задания месяца</div>';
-    challengesChoice.onclick = () => { stack.push({ level: 'challenges', title: 'Задания месяца' }); renderCrumbs(); render(false); };
-    wrap.appendChild(challengesChoice);
-
-    const studentsChoice = document.createElement('button');
-    studentsChoice.className = 'choice-card';
-    studentsChoice.style.animationDelay = '0.4s';
-    studentsChoice.innerHTML = '<svg class="choice-icon" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="7" r="3" stroke="#1899D6" stroke-width="1.5"/><path d="M4 17c0-3 2.7-5 6-5s6 2 6 5" stroke="#1899D6" stroke-width="1.5" stroke-linecap="round"/></svg><div class="choice-title">👥 Ученики</div>';
-    studentsChoice.onclick = () => { stack.push({ level: 'students', title: 'Ученики' }); renderCrumbs(); render(false); };
-    wrap.appendChild(studentsChoice);
-
-    swapScreen((screen) => { screen.appendChild(wrap); }, isBack);
+      screen.appendChild(list);
+    }, isBack);
   }
 
   async function renderSubjectBlocks(isBack) {
