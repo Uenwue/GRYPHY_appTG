@@ -991,7 +991,10 @@
   async function renderSubjectBlocks(isBack) {
     showLoadingMenu();
     try {
-      const blocks = await apiGet(`/api/teacher/subjects/${currentSubjectId}/blocks`);
+      const [blocks, seqUnlock] = await Promise.all([
+        apiGet(`/api/teacher/subjects/${currentSubjectId}/blocks`),
+        apiGet(`/api/teacher/subjects/${currentSubjectId}/sequential-unlock`),
+      ]);
       swapScreen((screen) => {
         const card = document.createElement('div');
         card.className = 'form-card';
@@ -1042,6 +1045,67 @@
         card.appendChild(saveBtn);
 
         screen.appendChild(card);
+
+        const seqCard = document.createElement('div');
+        seqCard.className = 'form-card';
+        seqCard.style.marginTop = '16px';
+        seqCard.innerHTML = '<div class="field-label" style="margin-bottom:4px;">Последовательное открытие тем</div><div class="field-hint" style="margin-bottom:16px;">Если включено — следующая тема раздела откроется ученику только после того, как он решит нужный процент заданий предыдущей темы верно. Действует внутри каждого раздела отдельно, первую тему это не касается.</div>';
+
+        const seqRow = document.createElement('div');
+        seqRow.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);';
+        const seqLbl = document.createElement('span');
+        seqLbl.style.cssText = "font-family:'Jost',sans-serif;font-weight:700;font-size:15px;";
+        seqLbl.textContent = '🔒 Включить';
+        seqRow.appendChild(seqLbl);
+        const seqToggle = document.createElement('button');
+        seqToggle.type = 'button';
+        let seqEnabled = seqUnlock.enabled;
+        function renderSeqToggle() {
+          seqToggle.className = 'correct-toggle' + (seqEnabled ? ' on' : '');
+          seqToggle.innerHTML = ICONS.check;
+        }
+        renderSeqToggle();
+        seqToggle.onclick = () => { seqEnabled = !seqEnabled; renderSeqToggle(); };
+        seqRow.appendChild(seqToggle);
+        seqCard.appendChild(seqRow);
+
+        const thresholdLabel = document.createElement('div');
+        thresholdLabel.className = 'field-label';
+        thresholdLabel.style.cssText = 'margin-top:14px;margin-bottom:6px;';
+        thresholdLabel.textContent = 'Нужный процент верных ответов (1–100)';
+        seqCard.appendChild(thresholdLabel);
+        const thresholdInput = document.createElement('input');
+        thresholdInput.className = 'field-input';
+        thresholdInput.type = 'number';
+        thresholdInput.min = '1';
+        thresholdInput.max = '100';
+        thresholdInput.value = seqUnlock.threshold;
+        seqCard.appendChild(thresholdInput);
+
+        const seqSaveBtn = document.createElement('button');
+        seqSaveBtn.className = 'save-btn';
+        seqSaveBtn.style.marginTop = '18px';
+        seqSaveBtn.textContent = 'Сохранить';
+        seqSaveBtn.onclick = async () => {
+          const threshold = parseInt(thresholdInput.value, 10);
+          if (!threshold || threshold < 1 || threshold > 100) {
+            showToast('Процент должен быть от 1 до 100');
+            return;
+          }
+          seqSaveBtn.disabled = true;
+          seqSaveBtn.textContent = 'Сохраняю…';
+          try {
+            await apiSend('PATCH', `/api/teacher/subjects/${currentSubjectId}/sequential-unlock`, { enabled: seqEnabled, threshold });
+            showToast('Настройки сохранены');
+          } catch (err) {
+            showToast('Не получилось сохранить: ' + err.message);
+          }
+          seqSaveBtn.disabled = false;
+          seqSaveBtn.textContent = 'Сохранить';
+        };
+        seqCard.appendChild(seqSaveBtn);
+
+        screen.appendChild(seqCard);
       }, isBack);
     } catch (err) { showErrorMsg(err, isBack); }
   }
