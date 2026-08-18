@@ -1286,9 +1286,10 @@
       } else if (current.level === 'subject_home') {
         renderSubjectHome(current.subjectId, isBack);
       } else if (current.level === 'sections') {
-        const sections = await apiGet(`/api/subjects/${current.subjectId}/sections`);
+        const kind = current.purpose === 'homework' ? 'homework' : 'trainer';
+        const sections = await apiGet(`/api/subjects/${current.subjectId}/sections?kind=${kind}`);
         const purpose = current.purpose;
-        renderList(sections.map(s => ({ id: s.id, title: s.title, is_locked: s.is_locked, lock_message: s.lock_message, sub: purpose === 'tasks' ? s.sub : undefined })),
+        renderList(sections.map(s => ({ id: s.id, title: s.title, is_locked: s.is_locked, lock_message: s.lock_message, sub: (purpose === 'tasks' || purpose === 'homework') ? s.sub : undefined })),
           (item) => { stack.push({ level: 'topics', sectionId: item.id, purpose, title: item.title }); render(false); },
           'sections', isBack);
       } else if (current.level === 'topics') {
@@ -1296,9 +1297,9 @@
         const purpose = current.purpose;
         const listScreen = renderList(topics.map((t, i) => ({
             id: t.id, title: t.title, is_locked: t.is_locked, lock_message: t.lock_message,
-            eyebrow: purpose === 'tasks' ? 'Тема ' + (i + 1) : undefined,
-            task_count: purpose === 'tasks' ? t.task_count : undefined,
-            correct_count: purpose === 'tasks' ? t.correct_count : undefined,
+            eyebrow: (purpose === 'tasks' || purpose === 'homework') ? (purpose === 'homework' ? 'Урок ' : 'Тема ') + (i + 1) : undefined,
+            task_count: (purpose === 'tasks' || purpose === 'homework') ? t.task_count : undefined,
+            correct_count: (purpose === 'tasks' || purpose === 'homework') ? t.correct_count : undefined,
           })),
           async (item) => {
             if (purpose === 'rules') {
@@ -1405,6 +1406,7 @@
       } catch (err) { /* если не получилось — просто показываем всё, не критично */ }
 
       const items = [
+        { key: 'homework', title: 'ДЗ', sub: 'Уроки открываются по порядку', hidden: false },
         { key: 'tasks', title: 'Задания', sub: 'Тренируйтесь по темам и разделам', hidden: blocks.tasks_hidden },
         { key: 'rules', title: 'Правила', sub: 'Справочник по темам курса', hidden: blocks.rules_hidden },
         { key: 'tests', title: 'Тесты', sub: 'Проверьте себя в формате экзамена', hidden: blocks.tests_hidden },
@@ -1429,7 +1431,7 @@
         card.appendChild(arrow);
         card.onclick = () => {
           if (item.key === 'tests') { stack.push({ level: 'tests', subjectId, title: 'Тесты' }); render(false); }
-          else { stack.push({ level: 'sections', subjectId, purpose: item.key, title: 'Разделы' }); render(false); }
+          else { stack.push({ level: 'sections', subjectId, purpose: item.key, title: item.key === 'homework' ? 'ДЗ' : 'Разделы' }); render(false); }
         };
         list.appendChild(card);
       });
