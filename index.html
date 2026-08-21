@@ -519,6 +519,17 @@
     return res.json();
   }
 
+  async function apiSend(method, path, body) {
+    const res = await fetch(API_BASE_URL + path, {
+      method,
+      headers: { 'Content-Type': 'application/json', 'X-Telegram-Init-Data': tg?.initData || '' },
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+    });
+    if (res.status === 401) throw new Error('Не удалось подтвердить, что это вы — откройте страницу через кнопку в боте.');
+    if (!res.ok) throw new Error('Сервер ответил с ошибкой: ' + res.status);
+    return res.json();
+  }
+
 
   const screenHost = document.getElementById('screenHost');
   const crumbsEl = document.getElementById('crumbs');
@@ -1025,6 +1036,72 @@
 
     screen.appendChild(card);
     screen.appendChild(buildReportErrorButton({ task_id: task.id }));
+    if (isTeacherViewing) {
+      screen.appendChild(buildTeacherFixButton('task', task, () => renderTaskScreen(false)));
+    }
+  }
+
+  function buildTeacherFixButton(kind, item, onSaved) {
+    const wrap = document.createElement('div');
+    wrap.style.cssText = 'text-align:center;margin-top:6px;';
+    const btn = document.createElement('button');
+    btn.style.cssText = 'background:none;border:none;color:var(--yellow-dark);font-size:12px;font-weight:700;cursor:pointer;padding:6px;';
+    btn.textContent = '✏️ Исправить (видно только вам)';
+    btn.onclick = () => promptTeacherFix(kind, item, onSaved);
+    wrap.appendChild(btn);
+    return wrap;
+  }
+
+  function promptTeacherFix(kind, item, onSaved) {
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center;z-index:30;padding:20px;';
+    overlay.innerHTML = '<div style="background:var(--bg);border-radius:16px;padding:18px;max-width:360px;width:100%;max-height:90vh;overflow-y:auto;">' +
+      '<div class="field-label">Вопрос</div>' +
+      '<textarea class="field-input" id="fixQ" rows="2" style="resize:vertical;margin-bottom:10px;"></textarea>' +
+      '<div class="field-label">Правильный ответ</div>' +
+      '<input class="field-input" id="fixA" style="margin-bottom:10px;">' +
+      '<div class="field-label">Объяснение (необязательно)</div>' +
+      '<textarea class="field-input" id="fixE" rows="3" style="resize:vertical;margin-bottom:10px;"></textarea>' +
+      '<div id="fixErr" style="color:var(--red-dark);font-size:12.5px;font-weight:700;margin-bottom:8px;display:none;"></div>' +
+      '<div style="display:flex;gap:8px;">' +
+      '<button class="back-btn" id="fixCancel" style="flex:1;">Отмена</button>' +
+      '<button class="submit-btn" id="fixSave" style="flex:1;margin-top:0;">Сохранить</button>' +
+      '</div></div>';
+    document.body.appendChild(overlay);
+    const qInput = overlay.querySelector('#fixQ');
+    const aInput = overlay.querySelector('#fixA');
+    const eInput = overlay.querySelector('#fixE');
+    const errBox = overlay.querySelector('#fixErr');
+    const saveBtn = overlay.querySelector('#fixSave');
+    qInput.value = item.question || '';
+    aInput.value = kind === 'task' ? (item.correct_answer_final || '') : (item.correct_answer_final || '');
+    eInput.value = item.explanation || '';
+    function closeOverlay() { overlay.remove(); }
+    overlay.querySelector('#fixCancel').onclick = closeOverlay;
+    saveBtn.onclick = async () => {
+      const question = qInput.value.trim();
+      const answer = aInput.value.trim();
+      if (!question || !answer) {
+        errBox.textContent = 'Заполните вопрос и ответ.';
+        errBox.style.display = 'block';
+        return;
+      }
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Сохраняю…';
+      try {
+        const path = kind === 'task' ? `/api/teacher/tasks/${item.id}` : `/api/teacher/testquestions/${item.id}`;
+        await apiSend('PATCH', path, { question, answer, explanation: eInput.value.trim() });
+        closeOverlay();
+        const okMsg = 'Исправлено.';
+        if (tg?.showAlert) tg.showAlert(okMsg); else alert(okMsg);
+        if (onSaved) onSaved();
+      } catch (err) {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Сохранить';
+        errBox.textContent = 'Не получилось сохранить: ' + err.message;
+        errBox.style.display = 'block';
+      }
+    };
   }
 
   function buildReportErrorButton(context) {
@@ -1719,6 +1796,9 @@
 
     screen.appendChild(card);
     screen.appendChild(buildReportErrorButton({ test_question_id: q.id }));
+    if (isTeacherViewing) {
+      screen.appendChild(buildTeacherFixButton('testq', q, () => renderTestQuestion(false)));
+    }
   }
 
   async function finishCurrentTest() {
@@ -2795,15 +2875,84 @@
     try {
       const info = await apiGet('/api/me/profile-info');
       if (info.filled) {
-        pickDefaultSubjectAndStart();
+        checkSubscriptionThenStart();
       } else {
         renderProfileSetupForm();
       }
     } catch (err) {
       // Если проверку анкеты не удалось выполнить (например, сеть) — не
       // блокируем вход в приложение совсем, просто идём дальше как обычно.
+      checkSubscriptionThenStart();
+    }
+  }
+
+  async function checkSubscriptionThenStart() {
+    try {
+      const status = await apiGet('/api/me/subscription-status');
+      if (status.has_access) {
+        pickDefaultSubjectAndStart();
+      } else {
+        renderSubscriptionRequiredScreen();
+      }
+    } catch (err) {
+      // Технический сбой самой проверки — не блокируем вход совсем,
+      // основная защита всё равно на сервере (каждый эндпоинт с контентом
+      // сам проверяет подписку и не отдаст ничего лишнего).
       pickDefaultSubjectAndStart();
     }
+  }
+
+  function renderSubscriptionRequiredScreen() {
+    document.querySelector('nav.tab-bar').style.display = 'none';
+    crumbsEl.innerHTML = '';
+    screenHost.innerHTML = '';
+    const screen = document.createElement('div');
+    screen.className = 'screen';
+    screen.id = 'content';
+
+    const card = document.createElement('div');
+    card.className = 'task-card';
+    card.style.textAlign = 'center';
+
+    const emoji = document.createElement('div');
+    emoji.style.cssText = 'font-size:40px;margin-bottom:10px;';
+    emoji.textContent = '🔒';
+    card.appendChild(emoji);
+
+    const title = document.createElement('p');
+    title.className = 'task-question';
+    title.style.textAlign = 'center';
+    title.textContent = 'Нужна подписка';
+    card.appendChild(title);
+
+    const hint = document.createElement('p');
+    hint.className = 'task-description';
+    hint.style.textAlign = 'center';
+    hint.textContent = 'Чтобы открыть материалы курса, оформите подписку. Если уже оплатили и видите это сообщение — напишите менеджеру, доступ откроем вручную.';
+    card.appendChild(hint);
+
+    const contactBtn = document.createElement('button');
+    contactBtn.className = 'submit-btn';
+    contactBtn.textContent = '✍️ Написать менеджеру';
+    contactBtn.onclick = () => {
+      const msg = 'Чтобы написать менеджеру, вернитесь в чат с ботом и нажмите там кнопку «Написать менеджеру» в главном меню.';
+      if (tg?.showAlert) {
+        tg.showAlert(msg, () => { if (tg?.close) tg.close(); });
+      } else {
+        alert(msg);
+      }
+    };
+    card.appendChild(contactBtn);
+
+    const retryBtn = document.createElement('button');
+    retryBtn.className = 'back-btn';
+    retryBtn.style.cssText = 'width:100%;margin-top:10px;';
+    retryBtn.textContent = '🔄 Проверить ещё раз';
+    retryBtn.onclick = () => checkSubscriptionThenStart();
+    card.appendChild(retryBtn);
+
+    screen.appendChild(card);
+    screenHost.appendChild(screen);
   }
 
   function renderProfileSetupForm() {
@@ -2940,6 +3089,8 @@
     screenHost.appendChild(screen);
   }
 
+  let isTeacherViewing = false;
+  apiGet('/api/me/role').then((r) => { isTeacherViewing = !!r.is_teacher; }).catch(() => {});
   checkProfileSetupThenStart();
 </script>
 
