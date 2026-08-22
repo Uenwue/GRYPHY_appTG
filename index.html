@@ -2934,7 +2934,20 @@
     const contactBtn = document.createElement('button');
     contactBtn.className = 'submit-btn';
     contactBtn.textContent = '✍️ Написать менеджеру';
-    contactBtn.onclick = () => {
+    contactBtn.onclick = async () => {
+      try {
+        const { url } = await apiGet('/api/manager-contact-url');
+        if (url) {
+          if (tg?.openTelegramLink && /^https?:\/\/t\.me\//.test(url)) {
+            tg.openTelegramLink(url);
+          } else if (tg?.openLink) {
+            tg.openLink(url);
+          } else {
+            window.open(url, '_blank');
+          }
+          return;
+        }
+      } catch (err) { /* падаем на запасной путь ниже */ }
       const msg = 'Чтобы написать менеджеру, вернитесь в чат с ботом и нажмите там кнопку «Написать менеджеру» в главном меню.';
       if (tg?.showAlert) {
         tg.showAlert(msg, () => { if (tg?.close) tg.close(); });
