@@ -596,7 +596,7 @@
     if (current.level === 'menu') {
       showLoadingMenu();
       try {
-        const subjects = await apiGet('/api/teacher/subjects');
+        const { role, subjects } = await apiGet('/api/teacher/subjects');
         if (!subjects.length) {
           swapScreen((screen) => {
             const p = document.createElement('p');
@@ -606,9 +606,11 @@
           }, isBack);
           return;
         }
-        // Если предмет один (обычный учитель) — сразу показываем его меню.
-        // Если несколько (админ) — сначала список предметов на выбор.
-        if (subjects.length === 1) {
+        // Учителю с одним предметом сразу показываем его меню — выбирать
+        // не из чего. Админ всегда видит список предметов на выбор, даже
+        // если сейчас он всего один — это явно отличает роль на экране,
+        // и легко расширится, как только предметов станет больше.
+        if (role !== 'admin' && subjects.length === 1) {
           currentSubjectId = subjects[0].id;
           currentSubjectTitle = subjects[0].title;
           document.getElementById('subjTitle').textContent = currentSubjectTitle;
