@@ -454,11 +454,12 @@
     eyeOff: '<svg viewBox="0 0 20 20" fill="none"><path d="M1 10C1 10 4.5 4 10 4C15.5 4 19 10 19 10C19 10 15.5 16 10 16C4.5 16 1 10 1 10Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><circle cx="10" cy="10" r="2.6" stroke="currentColor" stroke-width="1.6"/><path d="M2 2L18 18" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>',
     lockClosed: '<svg viewBox="0 0 20 20" fill="none"><rect x="4" y="9" width="12" height="8" rx="1.5" stroke="currentColor" stroke-width="1.6"/><path d="M6.5 9V6.5C6.5 4.6 8 3 10 3C12 3 13.5 4.6 13.5 6.5V9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>',
     lockOpen: '<svg viewBox="0 0 20 20" fill="none"><rect x="4" y="9" width="12" height="8" rx="1.5" stroke="currentColor" stroke-width="1.6"/><path d="M6.5 9V6.5C6.5 4.6 8 3 10 3C11.6 3 13 4.1 13.4 5.6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>',
+    move: '<svg viewBox="0 0 20 20" fill="none"><path d="M10 2V18M10 2L6.5 5.5M10 2L13.5 5.5M10 18L6.5 14.5M10 18L13.5 14.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>',
   };
 
   function renderRowList(items, iconType, iconClass, onOpen, onEdit, onDelete, emptyText, addLabel, onAdd, onPreview, extra) {
     extra = extra || {};
-    const { onLock, onHide, onReorder, onToggleExplanations } = extra;
+    const { onLock, onHide, onReorder, onToggleExplanations, onMove } = extra;
     return swapScreen((screen) => {
       const list = document.createElement('div');
       list.className = 'list';
@@ -566,6 +567,14 @@
           explBtn.textContent = '💡';
           explBtn.onclick = (e) => { e.stopPropagation(); onToggleExplanations(item); };
           actions.appendChild(explBtn);
+        }
+        if (onMove) {
+          const moveBtn = document.createElement('button');
+          moveBtn.className = 'icon-btn';
+          moveBtn.title = 'Переместить';
+          moveBtn.innerHTML = ICONS.move;
+          moveBtn.onclick = (e) => { e.stopPropagation(); onMove(item); };
+          actions.appendChild(moveBtn);
         }
         if (onEdit) {
           const editBtn = document.createElement('button');
@@ -737,6 +746,7 @@
               await apiSend('POST', `/api/teacher/sections/${current.sectionId}/topics/reorder`, { order: ids });
               render(false);
             },
+            onMove: (item) => promptMoveTopic(item.id, current.sectionId, () => render(false)),
           },
         );
       } catch (err) { showErrorMsg(err, isBack); }
@@ -759,6 +769,7 @@
           'В этой теме пока нет заданий.', 'Добавить задание',
           () => { stack.push({ level: 'task_form', topicId: current.topicId, editId: null, title: 'Новое задание' }); renderCrumbs(); render(false); },
           (item) => { stack.push({ level: 'task_preview', topicId: current.topicId, taskId: item.id, title: 'Предпросмотр' }); renderCrumbs(); render(false); },
+          { onMove: (item) => promptMoveTask(item.id, current.topicId, () => render(false)) },
         );
         if (listScreen) {
           const ioRow = document.createElement('div');
@@ -1188,6 +1199,111 @@
       }
     };
   }
+
+  async function promptMoveTopic(topicId, currentSectionId, onMoved) {
+    lockBodyScroll();
+    const sections = await apiGet(`/api/teacher/subjects/${currentSubjectId}/sections?kind=all`);
+    const choices = sections.filter(s => s.id !== currentSectionId);
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center;z-index:30;padding:20px;';
+    if (!choices.length) {
+      overlay.innerHTML = '<div style="background:var(--bg);border-radius:16px;padding:18px;max-width:340px;width:100%;">' +
+        '<div class="field-label">Переместить тему</div>' +
+        '<div class="field-hint" style="margin-bottom:14px;">Других разделов в этом предмете пока нет — переносить некуда.</div>' +
+        '<button class="back-btn" id="moveCancel" style="width:100%;">Закрыть</button></div>';
+      document.body.appendChild(overlay);
+      overlay.querySelector('#moveCancel').onclick = () => { unlockBodyScroll(); overlay.remove(); };
+      return;
+    }
+    const options = choices.map(s => `<option value="${s.id}">${s.title}</option>`).join('');
+    overlay.innerHTML = '<div style="background:var(--bg);border-radius:16px;padding:18px;max-width:340px;width:100%;">' +
+      '<div class="field-label">Переместить тему в раздел</div>' +
+      '<select class="field-input" id="moveTarget" style="margin-bottom:14px;">' + options + '</select>' +
+      '<div id="moveErr" style="color:#EA2B2B;font-size:12.5px;font-weight:700;margin-bottom:8px;display:none;"></div>' +
+      '<div style="display:flex;gap:8px;">' +
+      '<button class="back-btn" id="moveCancel" style="flex:1;">Отмена</button>' +
+      '<button class="save-btn" id="moveSave" style="flex:1;margin-top:0;">Переместить</button>' +
+      '</div></div>';
+    document.body.appendChild(overlay);
+    const select = overlay.querySelector('#moveTarget');
+    const errBox = overlay.querySelector('#moveErr');
+    const saveBtn = overlay.querySelector('#moveSave');
+    function closeOverlay() { unlockBodyScroll(); overlay.remove(); }
+    overlay.querySelector('#moveCancel').onclick = closeOverlay;
+    saveBtn.onclick = async () => {
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Переношу…';
+      try {
+        await apiSend('POST', `/api/teacher/topics/${topicId}/move`, { section_id: parseInt(select.value, 10) });
+        closeOverlay();
+        onMoved();
+      } catch (err) {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Переместить';
+        errBox.textContent = 'Не получилось: ' + err.message;
+        errBox.style.display = 'block';
+      }
+    };
+  }
+
+  async function promptMoveTask(taskId, currentTopicId, onMoved) {
+    lockBodyScroll();
+    const sections = await apiGet(`/api/teacher/subjects/${currentSubjectId}/sections?kind=all`);
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center;z-index:30;padding:20px;';
+    overlay.innerHTML = '<div style="background:var(--bg);border-radius:16px;padding:18px;max-width:340px;width:100%;">' +
+      '<div class="field-label">Раздел</div>' +
+      '<select class="field-input" id="moveSection" style="margin-bottom:14px;"></select>' +
+      '<div class="field-label">Тема</div>' +
+      '<select class="field-input" id="moveTopic" style="margin-bottom:14px;"></select>' +
+      '<div id="moveTaskErr" style="color:#EA2B2B;font-size:12.5px;font-weight:700;margin-bottom:8px;display:none;"></div>' +
+      '<div style="display:flex;gap:8px;">' +
+      '<button class="back-btn" id="moveTaskCancel" style="flex:1;">Отмена</button>' +
+      '<button class="save-btn" id="moveTaskSave" style="flex:1;margin-top:0;">Переместить</button>' +
+      '</div></div>';
+    document.body.appendChild(overlay);
+    const sectionSelect = overlay.querySelector('#moveSection');
+    const topicSelect = overlay.querySelector('#moveTopic');
+    const errBox = overlay.querySelector('#moveTaskErr');
+    const saveBtn = overlay.querySelector('#moveTaskSave');
+
+    sectionSelect.innerHTML = sections.map(s => `<option value="${s.id}">${s.title}</option>`).join('');
+
+    async function loadTopicsForSection() {
+      topicSelect.innerHTML = '<option>Загрузка…</option>';
+      const topics = await apiGet(`/api/teacher/sections/${sectionSelect.value}/topics`);
+      const choices = topics.filter(t => t.id !== currentTopicId);
+      topicSelect.innerHTML = choices.length
+        ? choices.map(t => `<option value="${t.id}">${t.title}</option>`).join('')
+        : '<option value="">— в этом разделе некуда —</option>';
+    }
+    sectionSelect.onchange = loadTopicsForSection;
+    await loadTopicsForSection();
+
+    function closeOverlay() { unlockBodyScroll(); overlay.remove(); }
+    overlay.querySelector('#moveTaskCancel').onclick = closeOverlay;
+    saveBtn.onclick = async () => {
+      const topicId = topicSelect.value;
+      if (!topicId) {
+        errBox.textContent = 'В выбранном разделе нет подходящей темы.';
+        errBox.style.display = 'block';
+        return;
+      }
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Переношу…';
+      try {
+        await apiSend('POST', `/api/teacher/tasks/${taskId}/move`, { topic_id: parseInt(topicId, 10) });
+        closeOverlay();
+        onMoved();
+      } catch (err) {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Переместить';
+        errBox.textContent = 'Не получилось: ' + err.message;
+        errBox.style.display = 'block';
+      }
+    };
+  }
+
 
   function promptScheduleEvent(existing, onSave) {
     lockBodyScroll();
@@ -2330,6 +2446,7 @@
   function renderMarkdownText(s) {
     let out = escapeHtml(s);
     out = out.replace(/`([^`]+)`/g, '<code>$1</code>');
+    out = out.replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>');
     out = out.replace(/\*([^*]+)\*/g, '<b>$1</b>');
     out = out.replace(/_([^_]+)_/g, '<i>$1</i>');
     return out.replace(/\n/g, '<br>');
@@ -3182,7 +3299,7 @@
           const btn = document.createElement('button');
           btn.className = 'option-btn';
           btn.innerHTML = '<span class="option-num">' + (i + 1) + '</span><span class="option-text"></span>';
-          btn.querySelector('.option-text').textContent = opt;
+          btn.querySelector('.option-text').innerHTML = renderMarkdownText(opt);
           btn.onclick = () => {
             if (isMulti) {
               const pos = selected.indexOf(opt);
