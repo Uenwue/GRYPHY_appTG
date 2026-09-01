@@ -518,7 +518,11 @@
   async function apiGet(path) {
     const res = await fetch(API_BASE_URL + path, { headers: { 'X-Telegram-Init-Data': tg?.initData || '' } });
     if (res.status === 401) throw new Error('Не удалось подтвердить, что это вы — откройте страницу через кнопку в боте.');
-    if (!res.ok) throw new Error('Сервер ответил с ошибкой: ' + res.status);
+    if (!res.ok) {
+      let data = null;
+      try { data = await res.json(); } catch (e) { /* тело не JSON — используем запасной текст ниже */ }
+      throw new Error((data && (data.message || data.error)) || ('Сервер ответил с ошибкой: ' + res.status));
+    }
     return res.json();
   }
 
@@ -529,7 +533,11 @@
       body: JSON.stringify(body),
     });
     if (res.status === 401) throw new Error('Не удалось подтвердить, что это вы — откройте страницу через кнопку в боте.');
-    if (!res.ok) throw new Error('Сервер ответил с ошибкой: ' + res.status);
+    if (!res.ok) {
+      let data = null;
+      try { data = await res.json(); } catch (e) { /* тело не JSON — используем запасной текст ниже */ }
+      throw new Error((data && (data.message || data.error)) || ('Сервер ответил с ошибкой: ' + res.status));
+    }
     return res.json();
   }
 
@@ -540,7 +548,11 @@
       body: body !== undefined ? JSON.stringify(body) : undefined,
     });
     if (res.status === 401) throw new Error('Не удалось подтвердить, что это вы — откройте страницу через кнопку в боте.');
-    if (!res.ok) throw new Error('Сервер ответил с ошибкой: ' + res.status);
+    if (!res.ok) {
+      let data = null;
+      try { data = await res.json(); } catch (e) { /* тело не JSON — используем запасной текст ниже */ }
+      throw new Error((data && (data.message || data.error)) || ('Сервер ответил с ошибкой: ' + res.status));
+    }
     return res.json();
   }
 
@@ -2212,13 +2224,13 @@
         // Hero-карточка: главное задание месяца (если есть), иначе просто общий заголовок
         const monthItems = byCategory.month || [];
         const hero = document.createElement('div');
-        hero.style.cssText = 'background:var(--green);border-radius:20px;padding:20px;margin-bottom:20px;color:white;';
+        hero.style.cssText = 'background:var(--green);width:calc(100% + 32px);margin-left:-16px;margin-right:-16px;padding:20px 16px;margin-bottom:20px;color:white;';
         const heroTitle = document.createElement('div');
-        heroTitle.style.cssText = "font-family:'Jost',sans-serif;font-weight:800;font-size:25px;";
+        heroTitle.style.cssText = "font-family:'Jost',sans-serif;font-weight:800;font-size:26px;";
         heroTitle.textContent = 'Задания ' + MONTH_NAMES_GEN[now.getMonth()];
         hero.appendChild(heroTitle);
         const heroSub = document.createElement('div');
-        heroSub.style.cssText = 'opacity:0.85;font-size:13px;font-weight:700;margin-top:4px;';
+        heroSub.style.cssText = 'opacity:0.9;font-size:13px;font-weight:800;margin-top:4px;text-transform:uppercase;letter-spacing:0.03em;';
         heroSub.textContent = '⏳ ' + daysLeftInMonth + (daysLeftInMonth === 1 ? ' день' : ' дней');
         hero.appendChild(heroSub);
 
@@ -2226,21 +2238,28 @@
           const main = monthItems[0];
           const pct = Math.min(100, Math.round((main.progress / main.target) * 100));
           const innerCard = document.createElement('div');
-          innerCard.style.cssText = 'background:white;border-radius:14px;padding:16px;margin-top:16px;';
+          innerCard.style.cssText = 'background:white;border-radius:16px;padding:18px;margin-top:18px;box-shadow:0 4px 14px rgba(0,0,0,0.12);';
           innerCard.innerHTML = `
-            <div style="font-family:'Jost',sans-serif;font-weight:800;font-size:15px;color:var(--text);">${main.title}</div>
-            <div style="background:var(--bg-soft);border-radius:10px;height:14px;overflow:hidden;margin:10px 0 6px;">
+            <div style="font-family:'Jost',sans-serif;font-weight:800;font-size:17px;color:var(--text);">${main.title}</div>
+            <div style="background:var(--bg-soft);border-radius:10px;height:14px;overflow:hidden;margin:12px 0 6px;">
               <div style="height:100%;width:${pct}%;background:var(--green);border-radius:10px;transition:width 0.4s var(--bounce);"></div>
             </div>
-            <div style="text-align:center;font-family:'Jost',sans-serif;font-weight:800;font-size:12.5px;color:var(--text-soft);">${main.progress} / ${main.target}</div>
+            <div style="text-align:center;font-family:'Jost',sans-serif;font-weight:800;font-size:13px;color:var(--text-soft);">${main.progress} / ${main.target}</div>
           `;
           hero.appendChild(innerCard);
         }
         screen.appendChild(hero);
 
+        let isFirstCategory = true;
         ['day', 'week', 'weekend'].forEach((cat) => {
           const group = byCategory[cat];
           if (!group || !group.length) return;
+          if (!isFirstCategory) {
+            const divider = document.createElement('div');
+            divider.style.cssText = 'border-top:1px solid var(--border);margin:8px 0 20px;';
+            screen.appendChild(divider);
+          }
+          isFirstCategory = false;
           const head = document.createElement('div');
           head.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin:0 0 12px;';
           const headLabel = document.createElement('span');
@@ -2249,7 +2268,7 @@
           head.appendChild(headLabel);
           if (cat === 'day') {
             const timeLabel = document.createElement('span');
-            timeLabel.style.cssText = 'font-size:12px;font-weight:800;color:var(--text-soft);';
+            timeLabel.style.cssText = 'font-size:12px;font-weight:800;color:var(--yellow-dark, #B8860B);';
             timeLabel.textContent = '⏱ ' + hoursLeftInDay + ' ч';
             head.appendChild(timeLabel);
           }
@@ -3260,6 +3279,8 @@
     renderGradeField();
 
     const cityInput = makeField('Город', 'Например, Минск');
+    const groupCodeInput = makeField('Код группы (если дали в школе/курсах)', 'Например, ABCD-1234');
+    groupCodeInput.style.textTransform = 'uppercase';
 
     const errBox = document.createElement('div');
     errBox.style.cssText = 'color:var(--red-dark);font-size:12.5px;font-weight:700;margin-bottom:8px;display:none;';
@@ -3274,6 +3295,7 @@
       const patronymic = patronymicInput.value.trim();
       const city = cityInput.value.trim();
       const grade = gradeInput ? gradeInput.value.trim() : '';
+      const group_code = groupCodeInput.value.trim();
       if (!surname || !given_name || !selectedStatus || !city) {
         errBox.textContent = 'Заполните фамилию, имя, статус и город.';
         errBox.style.display = 'block';
@@ -3287,7 +3309,7 @@
       saveBtn.disabled = true;
       saveBtn.textContent = 'Сохраняю…';
       try {
-        await apiPost('/api/me/profile-info', { surname, given_name, patronymic, status: selectedStatus, grade, city });
+        await apiPost('/api/me/profile-info', { surname, given_name, patronymic, status: selectedStatus, grade, city, group_code });
         document.querySelector('nav.tab-bar').style.display = '';
         pickDefaultSubjectAndStart();
       } catch (err) {
