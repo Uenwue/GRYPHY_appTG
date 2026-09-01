@@ -487,7 +487,7 @@
         Учёба
       </button>
       <button class="tab-btn" id="tabChallenges" onclick="switchTab('challenges')">
-        <svg viewBox="0 0 24 24" fill="none"><path d="M12 2L14.4 8.6L21 9.3L16 13.6L17.5 20.2L12 16.8L6.5 20.2L8 13.6L3 9.3L9.6 8.6L12 2Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+        <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="4.5" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="1.2" fill="currentColor"/></svg>
         Задания
       </button>
       <button class="tab-btn" id="tabRating" onclick="switchTab('rating')">
@@ -2214,7 +2214,7 @@
         const hero = document.createElement('div');
         hero.style.cssText = 'background:var(--green);border-radius:20px;padding:20px;margin-bottom:20px;color:white;';
         const heroTitle = document.createElement('div');
-        heroTitle.style.cssText = "font-family:'Jost',sans-serif;font-weight:800;font-size:22px;";
+        heroTitle.style.cssText = "font-family:'Jost',sans-serif;font-weight:800;font-size:25px;";
         heroTitle.textContent = 'Задания ' + MONTH_NAMES_GEN[now.getMonth()];
         hero.appendChild(heroTitle);
         const heroSub = document.createElement('div');
@@ -2244,7 +2244,7 @@
           const head = document.createElement('div');
           head.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin:0 0 12px;';
           const headLabel = document.createElement('span');
-          headLabel.style.cssText = "font-size:12px;font-weight:800;color:var(--text-soft);text-transform:uppercase;letter-spacing:0.03em;";
+          headLabel.style.cssText = "font-size:13.5px;font-weight:800;color:var(--text-soft);text-transform:uppercase;letter-spacing:0.03em;";
           headLabel.textContent = CATEGORY_LABELS[cat];
           head.appendChild(headLabel);
           if (cat === 'day') {
@@ -2263,11 +2263,11 @@
             const info = document.createElement('div');
             info.style.flex = '1';
             info.innerHTML = `
-              <div style="font-family:'Jost',sans-serif;font-weight:700;font-size:15px;${done ? 'color:var(--green-dark);' : ''}">${done ? '✅ ' : ''}${it.title}</div>
+              <div style="font-family:'Jost',sans-serif;font-weight:700;font-size:17px;${done ? 'color:var(--green-dark);' : ''}">${done ? '✅ ' : ''}${it.title}</div>
               <div style="background:var(--bg-soft);border-radius:10px;height:12px;overflow:hidden;margin:8px 0 4px;">
                 <div style="height:100%;width:${pct}%;background:${done ? 'var(--green)' : 'var(--yellow)'};border-radius:10px;transition:width 0.4s var(--bounce);"></div>
               </div>
-              <div style="font-size:12px;font-weight:700;color:var(--text-soft);">${it.progress} / ${it.target}</div>
+              <div style="font-size:13.5px;font-weight:700;color:var(--text-soft);">${it.progress} / ${it.target}</div>
             `;
             row.appendChild(info);
             const icon = document.createElement('div');
@@ -2302,6 +2302,7 @@
       renderProfile(false);
     } else if (tab === 'challenges') {
       crumbsEl.innerHTML = '';
+      crumbsEl.style.display = 'none';
       showLoading('Загружаем', false);
       getDefaultSubject().then((subject) => {
         if (!subject) {
@@ -3172,6 +3173,7 @@
     // никуда ещё — прячем нижнюю навигацию и хлебные крошки полностью.
     document.querySelector('nav.tab-bar').style.display = 'none';
     crumbsEl.innerHTML = '';
+    crumbsEl.style.display = 'none';
     screenHost.innerHTML = '';
     const screen = document.createElement('div');
     screen.className = 'screen';
