@@ -455,11 +455,12 @@
     lockClosed: '<svg viewBox="0 0 20 20" fill="none"><rect x="4" y="9" width="12" height="8" rx="1.5" stroke="currentColor" stroke-width="1.6"/><path d="M6.5 9V6.5C6.5 4.6 8 3 10 3C12 3 13.5 4.6 13.5 6.5V9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>',
     lockOpen: '<svg viewBox="0 0 20 20" fill="none"><rect x="4" y="9" width="12" height="8" rx="1.5" stroke="currentColor" stroke-width="1.6"/><path d="M6.5 9V6.5C6.5 4.6 8 3 10 3C11.6 3 13 4.1 13.4 5.6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>',
     move: '<svg viewBox="0 0 20 20" fill="none"><path d="M10 2V18M10 2L6.5 5.5M10 2L13.5 5.5M10 18L6.5 14.5M10 18L13.5 14.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    video: '<svg viewBox="0 0 20 20" fill="none"><rect x="2" y="5" width="12" height="10" rx="1.5" stroke="currentColor" stroke-width="1.6"/><path d="M14 8.5L18 6V14L14 11.5" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>',
   };
 
   function renderRowList(items, iconType, iconClass, onOpen, onEdit, onDelete, emptyText, addLabel, onAdd, onPreview, extra) {
     extra = extra || {};
-    const { onLock, onHide, onReorder, onToggleExplanations, onMove } = extra;
+    const { onLock, onHide, onReorder, onToggleExplanations, onMove, onVideo } = extra;
     return swapScreen((screen) => {
       const list = document.createElement('div');
       list.className = 'list';
@@ -575,6 +576,16 @@
           moveBtn.innerHTML = ICONS.move;
           moveBtn.onclick = (e) => { e.stopPropagation(); onMove(item); };
           actions.appendChild(moveBtn);
+        }
+        if (onVideo) {
+          const videoBtn = document.createElement('button');
+          videoBtn.className = 'icon-btn';
+          const hasVideo = !!item.video_url;
+          videoBtn.title = hasVideo ? (item.video_enabled ? 'Видео включено — нажмите, чтобы изменить' : 'Видео отключено — нажмите, чтобы изменить') : 'Добавить видео к теме';
+          videoBtn.style.opacity = hasVideo && item.video_enabled ? '1' : '0.4';
+          videoBtn.innerHTML = ICONS.video;
+          videoBtn.onclick = (e) => { e.stopPropagation(); onVideo(item); };
+          actions.appendChild(videoBtn);
         }
         if (onEdit) {
           const editBtn = document.createElement('button');
@@ -747,6 +758,7 @@
               render(false);
             },
             onMove: (item) => promptMoveTopic(item.id, current.sectionId, () => render(false)),
+            onVideo: (item) => promptTopicVideo(item, () => render(false)),
           },
         );
       } catch (err) { showErrorMsg(err, isBack); }
@@ -1191,6 +1203,54 @@
       try {
         await onSave(val);
         closeOverlay();
+      } catch (err) {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Сохранить';
+        errBox.textContent = 'Не получилось: ' + err.message;
+        errBox.style.display = 'block';
+      }
+    };
+  }
+
+  function promptTopicVideo(item, onSaved) {
+    lockBodyScroll();
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center;z-index:30;padding:20px;';
+    overlay.innerHTML = '<div style="background:var(--bg);border-radius:16px;padding:18px;max-width:360px;width:100%;">' +
+      '<div class="field-label">Ссылка на видео (YouTube)</div>' +
+      '<div class="field-hint" style="margin-bottom:8px;">Загрузите видео на YouTube с доступом «Доступно по ссылке» (Unlisted) — тогда его не будет в списке видео канала, и ученик не сможет случайно найти остальные ваши видео.</div>' +
+      '<input class="field-input" id="videoUrl" placeholder="https://youtu.be/..." style="margin-bottom:14px;">' +
+      '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);margin-bottom:14px;">' +
+      '<span style="font-family:\'Jost\',sans-serif;font-weight:700;font-size:15px;">Показывать ученикам</span>' +
+      '<button type="button" id="videoToggle" class="correct-toggle"></button>' +
+      '</div>' +
+      '<div id="videoErr" style="color:#EA2B2B;font-size:12.5px;font-weight:700;margin-bottom:8px;display:none;"></div>' +
+      '<div style="display:flex;gap:8px;">' +
+      '<button class="back-btn" id="videoCancel" style="flex:1;">Отмена</button>' +
+      '<button class="save-btn" id="videoSave" style="flex:1;margin-top:0;">Сохранить</button>' +
+      '</div></div>';
+    document.body.appendChild(overlay);
+    const urlInput = overlay.querySelector('#videoUrl');
+    const toggle = overlay.querySelector('#videoToggle');
+    const errBox = overlay.querySelector('#videoErr');
+    const saveBtn = overlay.querySelector('#videoSave');
+    urlInput.value = item.video_url || '';
+    let enabled = item.video_url ? (item.video_enabled !== false) : true;
+    function renderToggle() {
+      toggle.className = 'correct-toggle' + (enabled ? ' on' : '');
+      toggle.innerHTML = ICONS.check;
+    }
+    renderToggle();
+    toggle.onclick = () => { enabled = !enabled; renderToggle(); };
+    function closeOverlay() { unlockBodyScroll(); overlay.remove(); }
+    overlay.querySelector('#videoCancel').onclick = closeOverlay;
+    saveBtn.onclick = async () => {
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Сохраняю…';
+      try {
+        await apiSend('PATCH', `/api/teacher/topics/${item.id}`, { video_url: urlInput.value.trim(), video_enabled: enabled });
+        closeOverlay();
+        onSaved();
       } catch (err) {
         saveBtn.disabled = false;
         saveBtn.textContent = 'Сохранить';
