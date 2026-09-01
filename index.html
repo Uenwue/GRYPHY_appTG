@@ -2547,6 +2547,17 @@
         });
         screen.appendChild(themeGrid);
 
+        const notifBtn = document.createElement('button');
+        notifBtn.className = 'row-card';
+        notifBtn.style.cssText = 'width:100%;cursor:pointer;align-items:center;margin-bottom:20px;';
+        notifBtn.innerHTML = `
+          <div style="width:36px;height:36px;border-radius:10px;background:var(--blue-tint);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:18px;">🔔</div>
+          <div class="row-title" style="flex:1;">Уведомления</div>
+          <span style="color:var(--border);font-size:18px;font-weight:700;">›</span>
+        `;
+        notifBtn.onclick = () => { profileStack.push({ level: 'notifications', title: 'Уведомления' }); renderProfileCrumbs(); renderProfile(false); };
+        screen.appendChild(notifBtn);
+
         const subjTitle = document.createElement('div');
         subjTitle.className = 'field-hint';
         subjTitle.style.cssText = 'margin:0 0 8px;text-transform:uppercase;font-weight:800;letter-spacing:0.03em;';
@@ -2674,39 +2685,31 @@
         apiGet(`/api/subjects/${current.subjectId}/daily-stats`),
       ]);
       swapScreen((screen) => {
-        if (stats.streak_days > 0) {
-          const streakCard = document.createElement('div');
-          streakCard.style.cssText = 'background:var(--yellow-tint);border-radius:14px;padding:14px;text-align:center;margin-bottom:14px;';
-          streakCard.innerHTML = `<div style="font-size:24px;">🔥 ${stats.streak_days}</div><div class="field-hint" style="margin:0;">${stats.streak_days === 1 ? 'день подряд в приложении' : 'дней подряд в приложении'}</div>`;
-          screen.appendChild(streakCard);
-        }
-
         const now = new Date();
         const todayStr = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
         const todayData = dailyStats.days.find((d) => d.date === todayStr);
-
-        const recordsTitle = document.createElement('div');
-        recordsTitle.className = 'field-hint';
-        recordsTitle.style.cssText = 'margin:0 0 8px;text-transform:uppercase;font-weight:800;letter-spacing:0.03em;';
-        recordsTitle.textContent = 'Результаты сегодня';
-        screen.appendChild(recordsTitle);
-
-        const recordsGrid = document.createElement('div');
-        recordsGrid.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;';
         const openBreakdown = () => { profileStack.push({ level: 'profile_daily_breakdown', subjectId: current.subjectId, title: 'Статистика по дням' }); renderProfileCrumbs(); renderProfile(false); };
-        const recordCard = (label, value, desc, accent) => {
+
+        const statsGrid = document.createElement('div');
+        statsGrid.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px;';
+        const statCard = (emoji, label, value) => {
           const c = document.createElement('button');
-          c.style.cssText = `background:var(--bg);border:2px solid var(--border);border-radius:14px;padding:12px 14px;text-align:left;cursor:pointer;box-shadow:0 2px 8px rgba(60,60,60,0.05);`;
-          c.innerHTML = `<div style="font-family:'Jost',sans-serif;font-size:22px;font-weight:800;color:${accent};">${value}</div><div class="field-hint" style="margin:2px 0 0;">${label}</div><div class="field-hint" style="margin:1px 0 0;opacity:0.65;">${desc}</div>`;
+          c.style.cssText = 'background:var(--bg-soft);border:none;border-radius:16px;padding:14px;text-align:left;cursor:pointer;display:flex;align-items:center;gap:10px;';
+          c.innerHTML = `
+            <span style="font-size:30px;line-height:1;flex-shrink:0;">${emoji}</span>
+            <span style="min-width:0;">
+              <span style="display:block;font-size:12px;color:var(--text-soft);font-weight:600;">${label}</span>
+              <span style="display:block;font-family:'Jost',sans-serif;font-size:22px;font-weight:800;">${value}</span>
+            </span>
+          `;
           c.onclick = openBreakdown;
           return c;
         };
-        recordsGrid.appendChild(recordCard('Лучший балл теста', todayData && todayData.best_test_score !== null && todayData.best_test_score !== undefined ? todayData.best_test_score : '–', 'за сегодняшние тесты', 'var(--yellow-dark)'));
-        recordsGrid.appendChild(recordCard('Решено верно', todayData ? todayData.correct_solved : '–', 'заданий сегодня', 'var(--green-dark)'));
-        const totalCard = recordCard('Решено всего', todayData ? todayData.total_solved : '–', 'заданий сегодня (включая неверные)', 'var(--blue-dark)');
-        totalCard.style.gridColumn = 'span 2';
-        recordsGrid.appendChild(totalCard);
-        screen.appendChild(recordsGrid);
+        statsGrid.appendChild(statCard('🔥', 'Дней подряд', stats.streak_days || 0));
+        statsGrid.appendChild(statCard('✅', 'Решено верно', todayData ? todayData.correct_solved : '–'));
+        statsGrid.appendChild(statCard('📚', 'Решено всего', todayData ? todayData.total_solved : '–'));
+        statsGrid.appendChild(statCard('🏆', 'Балл теста', todayData && todayData.best_test_score !== null && todayData.best_test_score !== undefined ? todayData.best_test_score : '–'));
+        screen.appendChild(statsGrid);
 
         const chartTitle = document.createElement('div');
         chartTitle.className = 'field-hint';
@@ -2803,6 +2806,118 @@
           list.appendChild(card);
         });
         screen.appendChild(list);
+      }, isBack);
+    } else if (current.level === 'notifications') {
+      const prefs = await apiGet('/api/me/notification-preferences');
+      const view = current.notifView || 'list';
+      const CATEGORIES = [
+        { title: 'Учёба', keys: [
+          { key: 'schedule_reminder', label: 'О предстоящих занятиях' },
+          { key: 'topic_unlocked', label: 'Открылась новая тема' },
+          { key: 'new_challenge', label: 'Новое задание месяца' },
+        ] },
+        { title: 'Обратная связь', keys: [
+          { key: 'error_report_resolved', label: 'Ответ на сообщение об ошибке' },
+        ] },
+        { title: 'Другое', keys: [
+          { key: 'platform_news', label: 'Новости платформы' },
+        ] },
+      ];
+
+      async function toggle(key, value) {
+        prefs[key] = value;
+        try { await apiPost('/api/me/notification-preferences', { [key]: value }); }
+        catch (err) { /* не критично, состояние на экране уже отражено */ }
+      }
+
+      function buildToggle(checked, onChange) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.style.cssText = `width:44px;height:26px;border-radius:13px;border:none;background:${checked ? 'var(--green, #58CC02)' : 'var(--border)'};position:relative;cursor:pointer;flex-shrink:0;transition:background 0.15s ease;`;
+        btn.innerHTML = `<span style="position:absolute;top:2px;left:${checked ? '20px' : '2px'};width:22px;height:22px;border-radius:50%;background:white;box-shadow:0 1px 3px rgba(0,0,0,0.2);transition:left 0.15s ease;"></span>`;
+        btn.onclick = () => { checked = !checked; onChange(checked); };
+        return btn;
+      }
+
+      swapScreen((screen) => {
+        const tabs = document.createElement('div');
+        tabs.style.cssText = 'display:flex;gap:6px;margin-bottom:16px;';
+        [{ key: 'list', label: 'Уведомления' }, { key: 'center', label: 'Центр уведомлений' }].forEach((t) => {
+          const btn = document.createElement('button');
+          const active = view === t.key;
+          btn.textContent = t.label;
+          btn.style.cssText = `flex:1;padding:9px 6px;border-radius:10px;border:2px solid ${active ? 'var(--blue)' : 'var(--border)'};background:${active ? 'var(--blue-tint)' : 'var(--bg)'};color:${active ? 'var(--blue-dark)' : 'var(--text-soft)'};font-family:'Jost',sans-serif;font-size:12px;font-weight:800;cursor:pointer;`;
+          btn.onclick = () => { current.notifView = t.key; renderProfile(false); };
+          tabs.appendChild(btn);
+        });
+        screen.appendChild(tabs);
+
+        if (view === 'list') {
+          CATEGORIES.forEach((cat) => {
+            const catTitle = document.createElement('div');
+            catTitle.className = 'field-hint';
+            catTitle.style.cssText = 'margin:14px 0 6px;text-transform:uppercase;font-weight:800;letter-spacing:0.03em;';
+            catTitle.textContent = cat.title;
+            screen.appendChild(catTitle);
+            cat.keys.forEach(({ key, label }) => {
+              const row = document.createElement('div');
+              row.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 0;border-bottom:1px solid var(--border);';
+              const lbl = document.createElement('span');
+              lbl.style.cssText = "font-size:14px;font-weight:600;";
+              lbl.textContent = label;
+              row.appendChild(lbl);
+              row.appendChild(buildToggle(prefs[key], (v) => toggle(key, v)));
+              screen.appendChild(row);
+            });
+          });
+        } else {
+          CATEGORIES.forEach((cat) => {
+            const enabledCount = cat.keys.filter((k) => prefs[k.key]).length;
+            const card = document.createElement('div');
+            card.style.cssText = 'background:var(--bg);border:2px solid var(--border);border-radius:14px;padding:14px;margin-bottom:12px;box-shadow:0 2px 8px rgba(60,60,60,0.05);';
+
+            const head = document.createElement('div');
+            head.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:10px;cursor:pointer;';
+            const left = document.createElement('div');
+            left.innerHTML = `<div style="font-family:'Jost',sans-serif;font-weight:700;font-size:15px;">${cat.title}</div><div class="field-hint" style="margin:2px 0 0;">Включено ${enabledCount} из ${cat.keys.length}</div>`;
+            head.appendChild(left);
+            const right = document.createElement('div');
+            right.style.cssText = 'display:flex;align-items:center;gap:10px;';
+            const catToggle = buildToggle(enabledCount === cat.keys.length, async (v) => {
+              for (const { key } of cat.keys) await toggle(key, v);
+              renderProfile(false);
+            });
+            right.appendChild(catToggle);
+            const chevron = document.createElement('span');
+            chevron.textContent = card.dataset.open === '1' ? '▲' : '▼';
+            chevron.style.cssText = 'color:var(--text-soft);font-size:12px;';
+            right.appendChild(chevron);
+            head.appendChild(right);
+            card.appendChild(head);
+
+            const body = document.createElement('div');
+            body.style.cssText = 'margin-top:12px;padding-top:10px;border-top:1px solid var(--border);display:' + (card.dataset.open === '1' ? 'block' : 'none');
+            cat.keys.forEach(({ key, label }) => {
+              const row = document.createElement('div');
+              row.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 0;';
+              const lbl = document.createElement('span');
+              lbl.style.cssText = 'font-size:13.5px;font-weight:600;';
+              lbl.textContent = label;
+              row.appendChild(lbl);
+              row.appendChild(buildToggle(prefs[key], (v) => toggle(key, v)));
+              body.appendChild(row);
+            });
+            card.appendChild(body);
+
+            head.onclick = (e) => {
+              if (e.target === catToggle || catToggle.contains(e.target)) return;
+              card.dataset.open = card.dataset.open === '1' ? '0' : '1';
+              body.style.display = card.dataset.open === '1' ? 'block' : 'none';
+              chevron.textContent = card.dataset.open === '1' ? '▲' : '▼';
+            };
+            screen.appendChild(card);
+          });
+        }
       }, isBack);
     } else if (current.level === 'profile_leaderboard') {
       if (leaderboardType === undefined) leaderboardType = 'correct_tasks';
