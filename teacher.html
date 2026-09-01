@@ -83,6 +83,45 @@
 
   .wrap { max-width: 480px; margin: 0 auto; }
 
+  .side-nav {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 40;
+    display: flex; align-items: center; justify-content: space-around;
+    background: var(--bg); border-top: 1px solid var(--border);
+    padding: 6px 4px calc(6px + env(safe-area-inset-bottom, 0px));
+    box-shadow: 0 -2px 10px rgba(0,0,0,0.04);
+  }
+  .side-nav-item {
+    display: flex; flex-direction: column; align-items: center; gap: 2px;
+    background: none; border: none; cursor: pointer; color: var(--text-soft);
+    padding: 6px 8px; border-radius: 10px; position: relative; flex: 1; max-width: 64px;
+  }
+  .side-nav-item svg { width: 20px; height: 20px; }
+  .side-nav-item.active { color: var(--blue-dark, #1899D6); }
+  .side-nav-item .nav-badge {
+    position: absolute; top: 2px; right: 8px; background: var(--red-dark);
+    color: white; border-radius: 8px; padding: 0 4px; font-size: 9px; font-weight: 800; line-height: 14px;
+  }
+  .side-nav-more { display: flex; }
+  .side-nav-item.desktop-only { display: none; }
+  body.has-side-nav .wrap { padding-bottom: 64px; }
+
+  @media (min-width: 768px) {
+    .side-nav {
+      top: 0; bottom: 0; right: auto; width: 68px;
+      flex-direction: column; justify-content: flex-start; gap: 4px;
+      border-top: none; border-right: 1px solid var(--border);
+      padding: 14px 4px; box-shadow: 2px 0 10px rgba(0,0,0,0.04);
+    }
+    .side-nav-item { max-width: none; flex: none; width: 100%; }
+    .side-nav-item.active::before {
+      content: ''; position: absolute; left: -4px; top: 6px; bottom: 6px; width: 3px;
+      border-radius: 2px; background: var(--blue-dark, #1899D6);
+    }
+    .side-nav-item.desktop-only { display: flex; }
+    .side-nav-more { display: none !important; }
+    body.has-side-nav .wrap { padding-bottom: 0; padding-left: 68px; max-width: 548px; }
+  }
+
   header {
     display: flex; align-items: center; gap: 10px; margin-bottom: 18px;
     background: var(--bg);
@@ -350,7 +389,9 @@
   .feedback-explain { margin-top: 6px; font-size: 13px; color: var(--text-soft); font-weight: 600; }
 </style>
 </head>
-<body>
+<body class="has-side-nav">
+
+  <nav class="side-nav" id="sideNav"></nav>
 
   <div class="wrap">
     <header>
@@ -424,6 +465,66 @@
     title.className = 'crumb-title';
     title.textContent = stack[stack.length - 1].title;
     crumbsEl.appendChild(title);
+  }
+
+  const SIDE_NAV_ITEMS = [
+    { level: 'sections', extra: { sectionsKind: 'trainer' }, title: 'Тренажёры', primary: true,
+      icon: '<path d="M2 6.5C2 5.67 2.67 5 3.5 5H8L9.5 6.5H16.5C17.33 6.5 18 7.17 18 8V14.5C18 15.33 17.33 16 16.5 16H3.5C2.67 16 2 15.33 2 14.5V6.5Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>' },
+    { level: 'sections', extra: { sectionsKind: 'homework' }, title: 'ДЗ', primary: true,
+      icon: '<path d="M4 3.5C4 2.67 4.67 2 5.5 2H12L16 6V16.5C16 17.33 15.33 18 14.5 18H5.5C4.67 18 4 17.33 4 16.5V3.5Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M7 10H13M7 13H11" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>' },
+    { level: 'tests', title: 'Тесты', primary: true,
+      icon: '<path d="M6 3H14L14 17L10 14.5L6 17V3Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>' },
+    { level: 'students', title: 'Ученики', primary: true,
+      icon: '<circle cx="10" cy="7" r="3" stroke="currentColor" stroke-width="1.6"/><path d="M4 17c0-3 2.7-5 6-5s6 2 6 5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>' },
+    { level: 'schedule', title: 'Расписание',
+      icon: '<rect x="3" y="4" width="14" height="13" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M3 8H17M7 2V5M13 2V5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>' },
+    { level: 'error_reports', title: 'Сообщения об ошибках', badge: true,
+      icon: '<circle cx="10" cy="10" r="7" stroke="currentColor" stroke-width="1.6"/><path d="M10 7V10.5M10 13.2V13.3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>' },
+    { level: 'leaderboard', title: 'Рейтинг участников',
+      icon: '<path d="M10 3L12.2 7.6L17.3 8.3L13.6 11.9L14.5 17L10 14.5L5.5 17L6.4 11.9L2.7 8.3L7.8 7.6L10 3Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>' },
+    { level: 'challenges', title: 'Задания месяца',
+      icon: '<path d="M10 2L10 12M10 12L14 8M10 12L6 8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><rect x="4" y="14" width="12" height="4" rx="1" stroke="currentColor" stroke-width="1.6"/>' },
+    { level: 'subject_blocks', title: 'Настройки предмета',
+      icon: '<circle cx="10" cy="10" r="2.5" stroke="currentColor" stroke-width="1.6"/><path d="M10 2V4M10 16V18M18 10H16M4 10H2M15.5 4.5L14 6M6 14L4.5 15.5M15.5 15.5L14 14M6 6L4.5 4.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>' },
+  ];
+
+  function renderSideNav() {
+    const nav = document.getElementById('sideNav');
+    if (!nav || !currentSubjectId) { if (nav) nav.innerHTML = ''; return; }
+    nav.innerHTML = '';
+    const rootLevel = stack[0]?.level;
+    const rootKind = stack[0]?.sectionsKind;
+
+    SIDE_NAV_ITEMS.forEach((item) => {
+      const btn = document.createElement('button');
+      btn.className = 'side-nav-item' + (item.primary ? '' : ' desktop-only');
+      const isActive = rootLevel === item.level && (item.extra?.sectionsKind || undefined) === rootKind;
+      if (isActive) btn.classList.add('active');
+      btn.title = item.title;
+      btn.innerHTML = `<svg viewBox="0 0 20 20" fill="none">${item.icon}</svg>`;
+      btn.onclick = () => {
+        stack = [Object.assign({ level: item.level, title: item.title }, item.extra || {})];
+        render(false);
+      };
+      if (item.badge) {
+        apiGet(`/api/teacher/subjects/${currentSubjectId}/error-reports?status=new`).then((reports) => {
+          if (!reports.length) return;
+          const b = document.createElement('span');
+          b.className = 'nav-badge';
+          b.textContent = reports.length;
+          btn.appendChild(b);
+        }).catch(() => {});
+      }
+      nav.appendChild(btn);
+    });
+
+    const moreBtn = document.createElement('button');
+    moreBtn.className = 'side-nav-item side-nav-more';
+    if (rootLevel === 'menu') moreBtn.classList.add('active');
+    moreBtn.title = 'Ещё';
+    moreBtn.innerHTML = '<svg viewBox="0 0 20 20" fill="none"><circle cx="4" cy="10" r="1.6" fill="currentColor"/><circle cx="10" cy="10" r="1.6" fill="currentColor"/><circle cx="16" cy="10" r="1.6" fill="currentColor"/></svg>';
+    moreBtn.onclick = () => { stack = [{ level: 'menu', title: 'Меню' }]; render(false); };
+    nav.appendChild(moreBtn);
   }
 
   function swapScreen(buildFn, isBack) {
@@ -611,6 +712,7 @@
 
   async function render(isBack) {
     renderCrumbs();
+    renderSideNav();
     const current = stack[stack.length - 1];
 
     if (current.level === 'menu') {
