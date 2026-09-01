@@ -573,7 +573,9 @@
 
   function renderCrumbs() {
     crumbsEl.innerHTML = '';
-    if (stack.length > 1) {
+    const hasBack = stack.length > 1;
+    const title = stack[stack.length - 1].title;
+    if (hasBack) {
       const btn = document.createElement('button');
       btn.className = 'back-btn';
       btn.textContent = '← Назад';
@@ -592,10 +594,13 @@
       };
       crumbsEl.appendChild(btn);
     }
-    const title = document.createElement('span');
-    title.className = 'crumb-title';
-    title.textContent = stack[stack.length - 1].title;
-    crumbsEl.appendChild(title);
+    if (title) {
+      const titleEl = document.createElement('span');
+      titleEl.className = 'crumb-title';
+      titleEl.textContent = title;
+      crumbsEl.appendChild(titleEl);
+    }
+    crumbsEl.style.display = (hasBack || title) ? '' : 'none';
   }
 
   function swapScreen(buildFn, isBack) {
@@ -1075,14 +1080,26 @@
     return wrap;
   }
 
-  function promptTeacherFix(kind, item, onSaved) {
+  async function promptTeacherFix(kind, item, onSaved) {
+    let full;
+    try {
+      const path = kind === 'task' ? `/api/teacher/tasks/${item.id}` : `/api/teacher/testquestions/${item.id}`;
+      full = await apiGet(path);
+    } catch (err) {
+      const msg = 'Не получилось загрузить данные: ' + err.message;
+      if (tg?.showAlert) tg.showAlert(msg); else alert(msg);
+      return;
+    }
+
     const overlay = document.createElement('div');
     overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center;z-index:30;padding:20px;';
+    const isChoice = full.type === 'buttons' || full.type === 'multi';
     overlay.innerHTML = '<div style="background:var(--bg);border-radius:16px;padding:18px;max-width:360px;width:100%;max-height:90vh;overflow-y:auto;">' +
       '<div class="field-label">Вопрос</div>' +
       '<textarea class="field-input" id="fixQ" rows="2" style="resize:vertical;margin-bottom:10px;"></textarea>' +
-      '<div class="field-label">Правильный ответ</div>' +
-      '<input class="field-input" id="fixA" style="margin-bottom:10px;">' +
+      (isChoice
+        ? '<div class="field-label">Варианты ответа — отметьте правильные</div><div id="fixOptions" style="margin-bottom:10px;"></div><button type="button" id="fixAddOption" style="background:none;border:none;color:var(--blue-dark);font-size:12.5px;font-weight:700;cursor:pointer;padding:4px 0 10px;">+ добавить вариант</button>'
+        : '<div class="field-label">Правильный ответ</div><input class="field-input" id="fixA" style="margin-bottom:10px;">') +
       '<div class="field-label">Объяснение (необязательно)</div>' +
       '<textarea class="field-input" id="fixE" rows="3" style="resize:vertical;margin-bottom:10px;"></textarea>' +
       '<div id="fixErr" style="color:var(--red-dark);font-size:12.5px;font-weight:700;margin-bottom:8px;display:none;"></div>' +
@@ -1092,19 +1109,92 @@
       '</div></div>';
     document.body.appendChild(overlay);
     const qInput = overlay.querySelector('#fixQ');
-    const aInput = overlay.querySelector('#fixA');
     const eInput = overlay.querySelector('#fixE');
     const errBox = overlay.querySelector('#fixErr');
     const saveBtn = overlay.querySelector('#fixSave');
-    qInput.value = item.question || '';
-    aInput.value = kind === 'task' ? (item.correct_answer_final || '') : (item.correct_answer_final || '');
-    eInput.value = item.explanation || '';
+    qInput.value = full.question || '';
+    eInput.value = full.explanation || '';
+
+    let aInput = null;
+    let optionsBox = null;
+    const correctSet = new Set(isChoice ? (Array.isArray(full.answer) ? full.answer : [full.answer].filter(Boolean)) : []);
+
+    if (isChoice) {
+      optionsBox = overlay.querySelector('#fixOptions');
+      const isMulti = full.type === 'multi';
+
+      function addOptionRow(text, isCorrect) {
+        const row = document.createElement('div');
+        row.style.cssText = 'display:flex;align-items:center;gap:8px;margin-bottom:6px;';
+        const toggle = document.createElement('button');
+        toggle.type = 'button';
+        toggle.style.cssText = `width:26px;height:26px;border-radius:${isMulti ? '7px' : '50%'};border:2px solid ${isCorrect ? 'var(--green)' : 'var(--border)'};background:${isCorrect ? 'var(--green)' : 'var(--bg)'};color:white;flex-shrink:0;display:flex;align-items:center;justify-content:center;cursor:pointer;`;
+        toggle.innerHTML = isCorrect ? '<svg width="14" height="14" viewBox="0 0 20 20" fill="none"><path d="M4 10l4 4 8-8" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>' : '';
+        toggle.dataset.correct = isCorrect ? '1' : '0';
+        toggle.onclick = () => {
+          const nowCorrect = toggle.dataset.correct !== '1';
+          if (nowCorrect && !isMulti) {
+            // одиночный выбор — снимаем отметку со всех остальных
+            optionsBox.querySelectorAll('button[data-correct]').forEach((b) => {
+              b.dataset.correct = '0';
+              b.style.background = 'var(--bg)';
+              b.style.borderColor = 'var(--border)';
+              b.innerHTML = '';
+            });
+          }
+          toggle.dataset.correct = nowCorrect ? '1' : '0';
+          toggle.style.background = nowCorrect ? 'var(--green)' : 'var(--bg)';
+          toggle.style.borderColor = nowCorrect ? 'var(--green)' : 'var(--border)';
+          toggle.innerHTML = nowCorrect ? '<svg width="14" height="14" viewBox="0 0 20 20" fill="none"><path d="M4 10l4 4 8-8" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>' : '';
+        };
+        row.appendChild(toggle);
+        const input = document.createElement('input');
+        input.className = 'field-input';
+        input.value = text;
+        input.style.flex = '1';
+        row.appendChild(input);
+        const delBtn = document.createElement('button');
+        delBtn.type = 'button';
+        delBtn.style.cssText = 'background:none;border:none;color:var(--red-dark);font-size:18px;cursor:pointer;padding:0 4px;flex-shrink:0;';
+        delBtn.textContent = '✕';
+        delBtn.onclick = () => row.remove();
+        row.appendChild(delBtn);
+        optionsBox.appendChild(row);
+      }
+
+      (full.options || []).forEach((opt) => addOptionRow(opt, correctSet.has(opt)));
+      overlay.querySelector('#fixAddOption').onclick = () => addOptionRow('', false);
+    } else {
+      aInput = overlay.querySelector('#fixA');
+      aInput.value = full.answer || '';
+    }
+
     function closeOverlay() { overlay.remove(); }
     overlay.querySelector('#fixCancel').onclick = closeOverlay;
     saveBtn.onclick = async () => {
       const question = qInput.value.trim();
-      const answer = aInput.value.trim();
-      if (!question || !answer) {
+      let answer, options;
+      if (isChoice) {
+        const rows = [...optionsBox.querySelectorAll('div')];
+        const texts = rows.map((r) => r.querySelector('input').value.trim()).filter(Boolean);
+        const corrects = rows.filter((r) => r.querySelector('input').value.trim() && r.querySelector('button[data-correct]').dataset.correct === '1')
+          .map((r) => r.querySelector('input').value.trim());
+        if (texts.length < 2) {
+          errBox.textContent = 'Нужно хотя бы два варианта ответа.';
+          errBox.style.display = 'block';
+          return;
+        }
+        if (!corrects.length) {
+          errBox.textContent = 'Отметьте хотя бы один правильный вариант.';
+          errBox.style.display = 'block';
+          return;
+        }
+        options = texts;
+        answer = full.type === 'multi' ? corrects : corrects[0];
+      } else {
+        answer = aInput.value.trim();
+      }
+      if (!question || (isChoice ? false : !answer)) {
         errBox.textContent = 'Заполните вопрос и ответ.';
         errBox.style.display = 'block';
         return;
@@ -1113,7 +1203,9 @@
       saveBtn.textContent = 'Сохраняю…';
       try {
         const path = kind === 'task' ? `/api/teacher/tasks/${item.id}` : `/api/teacher/testquestions/${item.id}`;
-        await apiSend('PATCH', path, { question, answer, explanation: eInput.value.trim() });
+        const payload = { question, answer, explanation: eInput.value.trim() };
+        if (isChoice) payload.options = options;
+        await apiSend('PATCH', path, payload);
         closeOverlay();
         const okMsg = 'Исправлено.';
         if (tg?.showAlert) tg.showAlert(okMsg); else alert(okMsg);
@@ -1492,7 +1584,7 @@
     if (data.video_url) {
       const videoId = extractYoutubeId(data.video_url);
       const videoWrap = document.createElement('div');
-      videoWrap.style.cssText = 'position:relative;width:100%;padding-top:56.25%;border-radius:14px;overflow:hidden;margin-bottom:16px;background:#000;';
+      videoWrap.style.cssText = 'position:relative;width:calc(100% + 32px);margin-left:-16px;margin-right:-16px;padding-top:56.25%;overflow:hidden;margin-bottom:16px;background:#000;';
       if (videoId) {
         videoWrap.innerHTML = `<iframe src="https://www.youtube-nocookie.com/embed/${videoId}" style="position:absolute;inset:0;width:100%;height:100%;border:none;" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
       } else {
@@ -2385,7 +2477,8 @@
   function renderProfileCrumbs() {
     crumbsEl.innerHTML = '';
     const current = profileStack[profileStack.length - 1];
-    if (profileStack.length > 1) {
+    const hasBack = profileStack.length > 1;
+    if (hasBack) {
       const btn = document.createElement('button');
       btn.className = 'back-btn';
       btn.textContent = '← Назад';
@@ -2398,6 +2491,7 @@
       title.textContent = current.title;
       crumbsEl.appendChild(title);
     }
+    crumbsEl.style.display = (hasBack || current.title) ? '' : 'none';
   }
 
   async function renderProfile(isBack) {
