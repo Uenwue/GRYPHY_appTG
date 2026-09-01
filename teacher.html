@@ -883,7 +883,7 @@
           'В этой теме пока нет заданий.', 'Добавить задание',
           () => { stack.push({ level: 'task_form', topicId: current.topicId, editId: null, title: 'Новое задание' }); renderCrumbs(); render(false); },
           (item) => { stack.push({ level: 'task_preview', topicId: current.topicId, taskId: item.id, title: 'Предпросмотр' }); renderCrumbs(); render(false); },
-          { onMove: (item) => promptMoveTask(item.id, current.topicId, () => render(false)) },
+          { onMove: (item) => promptMoveTask([item.id], current.topicId, () => render(false)) },
         );
         if (listScreen) {
           const ioRow = document.createElement('div');
@@ -938,6 +938,16 @@
           ioRow.appendChild(importInput);
 
           listScreen.insertBefore(ioRow, listScreen.firstChild);
+
+          if (tasks.length > 1) {
+            const selectBtn = document.createElement('button');
+            selectBtn.className = 'add-row-btn';
+            selectBtn.style.width = '100%';
+            selectBtn.style.marginBottom = '12px';
+            selectBtn.textContent = '☑️ Выбрать несколько и переместить';
+            selectBtn.onclick = () => renderTaskSelectionMode(tasks, current.topicId);
+            listScreen.insertBefore(selectBtn, listScreen.children[1]);
+          }
         }
       } catch (err) { showErrorMsg(err, isBack); }
     } else if (current.level === 'task_form') {
@@ -1408,13 +1418,92 @@
     };
   }
 
-  async function promptMoveTask(taskId, currentTopicId, onMoved) {
+  function renderTaskSelectionMode(tasks, topicId) {
+    swapScreen((screen) => {
+      const header = document.createElement('div');
+      header.style.cssText = 'display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;';
+      header.innerHTML = '<div class="field-label" style="margin:0;">Выберите задания для переноса</div>';
+      const selectAllBtn = document.createElement('button');
+      selectAllBtn.style.cssText = 'background:none;border:none;color:var(--blue-dark);font-size:12.5px;font-weight:700;cursor:pointer;';
+      selectAllBtn.textContent = 'Выбрать все';
+      header.appendChild(selectAllBtn);
+      screen.appendChild(header);
+
+      const list = document.createElement('div');
+      list.className = 'list';
+      list.style.marginBottom = '80px';
+      screen.appendChild(list);
+
+      const checkboxes = [];
+      tasks.forEach((t, i) => {
+        const row = document.createElement('label');
+        row.className = 'row-card';
+        row.style.cssText = 'width:100%;cursor:pointer;align-items:center;';
+        const cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.style.cssText = 'width:20px;height:20px;flex-shrink:0;accent-color:var(--blue-dark);';
+        cb.onchange = updateBar;
+        checkboxes.push(cb);
+        row.appendChild(cb);
+        const lbl = document.createElement('div');
+        lbl.className = 'row-title';
+        lbl.style.cssText = 'flex:1;font-size:13.5px;';
+        lbl.textContent = '№' + (i + 1) + ': ' + t.question;
+        row.appendChild(lbl);
+        list.appendChild(row);
+      });
+
+      selectAllBtn.onclick = () => {
+        const allChecked = checkboxes.every((c) => c.checked);
+        checkboxes.forEach((c) => { c.checked = !allChecked; });
+        updateBar();
+      };
+
+      const bar = document.createElement('div');
+      bar.style.cssText = 'position:fixed;left:0;right:0;bottom:0;background:var(--bg);border-top:1px solid var(--border);padding:12px 16px;display:flex;gap:8px;align-items:center;z-index:20;';
+      const countLabel = document.createElement('span');
+      countLabel.style.cssText = 'font-size:13px;font-weight:700;color:var(--text-soft);flex-shrink:0;';
+      bar.appendChild(countLabel);
+      const cancelBtn = document.createElement('button');
+      cancelBtn.className = 'back-btn';
+      cancelBtn.textContent = 'Отмена';
+      cancelBtn.onclick = () => render(false);
+      bar.appendChild(cancelBtn);
+      const moveBtn = document.createElement('button');
+      moveBtn.className = 'save-btn';
+      moveBtn.style.cssText = 'flex:1;margin-top:0;';
+      moveBtn.textContent = 'Переместить';
+      moveBtn.disabled = true;
+      moveBtn.onclick = () => {
+        const selectedIds = tasks.filter((t, i) => checkboxes[i].checked).map((t) => t.id);
+        promptMoveTask(selectedIds, topicId, () => render(false));
+      };
+      bar.appendChild(moveBtn);
+      document.body.appendChild(bar);
+
+      function updateBar() {
+        const n = checkboxes.filter((c) => c.checked).length;
+        countLabel.textContent = n ? `Выбрано: ${n}` : '';
+        moveBtn.disabled = n === 0;
+      }
+
+      // Панель добавлена в body напрямую (fixed), а не в screen — убираем
+      // её при уходе с этого экрана, иначе останется висеть поверх всего.
+      const observer = new MutationObserver(() => {
+        if (!document.body.contains(screen)) { bar.remove(); observer.disconnect(); }
+      });
+      observer.observe(screenHost, { childList: true });
+    }, false);
+  }
+
+  async function promptMoveTask(taskIds, currentTopicId, onMoved) {
     lockBodyScroll();
     const sections = await apiGet(`/api/teacher/subjects/${currentSubjectId}/sections?kind=all`);
     const overlay = document.createElement('div');
     overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center;z-index:30;padding:20px;';
     overlay.innerHTML = '<div style="background:var(--bg);border-radius:16px;padding:18px;max-width:340px;width:100%;">' +
-      '<div class="field-label">Раздел</div>' +
+      '<div class="field-label">' + (taskIds.length > 1 ? `Переместить ${taskIds.length} заданий` : 'Переместить задание') + '</div>' +
+      '<div class="field-label" style="margin-top:10px;">Раздел</div>' +
       '<select class="field-input" id="moveSection" style="margin-bottom:14px;"></select>' +
       '<div class="field-label">Тема</div>' +
       '<select class="field-input" id="moveTopic" style="margin-bottom:14px;"></select>' +
@@ -1454,7 +1543,11 @@
       saveBtn.disabled = true;
       saveBtn.textContent = 'Переношу…';
       try {
-        await apiSend('POST', `/api/teacher/tasks/${taskId}/move`, { topic_id: parseInt(topicId, 10) });
+        if (taskIds.length > 1) {
+          await apiSend('POST', '/api/teacher/tasks/bulk-move', { task_ids: taskIds, topic_id: parseInt(topicId, 10) });
+        } else {
+          await apiSend('POST', `/api/teacher/tasks/${taskIds[0]}/move`, { topic_id: parseInt(topicId, 10) });
+        }
         closeOverlay();
         onMoved();
       } catch (err) {
