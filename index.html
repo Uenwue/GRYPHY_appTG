@@ -124,13 +124,27 @@
   .item-card {
     position: relative;
     background: var(--bg-soft); border: none;
-    border-radius: 18px; box-shadow: 0 2px 8px rgba(49, 44, 44, 0.05); padding: 20px 56px 20px 18px;
-    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    border-radius: 18px; box-shadow: 0 2px 8px rgba(49, 44, 44, 0.05); padding: 14px 16px;
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
     cursor: pointer; text-align: left; width: 100%; font-family: 'Nunito', sans-serif; color: var(--text);
     opacity: 0;
     animation: card-in 0.36s var(--bounce) both;
     transition: transform 0.1s ease, background 0.15s ease;
   }
+
+  .item-icon-square {
+    width: 48px; height: 48px; border-radius: 14px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Jost', sans-serif; font-weight: 800; font-size: 19px; color: rgba(0,0,0,0.55);
+  }
+  .item-arrow-btn {
+    width: 34px; height: 34px; border-radius: 10px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--blue, #1CB0F6); color: white;
+  }
+  .item-arrow-btn svg { width: 16px; height: 16px; }
+  .item-arrow-btn.done { background: var(--green, #58CC02); }
+  .item-arrow-btn.locked { background: var(--border); color: var(--text-soft); }
 
   .row-card {
     background: var(--bg); border: 2px solid var(--border); border-radius: 14px;
@@ -628,6 +642,8 @@
       screen.appendChild(list);
     }, isBack);
 
+    const PASTEL_COLORS = ['#FFB4A8', '#F5B8E0', '#FFDB70', '#C9B8F5', '#A8E6D4', '#A8D8F5'];
+
     const list = screen.querySelector('#listContainer');
     if (!items.length) { showState('Здесь пока пусто.'); return screen; }
     items.forEach((item, i) => {
@@ -636,7 +652,15 @@
       card.style.animationDelay = (i * 0.045) + 's';
       card.innerHTML = '';
 
+      const iconSq = document.createElement('div');
+      iconSq.className = 'item-icon-square';
+      iconSq.style.background = PASTEL_COLORS[i % PASTEL_COLORS.length];
+      iconSq.textContent = (item.title || '?').trim().charAt(0).toUpperCase();
+      card.appendChild(iconSq);
+
       const left = document.createElement('div');
+      left.style.flex = '1';
+      left.style.minWidth = '0';
       if (item.eyebrow) {
         const e = document.createElement('div');
         e.className = 'item-eyebrow';
@@ -664,16 +688,15 @@
       } else {
         const isDone = item.task_count > 0 && (item.correct_count || 0) >= item.task_count;
         const status = document.createElement('span');
+        status.className = 'item-arrow-btn';
         if (item.is_locked) {
-          status.className = 'item-status locked';
+          status.classList.add('locked');
           status.innerHTML = '<svg viewBox="0 0 20 20" fill="none"><rect x="5" y="9" width="10" height="8" rx="1.5" stroke="currentColor" stroke-width="1.6"/><path d="M7 9V6.5a3 3 0 0 1 6 0V9" stroke="currentColor" stroke-width="1.6"/></svg>';
         } else if (isDone) {
-          status.className = 'item-status done';
+          status.classList.add('done');
           status.innerHTML = '<svg viewBox="0 0 20 20" fill="none"><path d="M5 10.5L8.2 14L15 6.5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
         } else {
-          status.className = 'item-arrow';
-          status.style.cssText = 'position:absolute;right:16px;top:50%;transform:translateY(-50%);';
-          status.textContent = '›';
+          status.innerHTML = '<svg viewBox="0 0 20 20" fill="none"><path d="M8 5L13 10L8 15" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
         }
         card.appendChild(status);
       }
@@ -685,8 +708,7 @@
         titleEl.style.color = 'var(--text-soft)';
         const subEl = card.querySelector('.item-sub');
         if (subEl) { subEl.textContent = item.lock_message || 'Пока недоступно.'; subEl.style.color = 'var(--text-soft)'; }
-        const iconWrap = card.querySelector('.level-icon-wrap');
-        if (iconWrap) { iconWrap.style.background = 'var(--bg)'; iconWrap.style.color = 'var(--text-soft)'; }
+        iconSq.style.opacity = '0.6';
         card.onclick = () => {
           const msg = item.lock_message || 'Пока недоступно.';
           if (tg?.showAlert) tg.showAlert(msg); else alert(msg);
@@ -1518,16 +1540,24 @@
       } catch (err) { /* если не получилось — просто показываем всё, не критично */ }
 
       const items = [
-        { key: 'homework', title: 'ДЗ', sub: 'Уроки открываются по порядку', hidden: false },
-        { key: 'tasks', title: 'Задания', sub: 'Тренируйтесь по темам и разделам', hidden: blocks.tasks_hidden },
-        { key: 'rules', title: 'Правила', sub: 'Справочник по темам курса', hidden: blocks.rules_hidden },
-        { key: 'tests', title: 'Тесты', sub: 'Проверьте себя в формате экзамена', hidden: blocks.tests_hidden },
+        { key: 'homework', title: 'ДЗ', sub: 'Уроки открываются по порядку', hidden: false, emoji: '📓', color: '#F5B8E0' },
+        { key: 'tasks', title: 'Задания', sub: 'Тренируйтесь по темам и разделам', hidden: blocks.tasks_hidden, emoji: '📂', color: '#A8D8F5' },
+        { key: 'rules', title: 'Правила', sub: 'Справочник по темам курса', hidden: blocks.rules_hidden, emoji: '📖', color: '#A8E6D4' },
+        { key: 'tests', title: 'Тесты', sub: 'Проверьте себя в формате экзамена', hidden: blocks.tests_hidden, emoji: '🧪', color: '#FFDB70' },
       ].filter(item => !item.hidden);
       items.forEach((item, i) => {
         const card = document.createElement('button');
         card.className = 'item-card';
         card.style.animationDelay = (i * 0.05) + 's';
+        const iconSq = document.createElement('div');
+        iconSq.className = 'item-icon-square';
+        iconSq.style.background = item.color;
+        iconSq.style.fontSize = '22px';
+        iconSq.textContent = item.emoji;
+        card.appendChild(iconSq);
         const left = document.createElement('div');
+        left.style.flex = '1';
+        left.style.minWidth = '0';
         const t = document.createElement('div');
         t.className = 'item-title';
         t.textContent = item.title;
@@ -1538,8 +1568,8 @@
         left.appendChild(s);
         card.appendChild(left);
         const arrow = document.createElement('span');
-        arrow.className = 'item-arrow';
-        arrow.textContent = '›';
+        arrow.className = 'item-arrow-btn';
+        arrow.innerHTML = '<svg viewBox="0 0 20 20" fill="none"><path d="M8 5L13 10L8 15" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
         card.appendChild(arrow);
         card.onclick = () => {
           if (item.key === 'tests') { stack.push({ level: 'tests', subjectId, title: 'Тесты' }); render(false); }
@@ -2446,16 +2476,23 @@
             const card = document.createElement('button');
             card.className = 'item-card';
             card.style.animationDelay = (i * 0.045) + 's';
+            const iconSq = document.createElement('div');
+            iconSq.className = 'item-icon-square';
+            const PASTEL_COLORS = ['#FFB4A8', '#F5B8E0', '#FFDB70', '#C9B8F5', '#A8E6D4', '#A8D8F5'];
+            iconSq.style.background = PASTEL_COLORS[i % PASTEL_COLORS.length];
+            iconSq.textContent = (s.title || '?').trim().charAt(0).toUpperCase();
+            card.appendChild(iconSq);
             const left = document.createElement('div');
+            left.style.flex = '1';
+            left.style.minWidth = '0';
             const t = document.createElement('div');
             t.className = 'item-title';
             t.textContent = s.title;
             left.appendChild(t);
             card.appendChild(left);
             const status = document.createElement('span');
-            status.className = 'item-arrow';
-            status.style.cssText = 'position:absolute;right:16px;top:50%;transform:translateY(-50%);';
-            status.textContent = '›';
+            status.className = 'item-arrow-btn';
+            status.innerHTML = '<svg viewBox="0 0 20 20" fill="none"><path d="M8 5L13 10L8 15" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
             card.appendChild(status);
             card.onclick = () => { stack = [{ level: 'subject_home', subjectId: s.id, title: s.title }]; switchTab('study'); };
             list.appendChild(card);
