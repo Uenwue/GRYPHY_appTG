@@ -544,6 +544,8 @@
       icon: '<path d="M10 2L10 12M10 12L14 8M10 12L6 8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><rect x="4" y="14" width="12" height="4" rx="1" stroke="currentColor" stroke-width="1.6"/>' },
     { level: 'subject_blocks', title: 'Настройки предмета', navLabel: 'Настройки',
       icon: '<circle cx="10" cy="10" r="2.5" stroke="currentColor" stroke-width="1.6"/><path d="M10 2V4M10 16V18M18 10H16M4 10H2M15.5 4.5L14 6M6 14L4.5 15.5M15.5 15.5L14 14M6 6L4.5 4.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>' },
+    { level: 'admin_panel', title: 'Админ-панель', navLabel: 'Админка', adminOnly: true, standalone: true,
+      icon: '<path d="M10 2L16 5V9C16 13 13.5 16.5 10 18C6.5 16.5 4 13 4 9V5L10 2Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>' },
   ];
 
   function renderSideNav() {
@@ -553,7 +555,7 @@
     const rootLevel = stack[0]?.level;
     const rootKind = stack[0]?.sectionsKind;
 
-    SIDE_NAV_ITEMS.forEach((item) => {
+    SIDE_NAV_ITEMS.filter((item) => !item.adminOnly || currentUserRole === 'admin').forEach((item) => {
       const btn = document.createElement('button');
       btn.className = 'side-nav-item' + (item.primary ? '' : ' desktop-only');
       const isActive = rootLevel === item.level && (item.extra?.sectionsKind || undefined) === rootKind;
@@ -1081,6 +1083,8 @@
       renderStudents(isBack);
     } else if (current.level === 'groups') {
       renderGroups(isBack);
+    } else if (current.level === 'admin_panel') {
+      renderAdminPanel(isBack);
     } else if (current.level === 'testq_form') {
       renderTestQForm(current.testId, current.editId, isBack, current.templateFrom);
     } else if (current.level === 'testq_preview') {
@@ -2368,6 +2372,325 @@
         screen.appendChild(list);
       }, isBack);
     } catch (err) { showErrorMsg(err, isBack); }
+  }
+
+  let adminPanelTab = 'subjects';
+
+  async function renderAdminPanel(isBack) {
+    showLoadingMenu();
+    try {
+      swapScreen((screen) => {
+        const tabs = document.createElement('div');
+        tabs.style.cssText = 'display:flex;gap:6px;margin-bottom:16px;';
+        [{ key: 'subjects', label: 'Предметы' }, { key: 'users', label: 'Пользователи' }, { key: 'export', label: 'Экспорт' }].forEach((t) => {
+          const btn = document.createElement('button');
+          const active = adminPanelTab === t.key;
+          btn.textContent = t.label;
+          btn.style.cssText = `flex:1;padding:9px 6px;border-radius:10px;border:2px solid ${active ? '#7D3C98' : 'var(--border)'};background:${active ? 'rgba(155,89,182,0.12)' : 'var(--bg)'};color:${active ? '#7D3C98' : 'var(--text-soft)'};font-family:'Jost',sans-serif;font-size:12.5px;font-weight:800;cursor:pointer;`;
+          btn.onclick = () => { adminPanelTab = t.key; render(false); };
+          tabs.appendChild(btn);
+        });
+        screen.appendChild(tabs);
+        const body = document.createElement('div');
+        body.id = 'adminPanelBody';
+        screen.appendChild(body);
+
+        if (adminPanelTab === 'subjects') renderAdminSubjectsTab(body);
+        else if (adminPanelTab === 'users') renderAdminUsersTab(body);
+        else renderAdminExportTab(body);
+      }, isBack);
+    } catch (err) { showErrorMsg(err, isBack); }
+  }
+
+  async function renderAdminSubjectsTab(body) {
+    body.innerHTML = '<p class="state-msg">Загружаем…</p>';
+    const subjects = await apiGet('/api/admin/subjects');
+    body.innerHTML = '';
+
+    const hint = document.createElement('p');
+    hint.className = 'field-hint';
+    hint.style.marginBottom = '14px';
+    hint.textContent = 'Нажмите на предмет, чтобы переименовать, сменить код учителя или удалить его.';
+    body.appendChild(hint);
+
+    const addBtn = document.createElement('button');
+    addBtn.className = 'add-row-btn';
+    addBtn.style.width = '100%';
+    addBtn.style.marginBottom = '14px';
+    addBtn.textContent = '➕ Создать предмет';
+    addBtn.onclick = () => promptCreateSubject();
+    body.appendChild(addBtn);
+
+    if (!subjects.length) {
+      const p = document.createElement('p');
+      p.className = 'state-msg';
+      p.textContent = 'Пока нет ни одного предмета.';
+      body.appendChild(p);
+      return;
+    }
+    const list = document.createElement('div');
+    list.className = 'list';
+    subjects.forEach((s) => {
+      const card = document.createElement('div');
+      card.className = 'row-card';
+      card.style.opacity = s.is_hidden ? '0.55' : '1';
+      card.style.cursor = 'pointer';
+      const info = document.createElement('div');
+      info.style.flex = '1';
+      info.style.minWidth = '0';
+      const t = document.createElement('div');
+      t.className = 'row-title';
+      t.textContent = s.title + (s.is_hidden ? ' (скрыт)' : '');
+      info.appendChild(t);
+      const sub = document.createElement('div');
+      sub.className = 'row-sub';
+      sub.innerHTML = 'Код учителя: <b style="font-family:monospace;color:var(--text);">' + (s.teacher_code || '—') + '</b>';
+      info.appendChild(sub);
+      info.onclick = () => promptEditSubject(s);
+      card.appendChild(info);
+      if (s.teacher_code) {
+        const copyBtn = document.createElement('button');
+        copyBtn.className = 'icon-btn';
+        copyBtn.title = 'Скопировать код';
+        copyBtn.innerHTML = '<svg viewBox="0 0 20 20" fill="none"><rect x="7" y="7" width="10" height="10" rx="1.5" stroke="currentColor" stroke-width="1.6"/><path d="M4 13V4.5C4 3.67 4.67 3 5.5 3H13" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>';
+        copyBtn.onclick = (e) => { e.stopPropagation(); navigator.clipboard?.writeText(s.teacher_code).then(() => showToast('Код скопирован')); };
+        card.appendChild(copyBtn);
+      }
+      const toggleBtn = document.createElement('button');
+      toggleBtn.className = 'icon-btn';
+      toggleBtn.title = s.is_hidden ? 'Показать предмет' : 'Скрыть предмет';
+      toggleBtn.innerHTML = s.is_hidden
+        ? '<svg viewBox="0 0 20 20" fill="none"><path d="M2 10C2 10 5.5 4 10 4C14.5 4 18 10 18 10C18 10 14.5 16 10 16C5.5 16 2 10 2 10Z" stroke="currentColor" stroke-width="1.6"/><circle cx="10" cy="10" r="2.6" stroke="currentColor" stroke-width="1.6"/></svg>'
+        : '<svg viewBox="0 0 20 20" fill="none"><path d="M3 3L17 17M8.5 8.7C8.2 9 8 9.5 8 10C8 11.1 8.9 12 10 12C10.5 12 11 11.8 11.3 11.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M5.5 5.7C3.6 7 2 10 2 10C2 10 5.5 16 10 16C11.5 16 12.8 15.4 13.9 14.5M16.4 12.3C17.4 11.1 18 10 18 10C18 10 14.5 4 10 4C9.6 4 9.2 4 8.8 4.1" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>';
+      toggleBtn.onclick = async (e) => {
+        e.stopPropagation();
+        await apiSend('PATCH', `/api/admin/subjects/${s.id}/hidden`, { hidden: !s.is_hidden });
+        render(false);
+      };
+      card.appendChild(toggleBtn);
+      list.appendChild(card);
+    });
+    body.appendChild(list);
+  }
+
+  function promptEditSubject(subject) {
+    lockBodyScroll();
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center;z-index:30;padding:20px;';
+    overlay.innerHTML = '<div style="background:var(--bg);border-radius:16px;padding:18px;max-width:340px;width:100%;max-height:90vh;overflow-y:auto;">' +
+      '<div class="field-label">Название</div>' +
+      `<input class="field-input" id="editSubjTitle" style="margin-bottom:10px;" value="${subject.title.replace(/"/g, '&quot;')}">` +
+      '<div class="field-label">Код учителя</div>' +
+      `<input class="field-input" id="editSubjCode" style="margin-bottom:14px;" value="${(subject.teacher_code || '').replace(/"/g, '&quot;')}">` +
+      '<div id="editSubjErr" style="color:var(--red-dark);font-size:12.5px;font-weight:700;margin-bottom:8px;display:none;"></div>' +
+      '<div style="display:flex;gap:8px;margin-bottom:10px;">' +
+      '<button class="back-btn" id="editSubjCancel" style="flex:1;">Отмена</button>' +
+      '<button class="save-btn" id="editSubjSave" style="flex:1;margin-top:0;">Сохранить</button>' +
+      '</div>' +
+      '<button id="editSubjDelete" style="width:100%;background:none;border:none;color:var(--red-dark);font-size:13px;font-weight:700;cursor:pointer;padding:8px;">🗑 Удалить предмет</button>' +
+      '</div>';
+    document.body.appendChild(overlay);
+    const titleInput = overlay.querySelector('#editSubjTitle');
+    const codeInput = overlay.querySelector('#editSubjCode');
+    const errBox = overlay.querySelector('#editSubjErr');
+    const saveBtn = overlay.querySelector('#editSubjSave');
+    function closeOverlay() { unlockBodyScroll(); overlay.remove(); }
+    overlay.querySelector('#editSubjCancel').onclick = closeOverlay;
+    saveBtn.onclick = async () => {
+      const title = titleInput.value.trim();
+      if (!title) {
+        errBox.textContent = 'Название не может быть пустым.';
+        errBox.style.display = 'block';
+        return;
+      }
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Сохраняю…';
+      try {
+        await apiSend('PATCH', `/api/admin/subjects/${subject.id}`, { title, teacher_code: codeInput.value.trim() });
+        closeOverlay();
+        showToast('Сохранено');
+        render(false);
+      } catch (err) {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Сохранить';
+        errBox.textContent = 'Не получилось: ' + err.message;
+        errBox.style.display = 'block';
+      }
+    };
+    overlay.querySelector('#editSubjDelete').onclick = async () => {
+      const counts = await apiGet(`/api/admin/subjects/${subject.id}/counts`);
+      closeOverlay();
+      confirmDelete(
+        `Удалить предмет «${subject.title}» целиком? Вместе с ним удалятся: разделов — ${counts.sections}, тем — ${counts.topics}, тестов — ${counts.tests} (и все задания, правила, попытки учеников внутри). Отменить это будет нельзя.`,
+        async () => {
+          await apiSend('DELETE', `/api/admin/subjects/${subject.id}`);
+          showToast('Предмет удалён');
+          render(false);
+        }
+      );
+    };
+  }
+
+  async function renderAdminUsersTab(body) {
+    body.innerHTML = '<p class="state-msg">Загружаем…</p>';
+    const users = await apiGet('/api/admin/users');
+    body.innerHTML = '';
+
+    const searchBtn = document.createElement('button');
+    searchBtn.className = 'add-row-btn';
+    searchBtn.style.width = '100%';
+    searchBtn.style.marginBottom = '14px';
+    searchBtn.textContent = '🔍 Найти по id';
+    searchBtn.onclick = () => promptLookupUser();
+    body.appendChild(searchBtn);
+
+    if (!users.length) {
+      const p = document.createElement('p');
+      p.className = 'state-msg';
+      p.textContent = 'Пока никто не заходил.';
+      body.appendChild(p);
+      return;
+    }
+    const roleLabels = { admin: 'Админ', teacher: 'Учитель', student: 'Ученик', guest: 'Гость' };
+    const list = document.createElement('div');
+    list.className = 'list';
+    users.slice(0, 60).forEach((u) => {
+      const card = document.createElement('div');
+      card.className = 'row-card';
+      card.style.cursor = 'pointer';
+      const info = document.createElement('div');
+      info.style.flex = '1';
+      info.style.minWidth = '0';
+      const t = document.createElement('div');
+      t.className = 'row-title';
+      t.textContent = u.first_name || (u.username ? '@' + u.username : 'id' + u.telegram_id);
+      info.appendChild(t);
+      const sub = document.createElement('div');
+      sub.className = 'row-sub';
+      sub.textContent = `${roleLabels[u.role] || u.role || '—'} \u00b7 id${u.telegram_id} \u00b7 действий: ${u.actions_count}`;
+      info.appendChild(sub);
+      card.appendChild(info);
+      card.onclick = () => renderUserActivity(u.telegram_id, t.textContent);
+      list.appendChild(card);
+    });
+    body.appendChild(list);
+    if (users.length > 60) {
+      const more = document.createElement('p');
+      more.className = 'field-hint';
+      more.style.textAlign = 'center';
+      more.textContent = `И ещё ${users.length - 60} — используйте поиск по id, чтобы найти конкретного.`;
+      body.appendChild(more);
+    }
+  }
+
+  function promptLookupUser() {
+    lockBodyScroll();
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center;z-index:30;padding:20px;';
+    overlay.innerHTML = '<div style="background:var(--bg);border-radius:16px;padding:18px;max-width:320px;width:100%;">' +
+      '<div class="field-label">Telegram id пользователя</div>' +
+      '<input class="field-input" id="lookupId" type="number" style="margin-bottom:14px;">' +
+      '<div style="display:flex;gap:8px;">' +
+      '<button class="back-btn" id="lookupCancel" style="flex:1;">Отмена</button>' +
+      '<button class="save-btn" id="lookupGo" style="flex:1;margin-top:0;">Найти</button>' +
+      '</div></div>';
+    document.body.appendChild(overlay);
+    function closeOverlay() { unlockBodyScroll(); overlay.remove(); }
+    overlay.querySelector('#lookupCancel').onclick = closeOverlay;
+    overlay.querySelector('#lookupGo').onclick = () => {
+      const id = overlay.querySelector('#lookupId').value.trim();
+      if (!id) return;
+      closeOverlay();
+      renderUserActivity(id, 'id' + id);
+    };
+  }
+
+  async function renderUserActivity(telegramId, displayName) {
+    showLoadingMenu();
+    try {
+      const entries = await apiGet(`/api/admin/activity-log?telegram_id=${telegramId}&since_days=3`);
+      swapScreen((screen) => {
+        const title = document.createElement('div');
+        title.style.cssText = "font-family:'Jost',sans-serif;font-weight:800;font-size:17px;margin-bottom:14px;";
+        title.textContent = displayName;
+        screen.appendChild(title);
+        if (!entries.length) {
+          const p = document.createElement('p');
+          p.className = 'state-msg';
+          p.textContent = 'За последние 3 дня действий не было.';
+          screen.appendChild(p);
+          return;
+        }
+        const list = document.createElement('div');
+        list.className = 'list';
+        entries.forEach((e) => {
+          const row = document.createElement('div');
+          row.style.cssText = 'padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;';
+          row.innerHTML = `<b>${e.timestamp}</b> — ${e.action}`;
+          list.appendChild(row);
+        });
+        screen.appendChild(list);
+      }, false);
+    } catch (err) { showErrorMsg(err, false); }
+  }
+
+  function renderAdminExportTab(body) {
+    body.innerHTML = '';
+    const p = document.createElement('p');
+    p.className = 'field-hint';
+    p.style.marginBottom = '14px';
+    p.textContent = 'Текстовый файл со сводкой по всем предметам: сколько учеников, сколько заданий и тестов решено каждым.';
+    body.appendChild(p);
+    const btn = document.createElement('button');
+    btn.className = 'save-btn';
+    btn.textContent = '📊 Скачать отчёт';
+    btn.onclick = () => { window.open(API_BASE_URL + '/api/admin/export-stats', '_blank'); };
+    body.appendChild(btn);
+  }
+
+  function promptCreateSubject() {
+    lockBodyScroll();
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center;z-index:30;padding:20px;';
+    overlay.innerHTML = '<div style="background:var(--bg);border-radius:16px;padding:18px;max-width:340px;width:100%;">' +
+      '<div class="field-label">Название предмета</div>' +
+      '<input class="field-input" id="newSubjTitle" placeholder="Например, Английский язык" style="margin-bottom:10px;">' +
+      '<div class="field-label">Код учителя (необязательно)</div>' +
+      '<div class="field-hint" style="margin-bottom:8px;">Оставьте пустым — сгенерируем автоматически.</div>' +
+      '<input class="field-input" id="newSubjCode" placeholder="Например, ENG2026" style="margin-bottom:14px;">' +
+      '<div id="newSubjErr" style="color:var(--red-dark);font-size:12.5px;font-weight:700;margin-bottom:8px;display:none;"></div>' +
+      '<div style="display:flex;gap:8px;">' +
+      '<button class="back-btn" id="newSubjCancel" style="flex:1;">Отмена</button>' +
+      '<button class="save-btn" id="newSubjSave" style="flex:1;margin-top:0;">Создать</button>' +
+      '</div></div>';
+    document.body.appendChild(overlay);
+    const titleInput = overlay.querySelector('#newSubjTitle');
+    const codeInput = overlay.querySelector('#newSubjCode');
+    const errBox = overlay.querySelector('#newSubjErr');
+    const saveBtn = overlay.querySelector('#newSubjSave');
+    function closeOverlay() { unlockBodyScroll(); overlay.remove(); }
+    overlay.querySelector('#newSubjCancel').onclick = closeOverlay;
+    saveBtn.onclick = async () => {
+      const title = titleInput.value.trim();
+      if (!title) {
+        errBox.textContent = 'Укажите название предмета.';
+        errBox.style.display = 'block';
+        return;
+      }
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Создаю…';
+      try {
+        const result = await apiSend('POST', '/api/admin/subjects', { title, teacher_code: codeInput.value.trim() });
+        closeOverlay();
+        if (tg?.showAlert) tg.showAlert(`Предмет создан. Код учителя: ${result.teacher_code}`);
+        render(false);
+      } catch (err) {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Создать';
+        errBox.textContent = 'Не получилось: ' + err.message;
+        errBox.style.display = 'block';
+      }
+    };
   }
 
   function promptGrantSubscription(prefilledId) {
