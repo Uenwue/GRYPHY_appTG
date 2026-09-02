@@ -446,6 +446,7 @@
 
   // --- Состояние: какой предмет сейчас выбран (для учителя обычно один) ---
   let currentSubjectId = null;
+  let studentsGroupFilter = 'all';
   let currentSubjectTitle = '';
 
   const screenHost = document.getElementById('screenHost');
@@ -505,6 +506,7 @@
       btn.title = item.title;
       btn.innerHTML = `<svg viewBox="0 0 20 20" fill="none">${item.icon}</svg>`;
       btn.onclick = () => {
+        if (item.level === 'students') studentsGroupFilter = 'all';
         stack = [Object.assign({ level: item.level, title: item.title }, item.extra || {})];
         render(false);
       };
@@ -1088,7 +1090,7 @@
         { icon: 'M10 7V10.5M10 13.2V13.3', circleThin: true, color: '#EA2B2B', label: '🐞 Сообщения об ошибках', level: 'error_reports', title: 'Сообщения об ошибках', badge: true },
         { icon: 'M10 3L12.2 7.6L17.3 8.3L13.6 11.9L14.5 17L10 14.5L5.5 17L6.4 11.9L2.7 8.3L7.8 7.6L10 3Z', color: '#F5A623', label: '🏆 Рейтинг участников', level: 'leaderboard', title: 'Рейтинг участников' },
         { icon: 'M10 2L10 12M10 12L14 8M10 12L6 8', rectBottom: true, color: '#58CC02', label: '🎯 Задания месяца', level: 'challenges', title: 'Задания месяца' },
-        { icon: 'M4 17c0-3 2.7-5 6-5s6 2 6 5', people: true, color: '#1899D6', label: '👥 Ученики', level: 'students', title: 'Ученики' },
+        { icon: 'M4 17c0-3 2.7-5 6-5s6 2 6 5', people: true, color: '#1899D6', label: '👥 Ученики', level: 'students', title: 'Ученики', action: () => { studentsGroupFilter = 'all'; stack.push({ level: 'students', title: 'Ученики' }); renderCrumbs(); render(false); } },
       ];
 
       menuItems.forEach((item) => {
@@ -2075,7 +2077,11 @@
   async function renderStudents(isBack) {
     showLoadingMenu();
     try {
-      const students = await apiGet(`/api/teacher/subjects/${currentSubjectId}/students`);
+      const [students, groups] = await Promise.all([
+        apiGet(`/api/teacher/subjects/${currentSubjectId}/students`),
+        apiGet(`/api/teacher/subjects/${currentSubjectId}/groups`),
+      ]);
+      let activeFilter = studentsGroupFilter;
       swapScreen((screen) => {
         const addBtn = document.createElement('button');
         addBtn.className = 'add-row-btn';
@@ -2085,6 +2091,29 @@
         addBtn.onclick = () => promptGrantSubscription();
         screen.appendChild(addBtn);
 
+        if (groups.length) {
+          const filterRow = document.createElement('div');
+          filterRow.style.cssText = 'display:flex;gap:6px;overflow-x:auto;margin-bottom:14px;padding-bottom:2px;';
+          const makeFilterPill = (key, label) => {
+            const pill = document.createElement('button');
+            const active = activeFilter === key;
+            pill.textContent = label;
+            pill.style.cssText = `flex-shrink:0;padding:7px 14px;border-radius:20px;border:2px solid ${active ? 'var(--blue)' : 'var(--border)'};background:${active ? 'var(--blue-tint)' : 'var(--bg)'};color:${active ? 'var(--blue-dark)' : 'var(--text-soft)'};font-family:'Jost',sans-serif;font-size:12.5px;font-weight:800;cursor:pointer;white-space:nowrap;`;
+            pill.onclick = () => { studentsGroupFilter = key; render(false); };
+            return pill;
+          };
+          filterRow.appendChild(makeFilterPill('all', 'Все'));
+          filterRow.appendChild(makeFilterPill('none', 'Без группы'));
+          groups.forEach((g) => filterRow.appendChild(makeFilterPill(g.title, g.title)));
+          screen.appendChild(filterRow);
+        }
+
+        const visibleStudents = students.filter((s) => {
+          if (activeFilter === 'all') return true;
+          if (activeFilter === 'none') return !s.group_title;
+          return s.group_title === activeFilter;
+        });
+
         if (!students.length) {
           const p = document.createElement('p');
           p.className = 'state-msg';
@@ -2092,11 +2121,18 @@
           screen.appendChild(p);
           return;
         }
+        if (!visibleStudents.length) {
+          const p = document.createElement('p');
+          p.className = 'state-msg';
+          p.textContent = 'В этой группе пока никого нет.';
+          screen.appendChild(p);
+          return;
+        }
         const statusLabels = {'school': 'Школа', 'college': 'Колледж/вуз', 'work': 'Работает'};
         const PASTEL_COLORS = ['#FFB4A8', '#F5B8E0', '#FFDB70', '#C9B8F5', '#A8E6D4', '#A8D8F5'];
         const list = document.createElement('div');
         list.className = 'list';
-        students.forEach((s, i) => {
+        visibleStudents.forEach((s, i) => {
           const card = document.createElement('div');
           card.className = 'row-card';
           card.style.cursor = 'pointer';
@@ -2178,6 +2214,7 @@
         groups.forEach((g) => {
           const card = document.createElement('div');
           card.className = 'row-card';
+          card.style.cursor = 'pointer';
           const info = document.createElement('div');
           info.style.flex = '1';
           const t = document.createElement('div');
@@ -2186,21 +2223,29 @@
           info.appendChild(t);
           const sub = document.createElement('div');
           sub.className = 'row-sub';
-          sub.innerHTML = `Код: <b style="font-family:monospace;color:var(--text);">${g.join_code}</b> \u00b7 ${g.student_count} ${g.student_count === 1 ? 'ученик' : 'учеников'}`;
+          sub.innerHTML = `Код: <b style="font-family:monospace;color:var(--text);">${g.join_code}</b> \u00b7 ${g.student_count} ${g.student_count === 1 ? 'ученик' : 'учеников'} \u00b7 нажмите, чтобы увидеть список`;
           info.appendChild(sub);
+          info.onclick = () => {
+            studentsGroupFilter = g.title;
+            stack.push({ level: 'students', title: 'Ученики' });
+            renderCrumbs();
+            render(false);
+          };
           card.appendChild(info);
           const copyBtn = document.createElement('button');
           copyBtn.className = 'icon-btn';
           copyBtn.title = 'Скопировать код';
           copyBtn.innerHTML = '<svg viewBox="0 0 20 20" fill="none"><rect x="7" y="7" width="10" height="10" rx="1.5" stroke="currentColor" stroke-width="1.6"/><path d="M4 13V4.5C4 3.67 4.67 3 5.5 3H13" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>';
-          copyBtn.onclick = () => {
+          copyBtn.onclick = (e) => {
+            e.stopPropagation();
             navigator.clipboard?.writeText(g.join_code).then(() => showToast('Код скопирован'));
           };
           card.appendChild(copyBtn);
           const delBtn = document.createElement('button');
           delBtn.className = 'icon-btn';
           delBtn.innerHTML = ICONS.trash;
-          delBtn.onclick = () => {
+          delBtn.onclick = (e) => {
+            e.stopPropagation();
             confirmDelete(`Удалить группу «${g.title}»? Ученики останутся, просто отвяжутся от группы.`, async () => {
               await apiSend('DELETE', `/api/teacher/groups/${g.id}`);
               render(false);
