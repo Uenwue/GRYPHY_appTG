@@ -144,12 +144,14 @@
       text-transform: none; letter-spacing: normal; white-space: nowrap; text-align: left;
     }
     body.has-side-nav .wrap { padding-left: 240px; max-width: 920px; }
+    /* На широком экране мелкие мобильные размеры шрифта/отступов выглядят
+       потерянными — масштабируем весь интерфейс разом (текст, кнопки,
+       карточки, модалки), а не только саму панель навигации. */
+    body { zoom: 1.2; }
   }
 
   @media (min-width: 1700px) {
-    body.has-side-nav .wrap { max-width: 1140px; }
-    body { font-size: 17px; }
-    .side-nav { width: 270px; }
+    body { zoom: 1.4; }
   }
 
   header {
