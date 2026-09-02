@@ -3176,15 +3176,98 @@
     try {
       const info = await apiGet('/api/me/profile-info');
       if (info.filled) {
-        pickDefaultSubjectAndStart();
+        checkSubscriptionThenStart();
       } else {
         renderProfileSetupForm();
       }
     } catch (err) {
       // Если проверку анкеты не удалось выполнить (например, сеть) — не
       // блокируем вход в приложение совсем, просто идём дальше как обычно.
+      checkSubscriptionThenStart();
+    }
+  }
+
+  async function checkSubscriptionThenStart() {
+    try {
+      const status = await apiGet('/api/me/subscription-status');
+      if (status.has_access) {
+        pickDefaultSubjectAndStart();
+      } else {
+        renderSubscriptionRequiredScreen();
+      }
+    } catch (err) {
+      // Технический сбой самой проверки — не блокируем вход совсем,
+      // основная защита всё равно на сервере (каждый эндпоинт с контентом
+      // сам проверяет подписку и не отдаст ничего лишнего).
       pickDefaultSubjectAndStart();
     }
+  }
+
+  function renderSubscriptionRequiredScreen() {
+    document.querySelector('nav.tab-bar').style.display = 'none';
+    crumbsEl.innerHTML = '';
+    crumbsEl.style.display = 'none';
+    screenHost.innerHTML = '';
+    const screen = document.createElement('div');
+    screen.className = 'screen';
+    screen.id = 'content';
+
+    const card = document.createElement('div');
+    card.className = 'task-card';
+    card.style.textAlign = 'center';
+
+    const emoji = document.createElement('div');
+    emoji.style.cssText = 'font-size:40px;margin-bottom:10px;';
+    emoji.textContent = '🔒';
+    card.appendChild(emoji);
+
+    const title = document.createElement('p');
+    title.className = 'task-question';
+    title.style.textAlign = 'center';
+    title.textContent = 'Нужна подписка';
+    card.appendChild(title);
+
+    const hint = document.createElement('p');
+    hint.className = 'task-description';
+    hint.style.textAlign = 'center';
+    hint.textContent = 'Чтобы открыть материалы курса, оформите подписку. Если уже оплатили и видите это сообщение — напишите менеджеру, доступ откроем вручную.';
+    card.appendChild(hint);
+
+    const contactBtn = document.createElement('button');
+    contactBtn.className = 'submit-btn';
+    contactBtn.textContent = '✍️ Написать менеджеру';
+    contactBtn.onclick = async () => {
+      try {
+        const { url } = await apiGet('/api/manager-contact-url');
+        if (url) {
+          if (tg?.openTelegramLink && /^https?:\/\/t\.me\//.test(url)) {
+            tg.openTelegramLink(url);
+          } else if (tg?.openLink) {
+            tg.openLink(url);
+          } else {
+            window.open(url, '_blank');
+          }
+          return;
+        }
+      } catch (err) { /* падаем на запасной путь ниже */ }
+      const msg = 'Чтобы написать менеджеру, вернитесь в чат с ботом и нажмите там кнопку «Написать менеджеру» в главном меню.';
+      if (tg?.showAlert) {
+        tg.showAlert(msg, () => { if (tg?.close) tg.close(); });
+      } else {
+        alert(msg);
+      }
+    };
+    card.appendChild(contactBtn);
+
+    const retryBtn = document.createElement('button');
+    retryBtn.className = 'back-btn';
+    retryBtn.style.cssText = 'width:100%;margin-top:10px;';
+    retryBtn.textContent = '🔄 Проверить ещё раз';
+    retryBtn.onclick = () => checkSubscriptionThenStart();
+    card.appendChild(retryBtn);
+
+    screen.appendChild(card);
+    screenHost.appendChild(screen);
   }
 
   function renderProfileSetupForm() {
