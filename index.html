@@ -2240,11 +2240,11 @@
           const innerCard = document.createElement('div');
           innerCard.style.cssText = 'background:white;border-radius:16px;padding:18px;margin-top:18px;box-shadow:0 4px 14px rgba(0,0,0,0.12);';
           innerCard.innerHTML = `
-            <div style="font-family:'Jost',sans-serif;font-weight:800;font-size:17px;color:var(--text);">${main.title}</div>
-            <div style="background:var(--bg-soft);border-radius:10px;height:14px;overflow:hidden;margin:12px 0 6px;">
+            <div style="font-family:'Jost',sans-serif;font-weight:800;font-size:17px;color:#3C3C3C;">${main.title}</div>
+            <div style="background:#F0F0F0;border-radius:10px;height:14px;overflow:hidden;margin:12px 0 6px;">
               <div style="height:100%;width:${pct}%;background:var(--green);border-radius:10px;transition:width 0.4s var(--bounce);"></div>
             </div>
-            <div style="text-align:center;font-family:'Jost',sans-serif;font-weight:800;font-size:13px;color:var(--text-soft);">${main.progress} / ${main.target}</div>
+            <div style="text-align:center;font-family:'Jost',sans-serif;font-weight:800;font-size:13px;color:#777777;">${main.progress} / ${main.target}</div>
           `;
           hero.appendChild(innerCard);
         }
