@@ -2170,7 +2170,7 @@
           arrow.style.cssText = 'color:var(--border);font-size:18px;font-weight:700;flex-shrink:0;';
           arrow.textContent = '\u203a';
           card.appendChild(arrow);
-          card.onclick = () => renderStudentSubscriptions(s.telegram_id, s.display_name);
+          card.onclick = () => renderStudentSubscriptions(s.telegram_id, s.display_name, s.group_title);
           list.appendChild(card);
         });
         screen.appendChild(list);
@@ -2330,15 +2330,41 @@
     };
   }
 
-  async function renderStudentSubscriptions(studentId, displayName) {
+  async function renderStudentSubscriptions(studentId, displayName, groupTitle) {
     showLoadingMenu();
     try {
-      const subs = await apiGet(`/api/teacher/subjects/${currentSubjectId}/student-subscriptions/${studentId}`);
+      const [subs, groups] = await Promise.all([
+        apiGet(`/api/teacher/subjects/${currentSubjectId}/student-subscriptions/${studentId}`),
+        apiGet(`/api/teacher/subjects/${currentSubjectId}/groups`),
+      ]);
       swapScreen((screen) => {
         const title = document.createElement('div');
         title.style.cssText = "font-family:'Jost',sans-serif;font-weight:800;font-size:17px;margin-bottom:14px;";
         title.textContent = 'Подписки: ' + displayName;
         screen.appendChild(title);
+
+        if (groups.length) {
+          const groupLabel = document.createElement('div');
+          groupLabel.className = 'field-label';
+          groupLabel.textContent = 'Группа';
+          screen.appendChild(groupLabel);
+          const groupSelect = document.createElement('select');
+          groupSelect.className = 'field-input';
+          groupSelect.style.marginBottom = '16px';
+          groupSelect.innerHTML = '<option value="">— без группы —</option>' +
+            groups.map((g) => `<option value="${g.id}"${g.title === groupTitle ? ' selected' : ''}>${g.title}</option>`).join('');
+          groupSelect.onchange = async () => {
+            const groupId = groupSelect.value ? parseInt(groupSelect.value, 10) : null;
+            try {
+              await apiSend('POST', `/api/teacher/students/${studentId}/group`, { group_id: groupId });
+              showToast('Группа обновлена');
+              groupTitle = groupId ? groups.find((g) => g.id === groupId)?.title : null;
+            } catch (err) {
+              showToast('Не получилось: ' + err.message);
+            }
+          };
+          screen.appendChild(groupSelect);
+        }
 
         const addBtn = document.createElement('button');
         addBtn.className = 'add-row-btn';
@@ -2380,7 +2406,7 @@
             delBtn.onclick = () => {
               confirmDelete('Отозвать подписку на «' + s.subject_title + '»?', async () => {
                 await apiSend('DELETE', `/api/teacher/subscriptions/${s.id}`);
-                renderStudentSubscriptions(studentId, displayName);
+                renderStudentSubscriptions(studentId, displayName, groupTitle);
               });
             };
             card.appendChild(delBtn);
