@@ -81,6 +81,18 @@
     padding: 20px 16px 40px;
   }
 
+  @media (min-width: 1200px) {
+    /* На широком экране (Telegram Desktop, браузер) узкая мобильная
+       колонка выглядит потерянной и мелкой — масштабируем весь
+       интерфейс целиком, оставляя саму компоновку (узкую центрированную
+       колонку) нетронутой, это осознанный мобильный стиль, а не баг. */
+    body { zoom: 1.25; }
+  }
+
+  @media (min-width: 1700px) {
+    body { zoom: 1.5; }
+  }
+
   .demo-flag {
     max-width: 420px; margin: 0 auto 14px;
     background: var(--yellow); border: none; border-radius: 12px;
@@ -1638,16 +1650,17 @@
       list.className = 'list';
       screen.appendChild(list);
 
-      let blocks = { tasks_hidden: false, rules_hidden: false, tests_hidden: false };
+      let blocks = { tasks_hidden: false, homework_hidden: false, rules_hidden: false, tests_hidden: false, labels: {} };
       try {
         blocks = await apiGet(`/api/subjects/${subjectId}/blocks`);
       } catch (err) { /* если не получилось — просто показываем всё, не критично */ }
+      const labels = blocks.labels || {};
 
       const items = [
-        { key: 'homework', title: 'ДЗ', sub: 'Уроки открываются по порядку', hidden: false, emoji: '📓', color: '#F5B8E0' },
-        { key: 'tasks', title: 'Задания', sub: 'Тренируйтесь по темам и разделам', hidden: blocks.tasks_hidden, emoji: '📂', color: '#A8D8F5' },
-        { key: 'rules', title: 'Правила', sub: 'Справочник по темам курса', hidden: blocks.rules_hidden, emoji: '📖', color: '#A8E6D4' },
-        { key: 'tests', title: 'Тесты', sub: 'Проверьте себя в формате экзамена', hidden: blocks.tests_hidden, emoji: '🧪', color: '#FFDB70' },
+        { key: 'homework', title: labels.homework?.title || 'ДЗ', sub: labels.homework?.desc || 'Уроки открываются по порядку', hidden: blocks.homework_hidden, emoji: '📓', color: '#F5B8E0' },
+        { key: 'tasks', title: labels.tasks?.title || 'Задания', sub: labels.tasks?.desc || 'Тренируйтесь по темам и разделам', hidden: blocks.tasks_hidden, emoji: '📂', color: '#A8D8F5' },
+        { key: 'rules', title: labels.rules?.title || 'Правила', sub: labels.rules?.desc || 'Справочник по темам курса', hidden: blocks.rules_hidden, emoji: '📖', color: '#A8E6D4' },
+        { key: 'tests', title: labels.tests?.title || 'Тесты', sub: labels.tests?.desc || 'Проверьте себя в формате экзамена', hidden: blocks.tests_hidden, emoji: '🧪', color: '#FFDB70' },
       ].filter(item => !item.hidden);
       items.forEach((item, i) => {
         const card = document.createElement('button');
