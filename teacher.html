@@ -796,6 +796,7 @@
           currentSubjectId = subjects[0].id;
           currentSubjectTitle = subjects[0].title;
           document.getElementById('subjTitle').textContent = currentSubjectTitle;
+          renderSideNav();
           renderSubjectMenu(isBack);
         } else {
           renderRowList(
@@ -804,6 +805,7 @@
               currentSubjectId = item.id;
               currentSubjectTitle = item.title;
               document.getElementById('subjTitle').textContent = currentSubjectTitle;
+              renderSideNav();
               stack.push({ level: 'subject_menu', title: item.title });
               renderCrumbs();
               renderSubjectMenu(false);
