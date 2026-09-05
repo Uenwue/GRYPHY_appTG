@@ -2527,7 +2527,6 @@
   }
 
   function switchTab(tab) {
-    if (activeTab === tab) return;
     activeTab = tab;
     document.getElementById('tabStudy').classList.toggle('active', tab === 'study');
     document.getElementById('tabChallenges').classList.toggle('active', tab === 'challenges');
@@ -2808,10 +2807,6 @@
             card.onclick = () => { trainerStack = [{ level: 'subject_home', subjectId: s.id, title: s.title }]; trainerInitialized = true; switchTab('challenges'); };
             list.appendChild(card);
           });
-        }
-
-        if (scheduleEvents.length) {
-          const calTitle = document.createElement('div');
         }
       }, isBack);
     } else if (current.level === 'profile_subject_home') {
