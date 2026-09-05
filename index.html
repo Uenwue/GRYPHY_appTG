@@ -28,6 +28,9 @@
     --yellow-tint: #FFF1C2;
     --card-shadow: 0 2px 0 var(--border);
     --bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
+    --nav-active: #539DF3;
+    --nav-inactive: #484C52;
+    --accent: #6C63FF;
   }
 
   /* Тёмная тема — включается автоматически по системной настройке... */
@@ -42,6 +45,7 @@
       --blue-tint: rgba(28, 176, 246, 0.16);
       --red-tint: rgba(255, 75, 75, 0.16);
       --yellow-tint: rgba(255, 200, 0, 0.16);
+      --nav-inactive: #676D75;
     }
   }
   /* ...или вручную через переключатель (сохраняется в localStorage) */
@@ -55,6 +59,7 @@
     --blue-tint: rgba(28, 176, 246, 0.16);
     --red-tint: rgba(255, 75, 75, 0.16);
     --yellow-tint: rgba(255, 200, 0, 0.16);
+    --nav-inactive: #676D75;
   }
 
   .theme-toggle {
@@ -305,14 +310,26 @@
   }
   .tab-bar-inner { max-width: 420px; width: 100%; display: flex; }
   .tab-btn {
+    position: relative;
     flex: 1; background: none; border: none; cursor: pointer;
     display: flex; flex-direction: column; align-items: center; gap: 2px;
     padding: 6px 2px; font-family: 'Nunito', sans-serif; font-size: 10px; font-weight: 700;
-    color: var(--text-soft); transition: transform 0.12s var(--bounce);
+    color: var(--nav-inactive); transition: transform 0.12s var(--bounce), color 0.15s ease;
     text-transform: uppercase; letter-spacing: 0.01em;
   }
   .tab-btn svg { width: 21px; height: 21px; }
-  .tab-btn.active { color: var(--green-dark); }
+  .tab-btn.active { color: var(--nav-active); }
+  .tab-btn.active::before {
+    content: '';
+    position: absolute;
+    top: -10px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 44px;
+    height: 3px;
+    border-radius: 3px;
+    background: var(--nav-active);
+  }
   .tab-btn:active { transform: scale(0.92); }
 
   /* --- Выбор "Задания / Тесты" на экране предмета --- */
@@ -475,13 +492,36 @@
 
   .option-btn.neutral-final { opacity: 0.55; cursor: default; }
   .option-btn.neutral-final:active { transform: none; border-bottom-width: 4px; }
+
+  /* --- Домашнее задание (список уроков, дизайн под референс) --- */
+  .hw-subtitle { font-size: 13px; color: var(--text-soft); font-weight: 600; margin: 0 0 18px; }
+  .hw-progress-label { display: flex; justify-content: space-between; font-size: 12.5px; font-weight: 700; color: var(--text-soft); margin-bottom: 6px; }
+  .hw-progress-track { height: 6px; background: var(--border); border-radius: 6px; overflow: hidden; margin-bottom: 20px; }
+  .hw-progress-fill { height: 100%; background: var(--accent); border-radius: 6px; transition: width 0.35s var(--bounce); }
+  .hw-list { display: flex; flex-direction: column; gap: 10px; }
+  .hw-card {
+    display: flex; align-items: center; gap: 12px;
+    background: var(--bg-soft); border: none; border-radius: 16px; padding: 14px 16px;
+    text-align: left; width: 100%; font-family: 'Nunito', sans-serif; cursor: pointer;
+    opacity: 0; animation: card-in 0.36s var(--bounce) both;
+  }
+  .hw-card.locked { cursor: default; opacity: 0.75; }
+  .hw-card-body { flex: 1; min-width: 0; }
+  .hw-card-eyebrow { font-size: 11.5px; font-weight: 700; color: var(--text-soft); text-transform: uppercase; letter-spacing: 0.03em; margin-bottom: 2px; }
+  .hw-card-title { font-family: 'Jost', sans-serif; font-size: 15.5px; font-weight: 700; color: var(--text); line-height: 1.35; }
+  .hw-card-sub { font-size: 12.5px; color: var(--text-soft); font-weight: 600; margin-top: 4px; }
+  .hw-status { flex-shrink: 0; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; }
+  .hw-status svg { width: 100%; height: 100%; }
+  .hw-status.done { color: var(--green); }
+  .hw-status.arrow { color: var(--accent); }
+  .hw-status.locked { color: var(--text-soft); opacity: 0.6; }
 </style>
 </head>
 <body>
 
   <div class="wrap">
     <header>
-      <h1 id="headerTitle">Учёба</h1>
+      <h1 id="headerTitle">Домашнее задание</h1>
     </header>
 
     <div class="crumbs" id="crumbs"></div>
@@ -496,18 +536,18 @@
     <div class="tab-bar-inner">
       <button class="tab-btn active" id="tabStudy" onclick="switchTab('study')">
         <svg viewBox="0 0 24 24" fill="none"><path d="M4 6C4 4.9 4.9 4 6 4H18C19.1 4 20 4.9 20 6V20L12 16L4 20V6Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
-        Учёба
+        Домашка
       </button>
       <button class="tab-btn" id="tabChallenges" onclick="switchTab('challenges')">
-        <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="4.5" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="1.2" fill="currentColor"/></svg>
-        Задания
+        <svg viewBox="0 0 24 24" fill="none"><path d="M4 9L7.5 12L12 6L16.5 12L20 9L18.5 17H5.5L4 9Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/></svg>
+        Тренажёр
       </button>
       <button class="tab-btn" id="tabRating" onclick="switchTab('rating')">
         <svg viewBox="0 0 24 24" fill="none"><path d="M12 3L14.6 8.9L21 9.6L16.2 13.9L17.6 20.3L12 17L6.4 20.3L7.8 13.9L3 9.6L9.4 8.9L12 3Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
-        Рейтинги
+        Рейтинг
       </button>
       <button class="tab-btn" id="tabStats" onclick="switchTab('stats')">
-        <svg viewBox="0 0 24 24" fill="none"><path d="M4 20V13M11 20V8M18 20V4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        <svg viewBox="0 0 24 24" fill="none"><path d="M4 3V21H21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M6.5 15.5L11 11L14.5 14L19.5 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
         Статистика
       </button>
       <button class="tab-btn" id="tabProfile" onclick="switchTab('profile')">
@@ -797,6 +837,98 @@
     wrap.appendChild(img);
     wrap.appendChild(expandBtn);
     container.appendChild(wrap);
+  }
+
+  async function renderHomeworkList(sectionId, isBack) {
+    showLoading('Загружаем уроки', isBack);
+    try {
+      const topics = await apiGet(`/api/sections/${sectionId}/topics`);
+      const total = topics.length;
+      const done = topics.filter(t => t.task_count > 0 && (t.correct_count || 0) >= t.task_count).length;
+
+      swapScreen((screen) => {
+        const sub = document.createElement('div');
+        sub.className = 'hw-subtitle';
+        sub.textContent = 'Уроки открываются по порядку';
+        screen.appendChild(sub);
+
+        const progLabel = document.createElement('div');
+        progLabel.className = 'hw-progress-label';
+        progLabel.innerHTML = `<span>Пройдено уроков</span><span>${done} из ${total}</span>`;
+        screen.appendChild(progLabel);
+
+        const track = document.createElement('div');
+        track.className = 'hw-progress-track';
+        const fill = document.createElement('div');
+        fill.className = 'hw-progress-fill';
+        fill.style.width = (total ? Math.round((done / total) * 100) : 0) + '%';
+        track.appendChild(fill);
+        screen.appendChild(track);
+
+        const list = document.createElement('div');
+        list.className = 'hw-list';
+        screen.appendChild(list);
+
+        if (!total) {
+          const p = document.createElement('p');
+          p.className = 'state-msg';
+          p.textContent = 'Уроки пока не добавлены.';
+          list.appendChild(p);
+          return;
+        }
+
+        topics.forEach((t, i) => {
+          const isDone = t.task_count > 0 && (t.correct_count || 0) >= t.task_count;
+          const card = document.createElement('button');
+          card.className = 'hw-card' + (t.is_locked ? ' locked' : '');
+          card.style.animationDelay = (i * 0.045) + 's';
+
+          const body = document.createElement('div');
+          body.className = 'hw-card-body';
+          const eyebrow = document.createElement('div');
+          eyebrow.className = 'hw-card-eyebrow';
+          eyebrow.textContent = 'Урок ' + (i + 1);
+          body.appendChild(eyebrow);
+          const titleEl = document.createElement('div');
+          titleEl.className = 'hw-card-title';
+          titleEl.textContent = t.title;
+          body.appendChild(titleEl);
+          const subEl = document.createElement('div');
+          subEl.className = 'hw-card-sub';
+          subEl.textContent = t.is_locked ? (t.lock_message || 'Пока недоступно.')
+            : (t.task_count > 0 ? `${t.correct_count || 0} из ${t.task_count} верно` : '0 вопросов');
+          body.appendChild(subEl);
+          card.appendChild(body);
+
+          const status = document.createElement('span');
+          status.className = 'hw-status ' + (t.is_locked ? 'locked' : (isDone ? 'done' : 'arrow'));
+          if (t.is_locked) {
+            status.innerHTML = '<svg viewBox="0 0 20 20" fill="none"><rect x="5" y="9" width="10" height="8" rx="1.5" stroke="currentColor" stroke-width="1.6"/><path d="M7 9V6.5a3 3 0 0 1 6 0V9" stroke="currentColor" stroke-width="1.6"/></svg>';
+          } else if (isDone) {
+            status.innerHTML = '<svg viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="9" fill="currentColor"/><path d="M6 10.2L8.7 13L14 7.5" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+          } else {
+            status.innerHTML = '<svg viewBox="0 0 20 20" fill="none"><path d="M8 5L13 10L8 15" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+          }
+          card.appendChild(status);
+
+          if (t.is_locked) {
+            card.onclick = () => {
+              const msg = t.lock_message || 'Пока недоступно.';
+              if (tg?.showAlert) tg.showAlert(msg); else alert(msg);
+            };
+          } else {
+            card.onclick = () => {
+              stack.push({ level: 'order_choice', scope: 'topic', scopeId: t.id, title: t.title });
+              renderCrumbs();
+              render(false);
+            };
+          }
+          list.appendChild(card);
+        });
+      }, isBack);
+    } catch (err) {
+      showState('Не получилось загрузить уроки. ' + err.message, true, true, isBack);
+    }
   }
 
   async function renderOrderChoice(scope, scopeId, title, isBack) {
@@ -1506,7 +1638,14 @@
         const sections = await apiGet(`/api/subjects/${current.subjectId}/sections?kind=${kind}`);
         const purpose = current.purpose;
         renderList(sections.map(s => ({ id: s.id, title: s.title, is_locked: s.is_locked, lock_message: s.lock_message, sub: (purpose === 'tasks' || purpose === 'homework') ? s.sub : undefined })),
-          (item) => { stack.push({ level: 'topics', sectionId: item.id, purpose, title: item.title }); render(false); },
+          (item) => {
+            if (purpose === 'homework') {
+              stack.push({ level: 'homework_list', sectionId: item.id, title: item.title });
+            } else {
+              stack.push({ level: 'topics', sectionId: item.id, purpose, title: item.title });
+            }
+            render(false);
+          },
           'sections', isBack);
       } else if (current.level === 'topics') {
         const topics = await apiGet(`/api/sections/${current.sectionId}/topics`);
@@ -1549,6 +1688,8 @@
         }
       } else if (current.level === 'order_choice') {
         renderOrderChoice(current.scope, current.scopeId, current.title, isBack);
+      } else if (current.level === 'homework_list') {
+        renderHomeworkList(current.sectionId, isBack);
       } else if (current.level === 'tasks') {
         renderTaskScreen(isBack);
       } else if (current.level === 'rules') {
@@ -1688,9 +1829,26 @@
         arrow.className = 'item-arrow-btn';
         arrow.innerHTML = '<svg viewBox="0 0 20 20" fill="none"><path d="M8 5L13 10L8 15" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
         card.appendChild(arrow);
-        card.onclick = () => {
-          if (item.key === 'tests') { stack.push({ level: 'tests', subjectId, title: 'Тесты' }); render(false); }
-          else { stack.push({ level: 'sections', subjectId, purpose: item.key, title: item.key === 'homework' ? 'ДЗ' : 'Разделы' }); render(false); }
+        card.onclick = async () => {
+          if (item.key === 'tests') { stack.push({ level: 'tests', subjectId, title: 'Тесты' }); render(false); return; }
+          if (item.key === 'homework') {
+            showLoading('Загружаем', false);
+            try {
+              const hwSections = await apiGet(`/api/subjects/${subjectId}/sections?kind=homework`);
+              if (hwSections.length === 1) {
+                stack.push({ level: 'homework_list', sectionId: hwSections[0].id, title: 'Домашнее задание' });
+              } else {
+                stack.push({ level: 'sections', subjectId, purpose: 'homework', title: 'Домашнее задание' });
+              }
+            } catch (err) {
+              stack.push({ level: 'sections', subjectId, purpose: 'homework', title: 'Домашнее задание' });
+            }
+            renderCrumbs();
+            render(false);
+            return;
+          }
+          stack.push({ level: 'sections', subjectId, purpose: item.key, title: 'Разделы' });
+          render(false);
         };
         list.appendChild(card);
       });
@@ -2323,8 +2481,8 @@
     document.getElementById('tabRating').classList.toggle('active', tab === 'rating');
     document.getElementById('tabStats').classList.toggle('active', tab === 'stats');
     document.getElementById('tabProfile').classList.toggle('active', tab === 'profile');
-    const tabTitles = { study: 'Учёба', challenges: 'Задания', rating: 'Рейтинги', stats: 'Статистика', profile: 'Профиль' };
-    document.getElementById('headerTitle').textContent = tabTitles[tab] || 'Учёба';
+    const tabTitles = { study: 'Домашнее задание', challenges: 'Тренажёр', rating: 'Рейтинг', stats: 'Статистика', profile: 'Профиль' };
+    document.getElementById('headerTitle').textContent = tabTitles[tab] || 'Домашнее задание';
     if (tab === 'study') {
       renderCrumbs();
       render(false);
