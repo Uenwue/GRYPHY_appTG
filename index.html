@@ -1962,8 +1962,13 @@
   // --- Экран предмета: выбор "Разделы" / "Правила" / "Тесты" ---
   function renderSubjectHome(subjectId, isBack) {
     swapScreen(async (screen) => {
+      const sub = document.createElement('div');
+      sub.className = 'hw-subtitle';
+      sub.textContent = 'Выберите, чем хотите заняться';
+      screen.appendChild(sub);
+
       const list = document.createElement('div');
-      list.className = 'list';
+      list.className = 'hw-list';
       screen.appendChild(list);
 
       let blocks = { tasks_hidden: false, homework_hidden: false, rules_hidden: false, tests_hidden: false, labels: {} };
@@ -1973,43 +1978,22 @@
       const labels = blocks.labels || {};
 
       const items = [
-        { key: 'tasks', title: labels.tasks?.title || 'Задания', sub: labels.tasks?.desc || 'Тренируйтесь по темам и разделам', hidden: blocks.tasks_hidden, emoji: '📂', color: '#A8D8F5' },
-        { key: 'rules', title: labels.rules?.title || 'Правила', sub: labels.rules?.desc || 'Справочник по темам курса', hidden: blocks.rules_hidden, emoji: '📖', color: '#A8E6D4' },
-        { key: 'tests', title: labels.tests?.title || 'Тесты', sub: labels.tests?.desc || 'Проверьте себя в формате экзамена', hidden: blocks.tests_hidden, emoji: '🧪', color: '#FFDB70' },
+        { key: 'tasks', title: labels.tasks?.title || 'Задания', sub: labels.tasks?.desc || 'Тренируйтесь по темам и разделам', hidden: blocks.tasks_hidden, emoji: '📂' },
+        { key: 'rules', title: labels.rules?.title || 'Правила', sub: labels.rules?.desc || 'Справочник по темам курса', hidden: blocks.rules_hidden, emoji: '📖' },
+        { key: 'tests', title: labels.tests?.title || 'Тесты', sub: labels.tests?.desc || 'Проверьте себя в формате экзамена', hidden: blocks.tests_hidden, emoji: '🧪' },
       ].filter(item => !item.hidden);
-      items.forEach((item, i) => {
-        const card = document.createElement('button');
-        card.className = 'item-card';
-        card.style.animationDelay = (i * 0.05) + 's';
-        const iconSq = document.createElement('div');
-        iconSq.className = 'item-icon-square';
-        iconSq.style.background = item.color;
-        iconSq.style.fontSize = '22px';
-        iconSq.textContent = item.emoji;
-        card.appendChild(iconSq);
-        const left = document.createElement('div');
-        left.style.flex = '1';
-        left.style.minWidth = '0';
-        const t = document.createElement('div');
-        t.className = 'item-title';
-        t.textContent = item.title;
-        left.appendChild(t);
-        const s = document.createElement('div');
-        s.className = 'item-sub';
-        s.textContent = item.sub;
-        left.appendChild(s);
-        card.appendChild(left);
-        const arrow = document.createElement('span');
-        arrow.className = 'item-arrow-btn';
-        arrow.innerHTML = '<svg viewBox="0 0 20 20" fill="none"><path d="M8 5L13 10L8 15" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-        card.appendChild(arrow);
-        card.onclick = () => {
+
+      renderHwStyleCards(list, items.map((item) => ({
+        title: item.emoji + ' ' + item.title,
+        sub: item.sub,
+        isLocked: false,
+        isDone: false,
+        onClick: () => {
           if (item.key === 'tests') { stack.push({ level: 'tests', subjectId, title: 'Тесты' }); render(false); return; }
           stack.push({ level: 'sections', subjectId, purpose: item.key, title: 'Разделы' });
           render(false);
-        };
-        list.appendChild(card);
-      });
+        },
+      })));
     }, isBack);
   }
 
@@ -2554,7 +2538,7 @@
             showState('Нет доступных предметов.', false, false);
             return;
           }
-          trainerStack = [{ level: 'subject_home', subjectId: subject.id, title: subject.title }];
+          trainerStack = [{ level: 'subject_home', subjectId: subject.id, title: '' }];
           stack = trainerStack;
           renderCrumbs();
           render(false);
@@ -2579,7 +2563,7 @@
         }
         profileStack = tab === 'rating'
           ? [{ level: 'profile_leaderboard', subjectId: subject.id, title: '' }]
-          : [{ level: 'profile_subject_home', subjectId: subject.id, title: subject.title }];
+          : [{ level: 'profile_subject_home', subjectId: subject.id, title: '' }];
         renderProfileCrumbs();
         renderProfile(false);
       }).catch((err) => {
@@ -2593,6 +2577,7 @@
 
   let calYear, calMonth, calSelected;
   let leaderboardType;
+  let leaderboardPeriod;
 
   function buildCalendarGrid(year, month, eventDatesSet, selectedDate, onDayClick, onPrev, onNext) {
     const wrap = document.createElement('div');
@@ -2804,7 +2789,7 @@
             status.className = 'item-arrow-btn';
             status.innerHTML = '<svg viewBox="0 0 20 20" fill="none"><path d="M8 5L13 10L8 15" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
             card.appendChild(status);
-            card.onclick = () => { trainerStack = [{ level: 'subject_home', subjectId: s.id, title: s.title }]; trainerInitialized = true; switchTab('challenges'); };
+            card.onclick = () => { trainerStack = [{ level: 'subject_home', subjectId: s.id, title: '' }]; trainerInitialized = true; switchTab('challenges'); };
             list.appendChild(card);
           });
         }
@@ -3068,12 +3053,29 @@
       }, isBack);
     } else if (current.level === 'profile_leaderboard') {
       if (leaderboardType === undefined) leaderboardType = 'correct_tasks';
-      const rows = await apiGet(`/api/subjects/${current.subjectId}/leaderboard?type=${leaderboardType}`);
+      if (leaderboardPeriod === undefined) leaderboardPeriod = 'week';
+      const rows = await apiGet(`/api/subjects/${current.subjectId}/leaderboard?type=${leaderboardType}&period=${leaderboardPeriod}`);
       const myId = String(tg?.initDataUnsafe?.user?.id || '');
       const PASTEL_COLORS = ['#FFB4A8', '#F5B8E0', '#FFDB70', '#C9B8F5', '#A8E6D4', '#A8D8F5'];
       const initialOf = (name) => (name || '?').trim().charAt(0).toUpperCase();
 
       swapScreen((screen) => {
+        const periodSegmented = document.createElement('div');
+        periodSegmented.className = 'lb-segmented';
+        const periodDefs = [
+          { key: 'week', label: 'Неделя' },
+          { key: 'month', label: 'Месяц' },
+          { key: 'all', label: 'Всё время' },
+        ];
+        periodDefs.forEach((p) => {
+          const btn = document.createElement('button');
+          btn.className = 'lb-segment' + (leaderboardPeriod === p.key ? ' active' : '');
+          btn.textContent = p.label;
+          btn.onclick = () => { leaderboardPeriod = p.key; renderProfile(false); };
+          periodSegmented.appendChild(btn);
+        });
+        screen.appendChild(periodSegmented);
+
         const segmented = document.createElement('div');
         segmented.className = 'lb-segmented';
         const tabDefs = [
