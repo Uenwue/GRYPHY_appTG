@@ -30,7 +30,7 @@
     --bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
     --nav-active: #539DF3;
     --nav-inactive: #484C52;
-    --accent: #6C63FF;
+    --accent: #539DF3;
   }
 
   /* Тёмная тема — включается автоматически по системной настройке... */
@@ -517,7 +517,7 @@
   .hw-status.locked { color: var(--text-soft); opacity: 0.6; }
 
   /* --- Статистика (дизайн под референс) --- */
-  .stat-predict-card { background: linear-gradient(135deg, var(--accent), #8B7CFF); color: white; border-radius: 20px; padding: 18px; margin-bottom: 16px; }
+  .stat-predict-card { background: linear-gradient(135deg, var(--accent), #6FC6FF); color: white; border-radius: 20px; padding: 18px; margin-bottom: 16px; }
   .stat-predict-label { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; opacity: 0.9; margin-bottom: 8px; }
   .stat-predict-score { font-family: 'Jost', sans-serif; font-size: 34px; font-weight: 800; }
   .stat-predict-score span { font-size: 15px; font-weight: 600; opacity: 0.85; margin-left: 2px; }
@@ -537,6 +537,28 @@
   html[data-theme="dark"] .stat-streak-title, html:not([data-theme="light"]) .stat-streak-title { color: #FFB37A; }
   .stat-streak-value { font-size: 12.5px; color: #B8562A; font-weight: 600; margin-top: 2px; }
   html[data-theme="dark"] .stat-streak-value, html:not([data-theme="light"]) .stat-streak-value { color: #FFB37A; }
+
+  .stat-report-btn {
+    display: flex; align-items: center; gap: 10px; width: 100%;
+    background: var(--red-tint); border: none; border-radius: 16px; padding: 14px 16px;
+    font-family: 'Nunito', sans-serif; font-size: 13.5px; font-weight: 700; color: var(--red-dark);
+    cursor: pointer; text-align: left; margin-top: 16px;
+  }
+  .stat-report-btn svg { width: 20px; height: 20px; flex-shrink: 0; }
+
+  .stat-chart-title { font-size: 13px; color: var(--text-soft); font-weight: 700; margin: 20px 0 10px; }
+  .stat-chart-pager { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; gap: 12px; margin: 0 -16px; padding: 0 16px 4px; -webkit-overflow-scrolling: touch; }
+  .stat-chart-pager::-webkit-scrollbar { display: none; }
+  .stat-chart-page { flex: 0 0 100%; scroll-snap-align: start; background: var(--bg-soft); border-radius: 16px; padding: 14px 12px 12px; }
+  .stat-chart-page-title { font-size: 12px; font-weight: 700; color: var(--text-soft); margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.02em; }
+  .stat-chart-bars { display: flex; align-items: flex-end; justify-content: space-between; gap: 5px; height: 110px; }
+  .stat-chart-col { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; gap: 4px; }
+  .stat-chart-num { font-family: 'Jost', sans-serif; font-size: 10.5px; font-weight: 800; color: var(--text-soft); }
+  .stat-chart-bar { width: 100%; max-width: 22px; border-radius: 6px; transition: height 0.4s var(--bounce); }
+  .stat-chart-daylabel { font-size: 10.5px; font-weight: 700; color: var(--text-soft); margin-top: 2px; }
+  .stat-chart-dots { display: flex; justify-content: center; gap: 6px; margin-top: 10px; }
+  .stat-chart-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--border); transition: background 0.2s ease; }
+  .stat-chart-dot.active { background: var(--accent); }
 </style>
 </head>
 <body>
@@ -557,7 +579,7 @@
   <nav class="tab-bar">
     <div class="tab-bar-inner">
       <button class="tab-btn active" id="tabStudy" onclick="switchTab('study')">
-        <svg viewBox="0 0 24 24" fill="none"><path d="M4 6C4 4.9 4.9 4 6 4H18C19.1 4 20 4.9 20 6V20L12 16L4 20V6Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+        <svg viewBox="0 0 24 24" fill="none"><path d="M3 11l9-7 9 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 10v9a1 1 0 001 1h4v-6h4v6h4a1 1 0 001-1v-9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
         Домашка
       </button>
       <button class="tab-btn" id="tabChallenges" onclick="switchTab('challenges')">
@@ -644,11 +666,11 @@
     try {
       const hwSections = await apiGet(`/api/subjects/${subjectId}/sections?kind=homework`);
       if (hwSections.length === 1) {
-        return [{ level: 'homework_list', sectionId: hwSections[0].id, title: 'Домашнее задание' }];
+        return [{ level: 'homework_list', sectionId: hwSections[0].id, title: '' }];
       }
-      return [{ level: 'sections', subjectId, purpose: 'homework', title: 'Домашнее задание' }];
+      return [{ level: 'sections', subjectId, purpose: 'homework', title: '' }];
     } catch (err) {
-      return [{ level: 'sections', subjectId, purpose: 'homework', title: 'Домашнее задание' }];
+      return [{ level: 'sections', subjectId, purpose: 'homework', title: '' }];
     }
   }
 
@@ -2798,7 +2820,10 @@
         }
       }, isBack);
     } else if (current.level === 'profile_subject_home') {
-      const stats = await apiGet(`/api/subjects/${current.subjectId}/profile`);
+      const [stats, dailyStats] = await Promise.all([
+        apiGet(`/api/subjects/${current.subjectId}/profile`),
+        apiGet(`/api/subjects/${current.subjectId}/daily-stats`),
+      ]);
       swapScreen((screen) => {
         const sub = document.createElement('div');
         sub.className = 'hw-subtitle';
@@ -2855,6 +2880,11 @@
         grid.appendChild(cell(iconAccuracy, 'Точность', `${stats.accuracy || 0}%`, `верно ${stats.correct_solved || 0}`));
         grid.appendChild(cell(iconLessons, 'Уроки', `${stats.homework_done || 0} / ${stats.homework_total || 0}`));
         grid.appendChild(cell(iconTime, 'В приложении', `${Math.round((stats.time_today_seconds || 0) / 60)} мин`));
+        const iconTestScore = '<svg viewBox="0 0 24 24" fill="none"><path d="M12 3l2.6 5.6 6.1.6-4.6 4.1 1.3 6-5.4-3.2-5.4 3.2 1.3-6-4.6-4.1 6.1-.6z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>';
+        const iconStreakDays = '<svg viewBox="0 0 24 24" fill="none"><path d="M12 3c0 4-4 5-4 9a4 4 0 008 0c0-1.2-.6-2-1.2-2.8.2 1.6-.8 2.3-1.3 1.5-.6-1-.2-2.3.5-3.2-1.6.4-2-1.6-2-4.5z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>';
+        const bestTestScore = stats.tests && stats.tests.length ? Math.max(...stats.tests.map(t => t.actual_score ?? t.primary_score ?? 0)) : null;
+        grid.appendChild(cell(iconTestScore, 'Лучший балл теста', bestTestScore !== null ? bestTestScore : '—'));
+        grid.appendChild(cell(iconStreakDays, 'Дней подряд', stats.streak_days || 0));
         screen.appendChild(grid);
 
         if (stats.best_answer_streak > 0) {
@@ -2879,19 +2909,105 @@
         detailLink.onclick = () => { profileStack.push({ level: 'profile_tasks', subjectId: current.subjectId, title: 'История' }); renderProfileCrumbs(); renderProfile(false); };
         screen.appendChild(detailLink);
 
-        const wrap = document.createElement('div');
-        wrap.className = 'home-choice';
-        wrap.style.marginTop = '16px';
+        // --- Листаемый график: время в приложении / решено верно-неверно / баллы тестов ---
+        const chartTitle = document.createElement('div');
+        chartTitle.className = 'stat-chart-title';
+        chartTitle.textContent = 'История за последние 7 дней — листайте вправо';
+        screen.appendChild(chartTitle);
 
-        const reportChoice = document.createElement('button');
-        reportChoice.className = 'choice-card';
-        reportChoice.innerHTML = `
-          <svg class="choice-icon" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="7" stroke="#EA2B2B" stroke-width="1.5"/><path d="M10 7V10.5M10 13.2V13.3" stroke="#EA2B2B" stroke-width="1.5" stroke-linecap="round"/></svg>
-          <div class="choice-title">\uD83D\uDC1E Сообщить об ошибке</div>`;
-        reportChoice.onclick = () => promptReportError({ subject_id: current.subjectId });
-        wrap.appendChild(reportChoice);
+        const now = new Date();
+        const todayStr = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
+        const last7 = [];
+        for (let i = 6; i >= 0; i--) {
+          const d = new Date(now);
+          d.setDate(now.getDate() - i);
+          const dateStr = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+          const dayData = dailyStats.days.find((x) => x.date === dateStr) || {};
+          last7.push({
+            label: ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'][d.getDay()],
+            isToday: dateStr === todayStr,
+            total: dayData.total_solved || 0,
+            correct: dayData.correct_solved || 0,
+            testScore: dayData.best_test_score,
+            timeMin: Math.round((dayData.time_seconds || 0) / 60),
+          });
+        }
 
-        screen.appendChild(wrap);
+        const buildBarPage = (title, values, colorFn, unit) => {
+          const page = document.createElement('div');
+          page.className = 'stat-chart-page';
+          const t = document.createElement('div');
+          t.className = 'stat-chart-page-title';
+          t.textContent = title;
+          page.appendChild(t);
+          const bars = document.createElement('div');
+          bars.className = 'stat-chart-bars';
+          const maxVal = Math.max(1, ...values.map((v) => v.value));
+          values.forEach((v) => {
+            const col = document.createElement('div');
+            col.className = 'stat-chart-col';
+            if (v.value > 0) {
+              const num = document.createElement('div');
+              num.className = 'stat-chart-num';
+              num.textContent = v.value + (unit || '');
+              col.appendChild(num);
+            }
+            const bar = document.createElement('div');
+            bar.className = 'stat-chart-bar';
+            const h = v.value > 0 ? Math.max(6, Math.round((v.value / maxVal) * 74)) : 3;
+            bar.style.cssText = `height:${h}px;background:${colorFn(v)};`;
+            col.appendChild(bar);
+            const lbl = document.createElement('div');
+            lbl.className = 'stat-chart-daylabel';
+            lbl.style.color = v.isToday ? 'var(--accent)' : '';
+            lbl.textContent = v.label;
+            col.appendChild(lbl);
+            bars.appendChild(col);
+          });
+          page.appendChild(bars);
+          return page;
+        };
+
+        const pager = document.createElement('div');
+        pager.className = 'stat-chart-pager';
+
+        pager.appendChild(buildBarPage(
+          'Решено заданий (верно / всего)',
+          last7.map((d) => ({ value: d.total, isToday: d.isToday, correct: d.correct })),
+          (v) => v.value > 0 && v.correct >= v.value ? 'var(--green)' : (v.value > 0 ? 'var(--yellow)' : 'var(--border)')
+        ));
+        pager.appendChild(buildBarPage(
+          'Время в приложении, мин',
+          last7.map((d) => ({ value: d.timeMin, isToday: d.isToday })),
+          (v) => v.isToday ? 'var(--accent)' : 'var(--blue-tint)'
+        ));
+        pager.appendChild(buildBarPage(
+          'Баллы тестов',
+          last7.map((d) => ({ value: d.testScore || 0, isToday: d.isToday })),
+          (v) => v.isToday ? 'var(--accent)' : 'var(--yellow)'
+        ));
+        screen.appendChild(pager);
+
+        const dots = document.createElement('div');
+        dots.className = 'stat-chart-dots';
+        for (let i = 0; i < 3; i++) {
+          const dot = document.createElement('span');
+          dot.className = 'stat-chart-dot' + (i === 0 ? ' active' : '');
+          dots.appendChild(dot);
+        }
+        screen.appendChild(dots);
+        pager.addEventListener('scroll', () => {
+          const idx = Math.round(pager.scrollLeft / pager.clientWidth);
+          [...dots.children].forEach((dot, i) => dot.classList.toggle('active', i === idx));
+        });
+
+        const reportBtn = document.createElement('button');
+        reportBtn.className = 'stat-report-btn';
+        reportBtn.innerHTML = `
+          <svg viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="7" stroke="currentColor" stroke-width="1.6"/><path d="M10 7V10.5M10 13.2V13.3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+          <span>Сообщить об ошибке</span>`;
+        reportBtn.onclick = () => promptReportError({ subject_id: current.subjectId });
+        screen.appendChild(reportBtn);
       }, isBack);
     } else if (current.level === 'profile_daily_breakdown') {
       const dailyStats = await apiGet(`/api/subjects/${current.subjectId}/daily-stats`);
