@@ -760,7 +760,7 @@
     return screen;
   }
 
-  function showState(message, isError = false, withRetry = false, isBack = false) {
+  function showState(message, isError = false, withRetry = false, isBack = false, retryFn = () => render(false)) {
     swapScreen((screen) => {
       const p = document.createElement('p');
       p.className = 'state-msg' + (isError ? ' error' : '');
@@ -770,7 +770,7 @@
         const btn = document.createElement('button');
         btn.className = 'retry-btn';
         btn.textContent = 'Попробовать снова';
-        btn.onclick = () => render(false);
+        btn.onclick = retryFn;
         screen.appendChild(btn);
         screen.style.textAlign = 'center';
       }
@@ -922,6 +922,50 @@
     container.appendChild(wrap);
   }
 
+  function renderHwStyleCards(container, items) {
+    items.forEach((item, i) => {
+      const card = document.createElement('button');
+      card.className = 'hw-card' + (item.isLocked ? ' locked' : '');
+      card.style.animationDelay = (i * 0.045) + 's';
+
+      const body = document.createElement('div');
+      body.className = 'hw-card-body';
+      if (item.eyebrow) {
+        const eyebrow = document.createElement('div');
+        eyebrow.className = 'hw-card-eyebrow';
+        eyebrow.textContent = item.eyebrow;
+        body.appendChild(eyebrow);
+      }
+      const titleEl = document.createElement('div');
+      titleEl.className = 'hw-card-title';
+      titleEl.textContent = item.title;
+      body.appendChild(titleEl);
+      if (item.sub) {
+        const subEl = document.createElement('div');
+        subEl.className = 'hw-card-sub';
+        subEl.textContent = item.sub;
+        body.appendChild(subEl);
+      }
+      card.appendChild(body);
+
+      const status = document.createElement('span');
+      status.className = 'hw-status ' + (item.isLocked ? 'locked' : (item.isDone ? 'done' : 'arrow'));
+      if (item.isLocked) {
+        status.innerHTML = '<svg viewBox="0 0 20 20" fill="none"><rect x="5" y="9" width="10" height="8" rx="1.5" stroke="currentColor" stroke-width="1.6"/><path d="M7 9V6.5a3 3 0 0 1 6 0V9" stroke="currentColor" stroke-width="1.6"/></svg>';
+      } else if (item.isDone) {
+        status.innerHTML = '<svg viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="9" fill="currentColor"/><path d="M6 10.2L8.7 13L14 7.5" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+      } else {
+        status.innerHTML = '<svg viewBox="0 0 20 20" fill="none"><path d="M8 5L13 10L8 15" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+      }
+      card.appendChild(status);
+
+      card.onclick = item.isLocked
+        ? () => { const msg = item.lockMessage || 'Пока недоступно.'; if (tg?.showAlert) tg.showAlert(msg); else alert(msg); }
+        : item.onClick;
+      container.appendChild(card);
+    });
+  }
+
   async function renderHomeworkList(sectionId, isBack) {
     showLoading('Загружаем уроки', isBack);
     try {
@@ -951,6 +995,7 @@
         const list = document.createElement('div');
         list.className = 'hw-list';
         screen.appendChild(list);
+        const items = [];
 
         if (!total) {
           const p = document.createElement('p');
@@ -962,52 +1007,22 @@
 
         topics.forEach((t, i) => {
           const isDone = t.task_count > 0 && (t.correct_count || 0) >= t.task_count;
-          const card = document.createElement('button');
-          card.className = 'hw-card' + (t.is_locked ? ' locked' : '');
-          card.style.animationDelay = (i * 0.045) + 's';
-
-          const body = document.createElement('div');
-          body.className = 'hw-card-body';
-          const eyebrow = document.createElement('div');
-          eyebrow.className = 'hw-card-eyebrow';
-          eyebrow.textContent = 'Урок ' + (i + 1);
-          body.appendChild(eyebrow);
-          const titleEl = document.createElement('div');
-          titleEl.className = 'hw-card-title';
-          titleEl.textContent = t.title;
-          body.appendChild(titleEl);
-          const subEl = document.createElement('div');
-          subEl.className = 'hw-card-sub';
-          subEl.textContent = t.is_locked ? (t.lock_message || 'Пока недоступно.')
-            : (t.task_count > 0 ? `${t.correct_count || 0} из ${t.task_count} верно` : '0 вопросов');
-          body.appendChild(subEl);
-          card.appendChild(body);
-
-          const status = document.createElement('span');
-          status.className = 'hw-status ' + (t.is_locked ? 'locked' : (isDone ? 'done' : 'arrow'));
-          if (t.is_locked) {
-            status.innerHTML = '<svg viewBox="0 0 20 20" fill="none"><rect x="5" y="9" width="10" height="8" rx="1.5" stroke="currentColor" stroke-width="1.6"/><path d="M7 9V6.5a3 3 0 0 1 6 0V9" stroke="currentColor" stroke-width="1.6"/></svg>';
-          } else if (isDone) {
-            status.innerHTML = '<svg viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="9" fill="currentColor"/><path d="M6 10.2L8.7 13L14 7.5" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-          } else {
-            status.innerHTML = '<svg viewBox="0 0 20 20" fill="none"><path d="M8 5L13 10L8 15" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-          }
-          card.appendChild(status);
-
-          if (t.is_locked) {
-            card.onclick = () => {
-              const msg = t.lock_message || 'Пока недоступно.';
-              if (tg?.showAlert) tg.showAlert(msg); else alert(msg);
-            };
-          } else {
-            card.onclick = () => {
+          items.push({
+            eyebrow: 'Урок ' + (i + 1),
+            title: t.title,
+            sub: t.is_locked ? (t.lock_message || 'Пока недоступно.')
+              : (t.task_count > 0 ? `${t.correct_count || 0} из ${t.task_count} верно` : '0 вопросов'),
+            isLocked: t.is_locked,
+            lockMessage: t.lock_message,
+            isDone,
+            onClick: () => {
               stack.push({ level: 'order_choice', scope: 'topic', scopeId: t.id, title: t.title });
               renderCrumbs();
               render(false);
-            };
-          }
-          list.appendChild(card);
+            },
+          });
         });
+        renderHwStyleCards(list, items);
       }, isBack);
     } catch (err) {
       showState('Не получилось загрузить уроки. ' + err.message, true, true, isBack);
@@ -1720,27 +1735,120 @@
         const kind = current.purpose === 'homework' ? 'homework' : 'trainer';
         const sections = await apiGet(`/api/subjects/${current.subjectId}/sections?kind=${kind}`);
         const purpose = current.purpose;
-        renderList(sections.map(s => ({ id: s.id, title: s.title, is_locked: s.is_locked, lock_message: s.lock_message, sub: (purpose === 'tasks' || purpose === 'homework') ? s.sub : undefined })),
-          (item) => {
-            if (purpose === 'homework') {
-              stack.push({ level: 'homework_list', sectionId: item.id, title: item.title });
-            } else {
-              stack.push({ level: 'topics', sectionId: item.id, purpose, title: item.title });
+        if (purpose === 'tasks') {
+          swapScreen((screen) => {
+            const sub = document.createElement('div');
+            sub.className = 'hw-subtitle';
+            sub.textContent = 'Разделы открываются по порядку';
+            screen.appendChild(sub);
+
+            const list = document.createElement('div');
+            list.className = 'hw-list';
+            screen.appendChild(list);
+
+            if (!sections.length) {
+              const p = document.createElement('p');
+              p.className = 'state-msg';
+              p.textContent = 'Разделы пока не добавлены.';
+              list.appendChild(p);
+              return;
             }
-            render(false);
-          },
-          'sections', isBack);
+
+            renderHwStyleCards(list, sections.map((s) => ({
+              title: s.title,
+              sub: s.is_locked ? (s.lock_message || 'Пока недоступно.') : s.sub,
+              isLocked: s.is_locked,
+              lockMessage: s.lock_message,
+              isDone: false,
+              onClick: () => {
+                stack.push({ level: 'topics', sectionId: s.id, purpose, title: s.title });
+                render(false);
+              },
+            })));
+          }, isBack);
+        } else {
+          renderList(sections.map(s => ({ id: s.id, title: s.title, is_locked: s.is_locked, lock_message: s.lock_message, sub: purpose === 'homework' ? s.sub : undefined })),
+            (item) => {
+              if (purpose === 'homework') {
+                stack.push({ level: 'homework_list', sectionId: item.id, title: item.title });
+              } else {
+                stack.push({ level: 'topics', sectionId: item.id, purpose, title: item.title });
+              }
+              render(false);
+            },
+            'sections', isBack);
+        }
       } else if (current.level === 'topics') {
         const topics = await apiGet(`/api/sections/${current.sectionId}/topics`);
         const purpose = current.purpose;
-        const listScreen = renderList(topics.map((t, i) => ({
-            id: t.id, title: t.title, is_locked: t.is_locked, lock_message: t.lock_message,
-            eyebrow: (purpose === 'tasks' || purpose === 'homework') ? (purpose === 'homework' ? 'Урок ' : 'Тема ') + (i + 1) : undefined,
-            task_count: (purpose === 'tasks' || purpose === 'homework') ? t.task_count : undefined,
-            correct_count: (purpose === 'tasks' || purpose === 'homework') ? t.correct_count : undefined,
-          })),
-          async (item) => {
-            if (purpose === 'rules') {
+        if (purpose === 'tasks') {
+          const total = topics.length;
+          const done = topics.filter(t => t.task_count > 0 && (t.correct_count || 0) >= t.task_count).length;
+          swapScreen((screen) => {
+            const sub = document.createElement('div');
+            sub.className = 'hw-subtitle';
+            sub.textContent = 'Темы открываются по порядку';
+            screen.appendChild(sub);
+
+            const progLabel = document.createElement('div');
+            progLabel.className = 'hw-progress-label';
+            progLabel.innerHTML = `<span>Пройдено тем</span><span>${done} из ${total}</span>`;
+            screen.appendChild(progLabel);
+
+            const track = document.createElement('div');
+            track.className = 'hw-progress-track';
+            const fill = document.createElement('div');
+            fill.className = 'hw-progress-fill';
+            fill.style.width = (total ? Math.round((done / total) * 100) : 0) + '%';
+            track.appendChild(fill);
+            screen.appendChild(track);
+
+            if (topics.some(t => !t.is_locked && t.task_count > 0)) {
+              const wholeBtn = document.createElement('button');
+              wholeBtn.className = 'add-row-btn';
+              wholeBtn.style.cssText = 'width:100%;margin-bottom:14px;padding:16px;font-size:15.5px;color:var(--accent);';
+              wholeBtn.textContent = '🎯 Решить весь раздел целиком';
+              wholeBtn.onclick = () => {
+                stack.push({ level: 'order_choice', scope: 'section', scopeId: current.sectionId, title: current.title });
+                renderCrumbs();
+                render(false);
+              };
+              screen.appendChild(wholeBtn);
+            }
+
+            const list = document.createElement('div');
+            list.className = 'hw-list';
+            screen.appendChild(list);
+
+            if (!total) {
+              const p = document.createElement('p');
+              p.className = 'state-msg';
+              p.textContent = 'Темы пока не добавлены.';
+              list.appendChild(p);
+              return;
+            }
+
+            renderHwStyleCards(list, topics.map((t, i) => {
+              const isDone = t.task_count > 0 && (t.correct_count || 0) >= t.task_count;
+              return {
+                eyebrow: 'Тема ' + (i + 1),
+                title: t.title,
+                sub: t.is_locked ? (t.lock_message || 'Пока недоступно.')
+                  : (t.task_count > 0 ? `${t.correct_count || 0} из ${t.task_count} верно` : '0 вопросов'),
+                isLocked: t.is_locked,
+                lockMessage: t.lock_message,
+                isDone,
+                onClick: () => {
+                  stack.push({ level: 'order_choice', scope: 'topic', scopeId: t.id, title: t.title });
+                  renderCrumbs();
+                  render(false);
+                },
+              };
+            }));
+          }, isBack);
+        } else {
+          renderList(topics.map((t) => ({ id: t.id, title: t.title, is_locked: t.is_locked, lock_message: t.lock_message })),
+            async (item) => {
               stack.push({ level: 'rules', topicId: item.id, title: item.title });
               renderCrumbs();
               showLoading('Загружаем правила', false);
@@ -1750,24 +1858,8 @@
               } catch (err) {
                 showState('Не получилось загрузить правила.', true, true);
               }
-            } else {
-              stack.push({ level: 'order_choice', scope: 'topic', scopeId: item.id, title: item.title });
-              renderCrumbs();
-              render(false);
-            }
-          },
-          'topics', isBack);
-        if (purpose === 'tasks' && topics.some(t => !t.is_locked && t.task_count > 0) && listScreen) {
-          const wholeBtn = document.createElement('button');
-          wholeBtn.className = 'add-row-btn';
-          wholeBtn.style.cssText = 'width:100%;margin-bottom:14px;padding:16px;font-size:15.5px;color:var(--blue-dark);';
-          wholeBtn.textContent = '🎯 Решить весь раздел целиком';
-          wholeBtn.onclick = () => {
-            stack.push({ level: 'order_choice', scope: 'section', scopeId: current.sectionId, title: current.title });
-            renderCrumbs();
-            render(false);
-          };
-          listScreen.insertBefore(wholeBtn, listScreen.firstChild);
+            },
+            'topics', isBack);
         }
       } else if (current.level === 'order_choice') {
         renderOrderChoice(current.scope, current.scopeId, current.title, isBack);
@@ -2431,8 +2523,7 @@
   async function getDefaultSubject() {
     const subjects = await apiGet('/api/subjects');
     if (!subjects.length) return null;
-    const rus = subjects.find((s) => /русск/i.test(s.title));
-    return rus || subjects[0];
+    return subjects[0];
   }
 
   function switchTab(tab) {
@@ -2469,7 +2560,11 @@
           renderCrumbs();
           render(false);
         }).catch((err) => {
-          showState('Не получилось загрузить. ' + err.message, true, true);
+          showState('Не получилось загрузить. ' + err.message, true, true, false, () => {
+            trainerInitialized = false;
+            activeTab = null;
+            switchTab('challenges');
+          });
         });
       } else {
         stack = trainerStack;
@@ -2489,7 +2584,10 @@
         renderProfileCrumbs();
         renderProfile(false);
       }).catch((err) => {
-        showState('Не получилось загрузить. ' + err.message, true, true);
+        showState('Не получилось загрузить. ' + err.message, true, true, false, () => {
+          activeTab = null;
+          switchTab(tab);
+        });
       });
     }
   }
@@ -2767,7 +2865,7 @@
         grid.appendChild(cell('⏱', 'В приложении', `${Math.round((stats.time_today_seconds || 0) / 60)} мин`));
         const bestTestScore = stats.tests && stats.tests.length ? Math.max(...stats.tests.map(t => t.actual_score ?? t.primary_score ?? 0)) : null;
         grid.appendChild(cell('🏆', 'Лучший балл теста', bestTestScore !== null ? bestTestScore : '—'));
-        grid.appendChild(cell('📅', 'Дней подряд', stats.streak_days || 0));
+        grid.appendChild(cell('🔥', 'Дней подряд', stats.streak_days || 0));
         screen.appendChild(grid);
 
         if (stats.best_answer_streak > 0) {
@@ -2807,7 +2905,7 @@
           const dateStr = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
           const dayData = dailyStats.days.find((x) => x.date === dateStr) || {};
           last7.push({
-            label: ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'][d.getDay()],
+            label: String(d.getDate()).padStart(2, '0') + '.' + String(d.getMonth() + 1).padStart(2, '0'),
             isToday: dateStr === todayStr,
             total: dayData.total_solved || 0,
             correct: dayData.correct_solved || 0,
@@ -3291,7 +3389,7 @@
       }, isBack);
     }
     } catch (err) {
-      showState('Не получилось загрузить. ' + err.message, true, true, isBack);
+      showState('Не получилось загрузить. ' + err.message, true, true, isBack, () => renderProfile(false));
     }
   }
 
@@ -3311,8 +3409,7 @@
     try {
       const subjects = await apiGet('/api/subjects');
       if (subjects.length) {
-        const rus = subjects.find((s) => /русск/i.test(s.title));
-        const chosen = rus || subjects[0];
+        const chosen = subjects[0];
         hwStack = await buildHomeworkEntry(chosen.id);
         stack = hwStack;
       }
