@@ -521,16 +521,12 @@
   .hw-status.locked { color: var(--text-soft); opacity: 0.6; }
 
   /* --- Статистика (дизайн под референс) --- */
-  .stat-predict-card { background: linear-gradient(135deg, var(--accent), #6FC6FF); color: white; border-radius: 20px; padding: 18px; margin-bottom: 16px; }
-  .stat-predict-label { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; opacity: 0.9; margin-bottom: 8px; }
-  .stat-predict-score { font-family: 'Jost', sans-serif; font-size: 34px; font-weight: 800; }
-  .stat-predict-score span { font-size: 15px; font-weight: 600; opacity: 0.85; margin-left: 2px; }
-  .stat-predict-text { font-size: 13px; line-height: 1.5; margin-top: 10px; opacity: 0.96; }
-  .stat-predict-updated { font-size: 11px; opacity: 0.75; margin-top: 10px; }
+  .stat-predict-card { background: var(--blue-tint); border-radius: 20px; padding: 16px 18px; margin-bottom: 16px; }
+  .stat-predict-label { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; color: var(--blue-dark); margin-bottom: 4px; }
+  .stat-predict-text { font-size: 13.5px; line-height: 1.5; color: var(--text); }
   .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
   .stat-cell { background: var(--bg-soft); border-radius: 16px; padding: 14px; }
-  .stat-cell-icon { width: 22px; height: 22px; color: var(--accent); margin-bottom: 8px; }
-  .stat-cell-icon svg { width: 100%; height: 100%; }
+  .stat-cell-icon { font-size: 22px; margin-bottom: 6px; line-height: 1; }
   .stat-cell-label { font-size: 12px; color: var(--text-soft); font-weight: 600; }
   .stat-cell-value { font-family: 'Jost', sans-serif; font-size: 21px; font-weight: 800; margin-top: 2px; }
   .stat-cell-sub { font-size: 11px; color: var(--text-soft); font-weight: 600; margin-top: 2px; }
@@ -546,15 +542,15 @@
     display: flex; align-items: center; gap: 10px; width: 100%;
     background: var(--red-tint); border: none; border-radius: 16px; padding: 14px 16px;
     font-family: 'Nunito', sans-serif; font-size: 13.5px; font-weight: 700; color: var(--red-dark);
-    cursor: pointer; text-align: left; margin-top: 16px;
+    cursor: pointer; text-align: left; margin: 16px 0 24px;
   }
-  .stat-report-btn svg { width: 20px; height: 20px; flex-shrink: 0; }
+  .stat-report-btn span:first-child { font-size: 18px; flex-shrink: 0; }
 
-  .stat-chart-title { font-size: 13px; color: var(--text-soft); font-weight: 700; margin: 20px 0 10px; }
-  .stat-chart-pager { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; gap: 12px; margin: 0 -16px; padding: 0 16px 4px; -webkit-overflow-scrolling: touch; }
+  .stat-chart-title { font-size: 13px; color: var(--text-soft); font-weight: 700; margin: 20px 0 10px; text-align: center; }
+  .stat-chart-pager { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; width: 100%; }
   .stat-chart-pager::-webkit-scrollbar { display: none; }
-  .stat-chart-page { flex: 0 0 100%; scroll-snap-align: start; background: var(--bg-soft); border-radius: 16px; padding: 14px 12px 12px; }
-  .stat-chart-page-title { font-size: 12px; font-weight: 700; color: var(--text-soft); margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.02em; }
+  .stat-chart-page { flex: 0 0 100%; width: 100%; scroll-snap-align: start; background: var(--bg-soft); border-radius: 16px; padding: 14px 12px 12px; box-sizing: border-box; }
+  .stat-chart-page-title { font-size: 12px; font-weight: 700; color: var(--text-soft); margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.02em; text-align: center; }
   .stat-chart-bars { display: flex; align-items: flex-end; justify-content: space-between; gap: 5px; height: 110px; }
   .stat-chart-col { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; gap: 4px; }
   .stat-chart-num { font-family: 'Jost', sans-serif; font-size: 10.5px; font-weight: 800; color: var(--text-soft); }
@@ -563,6 +559,30 @@
   .stat-chart-dots { display: flex; justify-content: center; gap: 6px; margin-top: 10px; }
   .stat-chart-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--border); transition: background 0.2s ease; }
   .stat-chart-dot.active { background: var(--accent); }
+
+  /* --- Рейтинг (дизайн под референс, синяя палитра) --- */
+  .lb-segmented { display: flex; background: var(--bg-soft); border-radius: 14px; padding: 4px; gap: 4px; margin-bottom: 20px; }
+  .lb-segment { flex: 1; border: none; background: none; padding: 9px 4px; border-radius: 10px; font-family: 'Jost', sans-serif; font-size: 11.5px; font-weight: 700; color: var(--text-soft); cursor: pointer; transition: background 0.15s ease, color 0.15s ease; }
+  .lb-segment.active { background: var(--accent); color: white; }
+  .lb-podium { display: flex; align-items: flex-end; justify-content: center; gap: 10px; margin-bottom: 24px; }
+  .lb-podium-item { display: flex; flex-direction: column; align-items: center; gap: 2px; flex: 1; max-width: 110px; }
+  .lb-avatar-wrap { position: relative; }
+  .lb-avatar { width: 56px; height: 56px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-family: 'Jost', sans-serif; font-weight: 800; font-size: 20px; color: white; border: 3px solid var(--bg); box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+  .lb-podium-item.first .lb-avatar { width: 72px; height: 72px; font-size: 26px; border-color: var(--accent); }
+  .lb-crown { position: absolute; top: -18px; left: 50%; transform: translateX(-50%); font-size: 22px; }
+  .lb-rank-badge { position: absolute; bottom: -4px; left: 50%; transform: translateX(-50%); width: 22px; height: 22px; border-radius: 50%; background: var(--accent); color: white; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 800; border: 2px solid var(--bg); }
+  .lb-podium-name { font-family: 'Jost', sans-serif; font-weight: 800; font-size: 13px; text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; margin-top: 8px; }
+  .lb-podium-points { font-size: 12px; font-weight: 700; color: var(--text-soft); }
+  .lb-list-header { display: flex; align-items: center; gap: 12px; padding: 0 4px 8px; font-size: 11.5px; font-weight: 700; color: var(--text-soft); text-transform: uppercase; letter-spacing: 0.03em; }
+  .lb-list-header .lb-col-rank { width: 22px; }
+  .lb-list-header .lb-col-player { flex: 1; }
+  .lb-row { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 14px; margin-bottom: 8px; background: var(--blue-tint); }
+  .lb-row-rank { width: 22px; font-family: 'Jost', sans-serif; font-weight: 800; font-size: 13px; color: var(--accent); flex-shrink: 0; }
+  .lb-row-avatar { width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-family: 'Jost', sans-serif; font-weight: 800; font-size: 13px; color: white; flex-shrink: 0; }
+  .lb-row-name { flex: 1; font-size: 13.5px; font-weight: 700; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .lb-row-points { font-family: 'Jost', sans-serif; font-weight: 800; font-size: 13px; color: var(--text); flex-shrink: 0; }
+  .lb-row.me { background: var(--accent); }
+  .lb-row.me .lb-row-rank, .lb-row.me .lb-row-name, .lb-row.me .lb-row-points { color: white; }
 </style>
 </head>
 <body>
@@ -2704,64 +2724,50 @@
       swapScreen((screen) => {
         const sub = document.createElement('div');
         sub.className = 'hw-subtitle';
-        sub.textContent = 'Прогресс и прогноз балла за экзамен';
+        sub.textContent = 'Прогресс по предмету';
         screen.appendChild(sub);
 
-        const predicted = stats.predicted_score || { score: 0, best_topic: null, untouched_count: 0, total_topics: 0 };
-        const pluralTopics = (n) => {
-          const mod10 = n % 10, mod100 = n % 100;
-          if (mod10 === 1 && mod100 !== 11) return 'тема вообще не проработана';
-          if ([2, 3, 4].includes(mod10) && ![12, 13, 14].includes(mod100)) return 'темы вообще не проработаны';
-          return 'тем вообще не проработаны';
-        };
-        let predictText;
+        const predicted = stats.predicted_score || { best_topic: null, untouched_count: 0, total_topics: 0 };
+        let supportText;
         if (!predicted.total_topics) {
-          predictText = 'Пока нет тем для оценки прогноза.';
+          supportText = 'Пока нет тем для отслеживания прогресса — начните с первого раздела.';
         } else if (predicted.best_topic && predicted.untouched_count > 0) {
-          predictText = `Вы хорошо справляетесь с темой «${predicted.best_topic}», но остальные ${predicted.untouched_count} ${pluralTopics(predicted.untouched_count)}. Необходимо изучить все разделы и потренироваться в их применении.`;
+          supportText = `Хорошо идёте по теме «${predicted.best_topic}»! Впереди ещё ${predicted.untouched_count} ${predicted.untouched_count === 1 ? 'непроработанная тема' : 'непроработанных тем'} — не останавливайтесь.`;
         } else if (predicted.best_topic) {
-          predictText = `Вы прорабатываете темы предмета — лучше всего пока получается «${predicted.best_topic}». Продолжайте в том же духе.`;
+          supportText = `Лучше всего пока получается «${predicted.best_topic}». Продолжайте в том же духе!`;
         } else {
-          predictText = 'Начните решать задания, чтобы получить прогноз балла.';
+          supportText = 'Начните решать задания — и здесь появится персональная подсказка.';
         }
 
         const predictCard = document.createElement('div');
         predictCard.className = 'stat-predict-card';
         predictCard.innerHTML = `
-          <div class="stat-predict-label">✨ Прогнозируемый балл</div>
-          <div class="stat-predict-score">${predicted.score}<span>из 100</span></div>
-          <div class="stat-predict-text">${escapeHtml(predictText)}</div>
-          <div class="stat-predict-updated">Оценка по результатам домашних заданий. Обновлено только что.</div>
+          <div class="stat-predict-label">💪 Как дела с предметом</div>
+          <div class="stat-predict-text" style="margin-top:2px;">${escapeHtml(supportText)}</div>
         `;
         screen.appendChild(predictCard);
 
         const grid = document.createElement('div');
         grid.className = 'stat-grid';
-        const cell = (iconSvg, label, value, sub) => {
+        const cell = (emoji, label, value, sub) => {
           const c = document.createElement('div');
           c.className = 'stat-cell';
           c.innerHTML = `
-            <div class="stat-cell-icon">${iconSvg}</div>
+            <div class="stat-cell-icon">${emoji}</div>
             <div class="stat-cell-label">${label}</div>
             <div class="stat-cell-value">${value}</div>
             ${sub ? `<div class="stat-cell-sub">${sub}</div>` : ''}
           `;
           return c;
         };
-        const iconTasks = '<svg viewBox="0 0 24 24" fill="none"><path d="M4 6h16M4 12h16M4 18h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
-        const iconAccuracy = '<svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2"/></svg>';
-        const iconLessons = '<svg viewBox="0 0 24 24" fill="none"><path d="M4 5.5C4 4.7 4.7 4 5.5 4H12V20H5.5C4.7 20 4 19.3 4 18.5V5.5Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M20 5.5C20 4.7 19.3 4 18.5 4H12V20H18.5C19.3 20 20 19.3 20 18.5V5.5Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>';
-        const iconTime = '<svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8.5" stroke="currentColor" stroke-width="2"/><path d="M12 7.5V12L15 14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 
-        grid.appendChild(cell(iconTasks, 'Решено заданий', stats.total_solved || 0, `+${stats.solved_this_month || 0} за месяц`));
-        grid.appendChild(cell(iconAccuracy, 'Точность', `${stats.accuracy || 0}%`, `верно ${stats.correct_solved || 0}`));
-        grid.appendChild(cell(iconLessons, 'Уроки', `${stats.homework_done || 0} / ${stats.homework_total || 0}`));
-        grid.appendChild(cell(iconTime, 'В приложении', `${Math.round((stats.time_today_seconds || 0) / 60)} мин`));
-        const iconTestScore = '<svg viewBox="0 0 24 24" fill="none"><path d="M12 3l2.6 5.6 6.1.6-4.6 4.1 1.3 6-5.4-3.2-5.4 3.2 1.3-6-4.6-4.1 6.1-.6z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>';
-        const iconStreakDays = '<svg viewBox="0 0 24 24" fill="none"><path d="M12 3c0 4-4 5-4 9a4 4 0 008 0c0-1.2-.6-2-1.2-2.8.2 1.6-.8 2.3-1.3 1.5-.6-1-.2-2.3.5-3.2-1.6.4-2-1.6-2-4.5z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>';
+        grid.appendChild(cell('📚', 'Решено заданий', stats.total_solved || 0, `+${stats.solved_this_month || 0} за месяц`));
+        grid.appendChild(cell('🎯', 'Точность', `${stats.accuracy || 0}%`, `верно ${stats.correct_solved || 0}`));
+        grid.appendChild(cell('📖', 'Уроки', `${stats.homework_done || 0} / ${stats.homework_total || 0}`));
+        grid.appendChild(cell('⏱', 'В приложении', `${Math.round((stats.time_today_seconds || 0) / 60)} мин`));
         const bestTestScore = stats.tests && stats.tests.length ? Math.max(...stats.tests.map(t => t.actual_score ?? t.primary_score ?? 0)) : null;
-        grid.appendChild(cell(iconTestScore, 'Лучший балл теста', bestTestScore !== null ? bestTestScore : '—'));
-        grid.appendChild(cell(iconStreakDays, 'Дней подряд', stats.streak_days || 0));
+        grid.appendChild(cell('🏆', 'Лучший балл теста', bestTestScore !== null ? bestTestScore : '—'));
+        grid.appendChild(cell('📅', 'Дней подряд', stats.streak_days || 0));
         screen.appendChild(grid);
 
         if (stats.best_answer_streak > 0) {
@@ -2786,10 +2792,10 @@
         detailLink.onclick = () => { profileStack.push({ level: 'profile_tasks', subjectId: current.subjectId, title: 'История' }); renderProfileCrumbs(); renderProfile(false); };
         screen.appendChild(detailLink);
 
-        // --- Листаемый график: время в приложении / решено верно-неверно / баллы тестов ---
+        // --- Листаемый график: решено верно/всего, время в приложении, баллы тестов ---
         const chartTitle = document.createElement('div');
         chartTitle.className = 'stat-chart-title';
-        chartTitle.textContent = 'История за последние 7 дней — листайте вправо';
+        chartTitle.textContent = 'История за 7 дней — листайте вправо';
         screen.appendChild(chartTitle);
 
         const now = new Date();
@@ -2874,15 +2880,14 @@
         }
         screen.appendChild(dots);
         pager.addEventListener('scroll', () => {
-          const idx = Math.round(pager.scrollLeft / pager.clientWidth);
+          if (!pager.clientWidth) return;
+          const idx = Math.min(2, Math.max(0, Math.round(pager.scrollLeft / pager.clientWidth)));
           [...dots.children].forEach((dot, i) => dot.classList.toggle('active', i === idx));
         });
 
         const reportBtn = document.createElement('button');
         reportBtn.className = 'stat-report-btn';
-        reportBtn.innerHTML = `
-          <svg viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="7" stroke="currentColor" stroke-width="1.6"/><path d="M10 7V10.5M10 13.2V13.3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
-          <span>Сообщить об ошибке</span>`;
+        reportBtn.innerHTML = `<span>🐞</span><span>Сообщить об ошибке</span>`;
         reportBtn.onclick = () => promptReportError({ subject_id: current.subjectId });
         screen.appendChild(reportBtn);
       }, isBack);
@@ -2972,9 +2977,12 @@
       if (leaderboardType === undefined) leaderboardType = 'correct_tasks';
       const rows = await apiGet(`/api/subjects/${current.subjectId}/leaderboard?type=${leaderboardType}`);
       const myId = String(tg?.initDataUnsafe?.user?.id || '');
+      const PASTEL_COLORS = ['#FFB4A8', '#F5B8E0', '#FFDB70', '#C9B8F5', '#A8E6D4', '#A8D8F5'];
+      const initialOf = (name) => (name || '?').trim().charAt(0).toUpperCase();
+
       swapScreen((screen) => {
-        const tabs = document.createElement('div');
-        tabs.style.cssText = 'display:flex;gap:6px;margin-bottom:16px;';
+        const segmented = document.createElement('div');
+        segmented.className = 'lb-segmented';
         const tabDefs = [
           { key: 'total_tasks', label: 'Решено всего' },
           { key: 'correct_tasks', label: 'Верно решено' },
@@ -2982,13 +2990,12 @@
         ];
         tabDefs.forEach((tab) => {
           const btn = document.createElement('button');
-          const active = leaderboardType === tab.key;
+          btn.className = 'lb-segment' + (leaderboardType === tab.key ? ' active' : '');
           btn.textContent = tab.label;
-          btn.style.cssText = `flex:1;padding:9px 6px;border-radius:10px;border:2px solid ${active ? 'var(--blue)' : 'var(--border)'};background:${active ? 'var(--blue-tint)' : 'var(--bg)'};color:${active ? 'var(--blue-dark)' : 'var(--text-soft)'};font-family:'Jost',sans-serif;font-size:11.5px;font-weight:800;cursor:pointer;`;
           btn.onclick = () => { leaderboardType = tab.key; renderProfile(false); };
-          tabs.appendChild(btn);
+          segmented.appendChild(btn);
         });
-        screen.appendChild(tabs);
+        screen.appendChild(segmented);
 
         if (!rows.length) {
           const p = document.createElement('p');
@@ -3003,58 +3010,73 @@
 
         if (podium.length) {
           const podiumWrap = document.createElement('div');
-          podiumWrap.style.cssText = 'display:flex;align-items:flex-end;justify-content:center;gap:8px;margin-bottom:20px;';
+          podiumWrap.className = 'lb-podium';
           const order = podium.length >= 2 ? [1, 0, 2] : [0];
-          const heights = { 0: 92, 1: 72, 2: 58 };
-          const medals = { 0: '🥇', 1: '🥈', 2: '🥉' };
           order.forEach((idx) => {
             const p = podium[idx];
             if (!p) return;
-            const col = document.createElement('div');
-            col.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;max-width:110px;';
-            const medal = document.createElement('div');
-            medal.style.fontSize = '26px';
-            medal.textContent = medals[idx];
-            col.appendChild(medal);
+            const item = document.createElement('div');
+            item.className = 'lb-podium-item' + (idx === 0 ? ' first' : '');
+            const avatarWrap = document.createElement('div');
+            avatarWrap.className = 'lb-avatar-wrap';
+            if (idx === 0) {
+              const crown = document.createElement('div');
+              crown.className = 'lb-crown';
+              crown.textContent = '👑';
+              avatarWrap.appendChild(crown);
+            }
+            const avatar = document.createElement('div');
+            avatar.className = 'lb-avatar';
+            avatar.style.background = PASTEL_COLORS[idx % PASTEL_COLORS.length];
+            avatar.textContent = initialOf(p.name);
+            avatarWrap.appendChild(avatar);
+            const rankBadge = document.createElement('div');
+            rankBadge.className = 'lb-rank-badge';
+            rankBadge.textContent = idx + 1;
+            avatarWrap.appendChild(rankBadge);
+            item.appendChild(avatarWrap);
             const name = document.createElement('div');
-            name.style.cssText = 'font-family:\'Jost\',sans-serif;font-weight:800;font-size:12.5px;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%;';
+            name.className = 'lb-podium-name';
             name.textContent = p.name;
-            col.appendChild(name);
-            const bar = document.createElement('div');
-            bar.style.cssText = `width:100%;height:${heights[idx]}px;background:var(--yellow-tint);border:2px solid var(--yellow);border-radius:10px 10px 0 0;display:flex;align-items:center;justify-content:center;font-family:'Jost',sans-serif;font-weight:800;font-size:15px;`;
-            bar.textContent = p.points;
-            col.appendChild(bar);
-            podiumWrap.appendChild(col);
+            item.appendChild(name);
+            const points = document.createElement('div');
+            points.className = 'lb-podium-points';
+            points.textContent = p.points + ' очков';
+            item.appendChild(points);
+            podiumWrap.appendChild(item);
           });
           screen.appendChild(podiumWrap);
         }
 
         if (rest.length) {
-          const list = document.createElement('div');
-          list.className = 'list';
+          const header = document.createElement('div');
+          header.className = 'lb-list-header';
+          header.innerHTML = '<span class="lb-col-rank">Ранг</span><span class="lb-col-player">Игрок</span><span>Очки</span>';
+          screen.appendChild(header);
+
           rest.forEach((row) => {
-            const item = document.createElement('div');
             const isMe = String(row.telegram_id) === myId;
-            item.className = 'row-card';
-            item.style.cssText = isMe ? 'border-color:var(--blue);background:var(--blue-tint);' : '';
-            const place = document.createElement('div');
-            place.style.cssText = 'font-family:\'Jost\',sans-serif;font-weight:800;font-size:14px;color:var(--text-soft);width:26px;flex-shrink:0;';
-            place.textContent = '#' + row.place;
-            item.appendChild(place);
-            const info = document.createElement('div');
-            info.style.flex = '1';
-            const t = document.createElement('div');
-            t.className = 'row-title';
-            t.textContent = row.name + (isMe ? ' (вы)' : '');
-            info.appendChild(t);
-            item.appendChild(info);
+            const item = document.createElement('div');
+            item.className = 'lb-row' + (isMe ? ' me' : '');
+            const rank = document.createElement('div');
+            rank.className = 'lb-row-rank';
+            rank.textContent = row.place;
+            item.appendChild(rank);
+            const avatar = document.createElement('div');
+            avatar.className = 'lb-row-avatar';
+            avatar.style.background = isMe ? 'rgba(255,255,255,0.3)' : PASTEL_COLORS[row.place % PASTEL_COLORS.length];
+            avatar.textContent = initialOf(row.name);
+            item.appendChild(avatar);
+            const name = document.createElement('div');
+            name.className = 'lb-row-name';
+            name.textContent = row.name + (isMe ? ' (вы)' : '');
+            item.appendChild(name);
             const pts = document.createElement('div');
-            pts.style.cssText = 'font-family:\'Jost\',sans-serif;font-weight:800;font-size:14px;color:var(--yellow-dark);flex-shrink:0;';
-            pts.textContent = row.points + ' \u2b50';
+            pts.className = 'lb-row-points';
+            pts.textContent = row.points;
             item.appendChild(pts);
-            list.appendChild(item);
+            screen.appendChild(item);
           });
-          screen.appendChild(list);
         }
       }, isBack);
     } else if (current.level === 'profile_challenges') {
