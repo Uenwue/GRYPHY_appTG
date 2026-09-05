@@ -613,7 +613,22 @@
   const crumbsEl = document.getElementById('crumbs');
 
   let stack = [{ level: 'subjects', title: 'Предметы' }];
+  let trainerStack = stack;
+  let hwStack = [{ level: 'subjects', title: 'Предметы' }];
+  let trainerInitialized = false;
   let currentTasks = [];
+
+  async function buildHomeworkEntry(subjectId) {
+    try {
+      const hwSections = await apiGet(`/api/subjects/${subjectId}/sections?kind=homework`);
+      if (hwSections.length === 1) {
+        return [{ level: 'homework_list', sectionId: hwSections[0].id, title: 'Домашнее задание' }];
+      }
+      return [{ level: 'sections', subjectId, purpose: 'homework', title: 'Домашнее задание' }];
+    } catch (err) {
+      return [{ level: 'sections', subjectId, purpose: 'homework', title: 'Домашнее задание' }];
+    }
+  }
 
   const ICONS = {
     subjects: `<svg class="level-icon" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -1798,7 +1813,6 @@
       const labels = blocks.labels || {};
 
       const items = [
-        { key: 'homework', title: labels.homework?.title || 'ДЗ', sub: labels.homework?.desc || 'Уроки открываются по порядку', hidden: blocks.homework_hidden, emoji: '📓', color: '#F5B8E0' },
         { key: 'tasks', title: labels.tasks?.title || 'Задания', sub: labels.tasks?.desc || 'Тренируйтесь по темам и разделам', hidden: blocks.tasks_hidden, emoji: '📂', color: '#A8D8F5' },
         { key: 'rules', title: labels.rules?.title || 'Правила', sub: labels.rules?.desc || 'Справочник по темам курса', hidden: blocks.rules_hidden, emoji: '📖', color: '#A8E6D4' },
         { key: 'tests', title: labels.tests?.title || 'Тесты', sub: labels.tests?.desc || 'Проверьте себя в формате экзамена', hidden: blocks.tests_hidden, emoji: '🧪', color: '#FFDB70' },
@@ -1829,24 +1843,8 @@
         arrow.className = 'item-arrow-btn';
         arrow.innerHTML = '<svg viewBox="0 0 20 20" fill="none"><path d="M8 5L13 10L8 15" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
         card.appendChild(arrow);
-        card.onclick = async () => {
+        card.onclick = () => {
           if (item.key === 'tests') { stack.push({ level: 'tests', subjectId, title: 'Тесты' }); render(false); return; }
-          if (item.key === 'homework') {
-            showLoading('Загружаем', false);
-            try {
-              const hwSections = await apiGet(`/api/subjects/${subjectId}/sections?kind=homework`);
-              if (hwSections.length === 1) {
-                stack.push({ level: 'homework_list', sectionId: hwSections[0].id, title: 'Домашнее задание' });
-              } else {
-                stack.push({ level: 'sections', subjectId, purpose: 'homework', title: 'Домашнее задание' });
-              }
-            } catch (err) {
-              stack.push({ level: 'sections', subjectId, purpose: 'homework', title: 'Домашнее задание' });
-            }
-            renderCrumbs();
-            render(false);
-            return;
-          }
           stack.push({ level: 'sections', subjectId, purpose: item.key, title: 'Разделы' });
           render(false);
         };
@@ -2369,110 +2367,6 @@
     return rus || subjects[0];
   }
 
-  const CHALLENGE_ICONS = { streak: '⚡', tasks_count: '📚', tests_count: '🏆' };
-  const CATEGORY_LABELS = { month: 'Задания месяца', week: 'Задания недели', weekend: 'Задания выходных', day: 'Задания дня' };
-  const MONTH_NAMES_GEN = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
-
-  async function renderChallengesTab(subject) {
-    try {
-      const items = await apiGet(`/api/subjects/${subject.id}/challenges`);
-      swapScreen((screen) => {
-        if (!items.length) {
-          const p = document.createElement('p');
-          p.className = 'state-msg';
-          p.textContent = 'Учитель пока не добавил заданий месяца.';
-          screen.appendChild(p);
-          return;
-        }
-
-        const byCategory = {};
-        items.forEach((it) => { (byCategory[it.category] = byCategory[it.category] || []).push(it); });
-
-        const now = new Date();
-        const daysLeftInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate() - now.getDate();
-        const hoursLeftInDay = 23 - now.getHours();
-
-        // Hero-карточка: главное задание месяца (если есть), иначе просто общий заголовок
-        const monthItems = byCategory.month || [];
-        const hero = document.createElement('div');
-        hero.style.cssText = 'background:var(--green);width:calc(100% + 32px);margin-left:-16px;margin-right:-16px;padding:20px 16px;margin-bottom:20px;color:white;';
-        const heroTitle = document.createElement('div');
-        heroTitle.style.cssText = "font-family:'Jost',sans-serif;font-weight:800;font-size:26px;";
-        heroTitle.textContent = 'Задания ' + MONTH_NAMES_GEN[now.getMonth()];
-        hero.appendChild(heroTitle);
-        const heroSub = document.createElement('div');
-        heroSub.style.cssText = 'opacity:0.9;font-size:13px;font-weight:800;margin-top:4px;text-transform:uppercase;letter-spacing:0.03em;';
-        heroSub.textContent = '⏳ ' + daysLeftInMonth + (daysLeftInMonth === 1 ? ' день' : ' дней');
-        hero.appendChild(heroSub);
-
-        if (monthItems.length) {
-          const main = monthItems[0];
-          const pct = Math.min(100, Math.round((main.progress / main.target) * 100));
-          const innerCard = document.createElement('div');
-          innerCard.style.cssText = 'background:white;border-radius:16px;padding:18px;margin-top:18px;box-shadow:0 4px 14px rgba(0,0,0,0.12);';
-          innerCard.innerHTML = `
-            <div style="font-family:'Jost',sans-serif;font-weight:800;font-size:17px;color:#3C3C3C;">${main.title}</div>
-            <div style="background:#F0F0F0;border-radius:10px;height:14px;overflow:hidden;margin:12px 0 6px;">
-              <div style="height:100%;width:${pct}%;background:var(--green);border-radius:10px;transition:width 0.4s var(--bounce);"></div>
-            </div>
-            <div style="text-align:center;font-family:'Jost',sans-serif;font-weight:800;font-size:13px;color:#777777;">${main.progress} / ${main.target}</div>
-          `;
-          hero.appendChild(innerCard);
-        }
-        screen.appendChild(hero);
-
-        let isFirstCategory = true;
-        ['day', 'week', 'weekend'].forEach((cat) => {
-          const group = byCategory[cat];
-          if (!group || !group.length) return;
-          if (!isFirstCategory) {
-            const divider = document.createElement('div');
-            divider.style.cssText = 'border-top:1px solid var(--border);margin:8px 0 20px;';
-            screen.appendChild(divider);
-          }
-          isFirstCategory = false;
-          const head = document.createElement('div');
-          head.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin:0 0 12px;';
-          const headLabel = document.createElement('span');
-          headLabel.style.cssText = "font-size:13.5px;font-weight:800;color:var(--text-soft);text-transform:uppercase;letter-spacing:0.03em;";
-          headLabel.textContent = CATEGORY_LABELS[cat];
-          head.appendChild(headLabel);
-          if (cat === 'day') {
-            const timeLabel = document.createElement('span');
-            timeLabel.style.cssText = 'font-size:12px;font-weight:800;color:var(--yellow-dark, #B8860B);';
-            timeLabel.textContent = '⏱ ' + hoursLeftInDay + ' ч';
-            head.appendChild(timeLabel);
-          }
-          screen.appendChild(head);
-
-          group.forEach((it, i) => {
-            const pct = Math.min(100, Math.round((it.progress / it.target) * 100));
-            const done = it.progress >= it.target;
-            const row = document.createElement('div');
-            row.style.cssText = 'display:flex;align-items:center;gap:14px;padding:14px 0;' + (i < group.length - 1 ? 'border-bottom:1px solid var(--border);' : '');
-            const info = document.createElement('div');
-            info.style.flex = '1';
-            info.innerHTML = `
-              <div style="font-family:'Jost',sans-serif;font-weight:700;font-size:17px;${done ? 'color:var(--green-dark);' : ''}">${done ? '✅ ' : ''}${it.title}</div>
-              <div style="background:var(--bg-soft);border-radius:10px;height:12px;overflow:hidden;margin:8px 0 4px;">
-                <div style="height:100%;width:${pct}%;background:${done ? 'var(--green)' : 'var(--yellow)'};border-radius:10px;transition:width 0.4s var(--bounce);"></div>
-              </div>
-              <div style="font-size:13.5px;font-weight:700;color:var(--text-soft);">${it.progress} / ${it.target}</div>
-            `;
-            row.appendChild(info);
-            const icon = document.createElement('div');
-            icon.style.cssText = 'font-size:30px;flex-shrink:0;';
-            icon.textContent = CHALLENGE_ICONS[it.challenge_type] || '🎁';
-            row.appendChild(icon);
-            screen.appendChild(row);
-          });
-        });
-      }, false);
-    } catch (err) {
-      showState('Не получилось загрузить задания. ' + err.message, true, true);
-    }
-  }
-
   function switchTab(tab) {
     if (activeTab === tab) return;
     activeTab = tab;
@@ -2484,6 +2378,7 @@
     const tabTitles = { study: 'Домашнее задание', challenges: 'Тренажёр', rating: 'Рейтинг', stats: 'Статистика', profile: 'Профиль' };
     document.getElementById('headerTitle').textContent = tabTitles[tab] || 'Домашнее задание';
     if (tab === 'study') {
+      stack = hwStack;
       renderCrumbs();
       render(false);
     } else if (tab === 'profile') {
@@ -2491,18 +2386,28 @@
       renderProfileCrumbs();
       renderProfile(false);
     } else if (tab === 'challenges') {
-      crumbsEl.innerHTML = '';
-      crumbsEl.style.display = 'none';
-      showLoading('Загружаем', false);
-      getDefaultSubject().then((subject) => {
-        if (!subject) {
-          showState('Нет доступных предметов.', false, false);
-          return;
-        }
-        renderChallengesTab(subject);
-      }).catch((err) => {
-        showState('Не получилось загрузить. ' + err.message, true, true);
-      });
+      if (!trainerInitialized) {
+        trainerInitialized = true;
+        crumbsEl.innerHTML = '';
+        crumbsEl.style.display = 'none';
+        showLoading('Загружаем', false);
+        getDefaultSubject().then((subject) => {
+          if (!subject) {
+            showState('Нет доступных предметов.', false, false);
+            return;
+          }
+          trainerStack = [{ level: 'subject_home', subjectId: subject.id, title: subject.title }];
+          stack = trainerStack;
+          renderCrumbs();
+          render(false);
+        }).catch((err) => {
+          showState('Не получилось загрузить. ' + err.message, true, true);
+        });
+      } else {
+        stack = trainerStack;
+        renderCrumbs();
+        render(false);
+      }
     } else if (tab === 'rating' || tab === 'stats') {
       showLoading('Загружаем', false);
       getDefaultSubject().then((subject) => {
@@ -2790,7 +2695,7 @@
             status.className = 'item-arrow-btn';
             status.innerHTML = '<svg viewBox="0 0 20 20" fill="none"><path d="M8 5L13 10L8 15" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
             card.appendChild(status);
-            card.onclick = () => { stack = [{ level: 'subject_home', subjectId: s.id, title: s.title }]; switchTab('study'); };
+            card.onclick = () => { trainerStack = [{ level: 'subject_home', subjectId: s.id, title: s.title }]; trainerInitialized = true; switchTab('challenges'); };
             list.appendChild(card);
           });
         }
@@ -3334,7 +3239,8 @@
       if (subjects.length) {
         const rus = subjects.find((s) => /русск/i.test(s.title));
         const chosen = rus || subjects[0];
-        stack = [{ level: 'subject_home', subjectId: chosen.id, title: chosen.title }];
+        hwStack = await buildHomeworkEntry(chosen.id);
+        stack = hwStack;
       }
     } catch (err) {
       // Не получилось узнать список предметов — остаёмся на обычном
