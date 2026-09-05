@@ -515,6 +515,28 @@
   .hw-status.done { color: var(--green); }
   .hw-status.arrow { color: var(--accent); }
   .hw-status.locked { color: var(--text-soft); opacity: 0.6; }
+
+  /* --- Статистика (дизайн под референс) --- */
+  .stat-predict-card { background: linear-gradient(135deg, var(--accent), #8B7CFF); color: white; border-radius: 20px; padding: 18px; margin-bottom: 16px; }
+  .stat-predict-label { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; opacity: 0.9; margin-bottom: 8px; }
+  .stat-predict-score { font-family: 'Jost', sans-serif; font-size: 34px; font-weight: 800; }
+  .stat-predict-score span { font-size: 15px; font-weight: 600; opacity: 0.85; margin-left: 2px; }
+  .stat-predict-text { font-size: 13px; line-height: 1.5; margin-top: 10px; opacity: 0.96; }
+  .stat-predict-updated { font-size: 11px; opacity: 0.75; margin-top: 10px; }
+  .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+  .stat-cell { background: var(--bg-soft); border-radius: 16px; padding: 14px; }
+  .stat-cell-icon { width: 22px; height: 22px; color: var(--accent); margin-bottom: 8px; }
+  .stat-cell-icon svg { width: 100%; height: 100%; }
+  .stat-cell-label { font-size: 12px; color: var(--text-soft); font-weight: 600; }
+  .stat-cell-value { font-family: 'Jost', sans-serif; font-size: 21px; font-weight: 800; margin-top: 2px; }
+  .stat-cell-sub { font-size: 11px; color: var(--text-soft); font-weight: 600; margin-top: 2px; }
+  .stat-streak-banner { display: flex; align-items: center; gap: 12px; background: #FFE4D6; border-radius: 16px; padding: 14px 16px; }
+  html[data-theme="dark"] .stat-streak-banner, html:not([data-theme="light"]) .stat-streak-banner { background: rgba(255, 140, 66, 0.18); }
+  .stat-streak-emoji { font-size: 26px; }
+  .stat-streak-title { display: block; font-weight: 700; font-size: 13.5px; color: #B8562A; }
+  html[data-theme="dark"] .stat-streak-title, html:not([data-theme="light"]) .stat-streak-title { color: #FFB37A; }
+  .stat-streak-value { font-size: 12.5px; color: #B8562A; font-weight: 600; margin-top: 2px; }
+  html[data-theme="dark"] .stat-streak-value, html:not([data-theme="light"]) .stat-streak-value { color: #FFB37A; }
 </style>
 </head>
 <body>
@@ -2776,89 +2798,90 @@
         }
       }, isBack);
     } else if (current.level === 'profile_subject_home') {
-      const [stats, dailyStats] = await Promise.all([
-        apiGet(`/api/subjects/${current.subjectId}/profile`),
-        apiGet(`/api/subjects/${current.subjectId}/daily-stats`),
-      ]);
+      const stats = await apiGet(`/api/subjects/${current.subjectId}/profile`);
       swapScreen((screen) => {
-        const now = new Date();
-        const todayStr = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
-        const todayData = dailyStats.days.find((d) => d.date === todayStr);
-        const openBreakdown = () => { profileStack.push({ level: 'profile_daily_breakdown', subjectId: current.subjectId, title: 'Статистика по дням' }); renderProfileCrumbs(); renderProfile(false); };
+        const sub = document.createElement('div');
+        sub.className = 'hw-subtitle';
+        sub.textContent = 'Прогресс и прогноз балла за экзамен';
+        screen.appendChild(sub);
 
-        const statsGrid = document.createElement('div');
-        statsGrid.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px;';
-        const statCard = (emoji, label, value) => {
-          const c = document.createElement('button');
-          c.style.cssText = 'background:var(--bg-soft);border:none;border-radius:16px;padding:14px;text-align:left;cursor:pointer;display:flex;align-items:center;gap:10px;';
+        const predicted = stats.predicted_score || { score: 0, best_topic: null, untouched_count: 0, total_topics: 0 };
+        const pluralTopics = (n) => {
+          const mod10 = n % 10, mod100 = n % 100;
+          if (mod10 === 1 && mod100 !== 11) return 'тема вообще не проработана';
+          if ([2, 3, 4].includes(mod10) && ![12, 13, 14].includes(mod100)) return 'темы вообще не проработаны';
+          return 'тем вообще не проработаны';
+        };
+        let predictText;
+        if (!predicted.total_topics) {
+          predictText = 'Пока нет тем для оценки прогноза.';
+        } else if (predicted.best_topic && predicted.untouched_count > 0) {
+          predictText = `Вы хорошо справляетесь с темой «${predicted.best_topic}», но остальные ${predicted.untouched_count} ${pluralTopics(predicted.untouched_count)}. Необходимо изучить все разделы и потренироваться в их применении.`;
+        } else if (predicted.best_topic) {
+          predictText = `Вы прорабатываете темы предмета — лучше всего пока получается «${predicted.best_topic}». Продолжайте в том же духе.`;
+        } else {
+          predictText = 'Начните решать задания, чтобы получить прогноз балла.';
+        }
+
+        const predictCard = document.createElement('div');
+        predictCard.className = 'stat-predict-card';
+        predictCard.innerHTML = `
+          <div class="stat-predict-label">✨ Прогнозируемый балл</div>
+          <div class="stat-predict-score">${predicted.score}<span>из 100</span></div>
+          <div class="stat-predict-text">${escapeHtml(predictText)}</div>
+          <div class="stat-predict-updated">Оценка по результатам домашних заданий. Обновлено только что.</div>
+        `;
+        screen.appendChild(predictCard);
+
+        const grid = document.createElement('div');
+        grid.className = 'stat-grid';
+        const cell = (iconSvg, label, value, sub) => {
+          const c = document.createElement('div');
+          c.className = 'stat-cell';
           c.innerHTML = `
-            <span style="font-size:30px;line-height:1;flex-shrink:0;">${emoji}</span>
-            <span style="min-width:0;">
-              <span style="display:block;font-size:12px;color:var(--text-soft);font-weight:600;">${label}</span>
-              <span style="display:block;font-family:'Jost',sans-serif;font-size:22px;font-weight:800;">${value}</span>
-            </span>
+            <div class="stat-cell-icon">${iconSvg}</div>
+            <div class="stat-cell-label">${label}</div>
+            <div class="stat-cell-value">${value}</div>
+            ${sub ? `<div class="stat-cell-sub">${sub}</div>` : ''}
           `;
-          c.onclick = openBreakdown;
           return c;
         };
-        statsGrid.appendChild(statCard('🔥', 'Дней подряд', stats.streak_days || 0));
-        statsGrid.appendChild(statCard('✅', 'Решено верно', todayData ? todayData.correct_solved : '–'));
-        statsGrid.appendChild(statCard('📚', 'Решено всего', todayData ? todayData.total_solved : '–'));
-        statsGrid.appendChild(statCard('🏆', 'Балл теста', todayData && todayData.best_test_score !== null && todayData.best_test_score !== undefined ? todayData.best_test_score : '–'));
-        screen.appendChild(statsGrid);
+        const iconTasks = '<svg viewBox="0 0 24 24" fill="none"><path d="M4 6h16M4 12h16M4 18h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
+        const iconAccuracy = '<svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2"/></svg>';
+        const iconLessons = '<svg viewBox="0 0 24 24" fill="none"><path d="M4 5.5C4 4.7 4.7 4 5.5 4H12V20H5.5C4.7 20 4 19.3 4 18.5V5.5Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M20 5.5C20 4.7 19.3 4 18.5 4H12V20H18.5C19.3 20 20 19.3 20 18.5V5.5Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>';
+        const iconTime = '<svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8.5" stroke="currentColor" stroke-width="2"/><path d="M12 7.5V12L15 14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 
-        const chartTitle = document.createElement('div');
-        chartTitle.className = 'field-hint';
-        chartTitle.style.cssText = 'margin:0 0 10px;text-transform:uppercase;font-weight:800;letter-spacing:0.03em;';
-        chartTitle.textContent = 'Активность за неделю';
-        screen.appendChild(chartTitle);
+        grid.appendChild(cell(iconTasks, 'Решено заданий', stats.total_solved || 0, `+${stats.solved_this_month || 0} за месяц`));
+        grid.appendChild(cell(iconAccuracy, 'Точность', `${stats.accuracy || 0}%`, `верно ${stats.correct_solved || 0}`));
+        grid.appendChild(cell(iconLessons, 'Уроки', `${stats.homework_done || 0} / ${stats.homework_total || 0}`));
+        grid.appendChild(cell(iconTime, 'В приложении', `${Math.round((stats.time_today_seconds || 0) / 60)} мин`));
+        screen.appendChild(grid);
 
-        const weekDays = [];
-        for (let i = 6; i >= 0; i--) {
-          const d = new Date(now);
-          d.setDate(now.getDate() - i);
-          const dateStr = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
-          const dayData = dailyStats.days.find((x) => x.date === dateStr);
-          weekDays.push({
-            label: ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'][d.getDay()],
-            total: dayData ? dayData.total_solved : 0,
-            correct: dayData ? dayData.correct_solved : 0,
-            isToday: dateStr === todayStr,
-          });
+        if (stats.best_answer_streak > 0) {
+          const n = stats.best_answer_streak;
+          const mod10 = n % 10, mod100 = n % 100;
+          const word = (mod10 === 1 && mod100 !== 11) ? 'ответ' : ([2, 3, 4].includes(mod10) && ![12, 13, 14].includes(mod100)) ? 'ответа' : 'ответов';
+          const banner = document.createElement('div');
+          banner.className = 'stat-streak-banner';
+          banner.innerHTML = `
+            <span class="stat-streak-emoji">🔥</span>
+            <span>
+              <span class="stat-streak-title">Рекорд стрика в практике</span>
+              <span class="stat-streak-value">${n} ${word} подряд</span>
+            </span>
+          `;
+          screen.appendChild(banner);
         }
-        const maxVal = Math.max(1, ...weekDays.map((d) => d.total));
-
-        const chart = document.createElement('div');
-        chart.style.cssText = 'background:var(--bg);border:2px solid var(--border);border-radius:16px;padding:16px 12px 12px;margin-bottom:16px;box-shadow:0 2px 8px rgba(60,60,60,0.05);display:flex;align-items:flex-end;justify-content:space-between;gap:6px;height:130px;';
-        weekDays.forEach((d) => {
-          const col = document.createElement('div');
-          col.style.cssText = 'flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;gap:4px;';
-          if (d.total > 0) {
-            const numLabel = document.createElement('div');
-            numLabel.style.cssText = "font-family:'Jost',sans-serif;font-size:11px;font-weight:800;color:var(--text-soft);";
-            numLabel.textContent = d.total;
-            col.appendChild(numLabel);
-          }
-          const barTrack = document.createElement('div');
-          const barHeight = d.total > 0 ? Math.max(6, Math.round((d.total / maxVal) * 70)) : 4;
-          barTrack.style.cssText = `width:100%;max-width:26px;height:${barHeight}px;border-radius:6px;background:${d.isToday ? 'var(--green)' : 'var(--green-tint)'};transition:height 0.4s var(--bounce);`;
-          col.appendChild(barTrack);
-          const dayLabel = document.createElement('div');
-          dayLabel.style.cssText = `font-size:11px;font-weight:800;color:${d.isToday ? 'var(--green-dark)' : 'var(--text-soft)'};margin-top:2px;`;
-          dayLabel.textContent = d.label;
-          col.appendChild(dayLabel);
-          chart.appendChild(col);
-        });
-        screen.appendChild(chart);
 
         const detailLink = document.createElement('button');
-        detailLink.style.cssText = 'background:none;border:none;color:var(--blue-dark);font-size:12.5px;font-weight:700;cursor:pointer;padding:0 0 16px;text-decoration:underline;';
+        detailLink.style.cssText = 'background:none;border:none;color:var(--accent);font-size:12.5px;font-weight:700;cursor:pointer;padding:16px 0 0;text-decoration:underline;';
         detailLink.textContent = 'Подробная история по темам и тестам →';
         detailLink.onclick = () => { profileStack.push({ level: 'profile_tasks', subjectId: current.subjectId, title: 'История' }); renderProfileCrumbs(); renderProfile(false); };
         screen.appendChild(detailLink);
 
         const wrap = document.createElement('div');
         wrap.className = 'home-choice';
+        wrap.style.marginTop = '16px';
 
         const reportChoice = document.createElement('button');
         reportChoice.className = 'choice-card';
@@ -3488,6 +3511,18 @@
   let isTeacherViewing = false;
   apiGet('/api/me/role').then((r) => { isTeacherViewing = !!r.is_teacher; }).catch(() => {});
   checkProfileSetupThenStart();
+
+  // Heartbeat «время в приложении» — раз в 30 секунд, только пока страница
+  // видима, шлём накопленные секунды на дефолтный предмет пользователя.
+  (function startAppTimeHeartbeat() {
+    const INTERVAL_MS = 30000;
+    let pingSubjectId = null;
+    getDefaultSubject().then((subject) => { if (subject) pingSubjectId = subject.id; }).catch(() => {});
+    setInterval(() => {
+      if (!pingSubjectId || document.visibilityState !== 'visible') return;
+      apiPost(`/api/subjects/${pingSubjectId}/ping`, { seconds: Math.round(INTERVAL_MS / 1000) }).catch(() => {});
+    }, INTERVAL_MS);
+  })();
 </script>
 
 </body>
