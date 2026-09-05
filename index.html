@@ -377,16 +377,20 @@
   .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; }
   .cal-daylabel { text-align: center; font-size: 10.5px; font-weight: 700; color: var(--text-soft); padding-bottom: 4px; }
   .cal-day {
-    position: relative; aspect-ratio: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
-    border-radius: 9px; font-size: 12.5px; font-weight: 700; cursor: pointer; background: transparent;
+    position: relative; aspect-ratio: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+    border-radius: 0; font-size: 13px; font-weight: 600; cursor: pointer; background: transparent;
     border: none; color: var(--text); padding: 0;
   }
   .cal-day.empty { cursor: default; }
-  .cal-day.today { border: 2px solid var(--blue); }
-  .cal-day.selected { background: var(--blue); color: white; }
+  .cal-day-num {
+    display: flex; align-items: center; justify-content: center;
+    width: 30px; height: 30px; border-radius: 50%; transition: background 0.15s ease, color 0.15s ease;
+  }
+  .cal-day.today .cal-day-num { color: var(--accent); font-weight: 800; }
+  .cal-day.selected .cal-day-num { background: var(--accent); color: white; font-weight: 800; }
+  .cal-day.today.selected .cal-day-num { color: white; }
   .cal-day-dots { display: flex; gap: 2px; height: 5px; }
-  .cal-day-dot { width: 5px; height: 5px; border-radius: 50%; animation: dot-pulse 1.6s ease-in-out infinite; }
-  .cal-day.selected .cal-day-dot { background: white !important; }
+  .cal-day-dot { width: 4px; height: 4px; border-radius: 50%; }
   @keyframes dot-pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(1.3); } }
   .result-score { font-family: 'Jost', sans-serif; font-size: 40px; font-weight: 700; color: var(--green-dark); margin: 6px 0; }
   .result-label { font-size: 13px; font-weight: 700; color: var(--text-soft); text-transform: uppercase; letter-spacing: 0.03em; }
@@ -2528,6 +2532,7 @@
       if (dateStr === todayStr) cell.classList.add('today');
       if (dateStr === selectedDate) cell.classList.add('selected');
       const numSpan = document.createElement('span');
+      numSpan.className = 'cal-day-num';
       numSpan.textContent = d;
       cell.appendChild(numSpan);
       if (hasEvent) {
@@ -2547,71 +2552,6 @@
     }
     wrap.appendChild(grid);
     return wrap;
-  }
-
-  async function renderStudentSchedule() {
-    showLoading('Загружаем расписание', false);
-    try {
-      const events = await apiGet('/api/schedule');
-      const now = new Date();
-      if (calYear === undefined) {
-        calYear = now.getFullYear();
-        calMonth = now.getMonth();
-        calSelected = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
-      }
-      const eventDates = new Set(events.map((ev) => ev.event_time.slice(0, 10)));
-
-      swapScreen((screen) => {
-        const cal = buildCalendarGrid(calYear, calMonth, eventDates, calSelected,
-          (dateStr) => { calSelected = dateStr; renderStudentSchedule(); },
-          () => { calMonth--; if (calMonth < 0) { calMonth = 11; calYear--; } renderStudentSchedule(); },
-          () => { calMonth++; if (calMonth > 11) { calMonth = 0; calYear++; } renderStudentSchedule(); },
-        );
-        screen.appendChild(cal);
-
-        const dayEvents = events.filter((ev) => ev.event_time.slice(0, 10) === calSelected);
-        if (!dayEvents.length) {
-          const p = document.createElement('p');
-          p.className = 'state-msg';
-          p.textContent = 'На этот день занятий не запланировано.';
-          screen.appendChild(p);
-          return;
-        }
-        dayEvents.forEach((ev) => {
-          const card = document.createElement('div');
-          card.className = 'result-card';
-          card.style.cssText = 'text-align:left;margin-bottom:14px;';
-          const subj = document.createElement('div');
-          subj.className = 'field-hint';
-          subj.style.margin = '0 0 4px';
-          subj.textContent = ev.subject_title;
-          card.appendChild(subj);
-          const t = document.createElement('div');
-          t.style.cssText = 'font-family:\'Jost\',sans-serif;font-weight:800;font-size:17px;margin-bottom:6px;';
-          t.textContent = ev.title;
-          card.appendChild(t);
-          const time = document.createElement('div');
-          time.style.cssText = 'font-weight:700;color:var(--text-soft);margin-bottom:10px;';
-          time.textContent = '🕒 ' + ev.event_time.slice(11);
-          card.appendChild(time);
-          if (ev.link) {
-            const linkBtn = document.createElement('a');
-            linkBtn.href = ev.link;
-            linkBtn.target = '_blank';
-            linkBtn.className = 'submit-btn';
-            linkBtn.style.cssText = 'display:block;text-align:center;text-decoration:none;box-sizing:border-box;';
-            linkBtn.textContent = '🔗 Перейти к занятию';
-            linkBtn.onclick = (e) => {
-              if (tg?.openLink) { e.preventDefault(); tg.openLink(ev.link); }
-            };
-            card.appendChild(linkBtn);
-          }
-          screen.appendChild(card);
-        });
-      }, false);
-    } catch (err) {
-      showState('Не получилось загрузить расписание. ' + err.message, true, true);
-    }
   }
 
   function renderProfileCrumbs() {
@@ -2640,10 +2580,7 @@
 
     try {
     if (current.level === 'profile_subjects') {
-      const [subjects, scheduleEvents] = await Promise.all([
-        apiGet('/api/subjects'),
-        apiGet('/api/schedule'),
-      ]);
+      const subjects = await apiGet('/api/subjects');
       swapScreen((screen) => {
         const subtitle = document.createElement('p');
         subtitle.className = 'field-hint';
@@ -2698,6 +2635,17 @@
         notifBtn.onclick = () => { profileStack.push({ level: 'notifications', title: 'Уведомления' }); renderProfileCrumbs(); renderProfile(false); };
         screen.appendChild(notifBtn);
 
+        const scheduleBtn = document.createElement('button');
+        scheduleBtn.className = 'row-card';
+        scheduleBtn.style.cssText = 'width:100%;cursor:pointer;align-items:center;margin-bottom:20px;';
+        scheduleBtn.innerHTML = `
+          <div style="width:36px;height:36px;border-radius:10px;background:var(--blue-tint);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:18px;">📅</div>
+          <div class="row-title" style="flex:1;">Расписание занятий</div>
+          <span style="color:var(--border);font-size:18px;font-weight:700;">›</span>
+        `;
+        scheduleBtn.onclick = () => { profileStack.push({ level: 'schedule', title: 'Расписание' }); renderProfileCrumbs(); renderProfile(false); };
+        screen.appendChild(scheduleBtn);
+
         const subjTitle = document.createElement('div');
         subjTitle.className = 'field-hint';
         subjTitle.style.cssText = 'margin:0 0 8px;text-transform:uppercase;font-weight:800;letter-spacing:0.03em;';
@@ -2746,77 +2694,6 @@
 
         if (scheduleEvents.length) {
           const calTitle = document.createElement('div');
-          calTitle.className = 'field-hint';
-          calTitle.style.cssText = 'margin:0 0 8px;text-transform:uppercase;font-weight:800;letter-spacing:0.03em;';
-          calTitle.textContent = '📅 Календарь занятий';
-          screen.appendChild(calTitle);
-
-          const subjectColors = ['var(--green)', 'var(--blue)', 'var(--yellow)', 'var(--red)', '#9B59B6', '#FF8C42'];
-          const colorBySubject = {};
-          subjects.forEach((s, i) => { colorBySubject[s.title] = subjectColors[i % subjectColors.length]; });
-
-          const eventColors = new Map();
-          scheduleEvents.forEach((ev) => {
-            const dateStr = ev.event_time.slice(0, 10);
-            const color = colorBySubject[ev.subject_title] || 'var(--yellow)';
-            if (!eventColors.has(dateStr)) eventColors.set(dateStr, []);
-            if (!eventColors.get(dateStr).includes(color)) eventColors.get(dateStr).push(color);
-          });
-
-          if (subjects.length > 1) {
-            const legend = document.createElement('div');
-            legend.style.cssText = 'display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;';
-            subjects.forEach((s) => {
-              const tag = document.createElement('div');
-              tag.style.cssText = 'display:flex;align-items:center;gap:5px;font-size:11px;font-weight:700;color:var(--text-soft);';
-              tag.innerHTML = `<span style="width:8px;height:8px;border-radius:50%;background:${colorBySubject[s.title]};"></span>${s.title}`;
-              legend.appendChild(tag);
-            });
-            screen.appendChild(legend);
-          }
-
-          const now = new Date();
-          if (calYear === undefined) {
-            calYear = now.getFullYear();
-            calMonth = now.getMonth();
-            calSelected = null;
-          }
-          const cal = buildCalendarGrid(calYear, calMonth, eventColors, calSelected,
-            (dateStr) => { calSelected = calSelected === dateStr ? null : dateStr; renderProfile(false); },
-            () => { calMonth--; if (calMonth < 0) { calMonth = 11; calYear--; } renderProfile(false); },
-            () => { calMonth++; if (calMonth > 11) { calMonth = 0; calYear++; } renderProfile(false); },
-          );
-          screen.appendChild(cal);
-
-          if (calSelected) {
-            const dayEvents = scheduleEvents.filter((ev) => ev.event_time.slice(0, 10) === calSelected);
-            const dayWrap = document.createElement('div');
-            dayWrap.style.cssText = 'margin-top:12px;';
-            if (!dayEvents.length) {
-              const p = document.createElement('p');
-              p.className = 'field-hint';
-              p.style.cssText = 'text-align:center;padding:10px;';
-              p.textContent = 'На этот день занятий нет.';
-              dayWrap.appendChild(p);
-            } else {
-              dayEvents.forEach((ev) => {
-                const evCard = document.createElement('div');
-                evCard.style.cssText = 'background:var(--bg);border:2px solid var(--border);border-radius:12px;padding:10px 12px;margin-bottom:8px;';
-                evCard.innerHTML = `<div style="font-family:'Jost',sans-serif;font-weight:800;font-size:14px;">${ev.title}</div><div class="field-hint" style="margin:2px 0 0;">${ev.subject_title} · 🕒 ${ev.event_time.slice(11)}</div>`;
-                if (ev.link) {
-                  const linkBtn = document.createElement('a');
-                  linkBtn.href = ev.link;
-                  linkBtn.target = '_blank';
-                  linkBtn.style.cssText = 'display:inline-block;margin-top:6px;font-size:12px;font-weight:700;color:var(--blue-dark);text-decoration:none;';
-                  linkBtn.textContent = '🔗 Перейти к занятию';
-                  linkBtn.onclick = (e) => { if (tg?.openLink) { e.preventDefault(); tg.openLink(ev.link); } };
-                  evCard.appendChild(linkBtn);
-                }
-                dayWrap.appendChild(evCard);
-              });
-            }
-            screen.appendChild(dayWrap);
-          }
         }
       }, isBack);
     } else if (current.level === 'profile_subject_home') {
@@ -3044,12 +2921,10 @@
       }, isBack);
     } else if (current.level === 'notifications') {
       const prefs = await apiGet('/api/me/notification-preferences');
-      const view = current.notifView || 'list';
       const CATEGORIES = [
         { title: 'Учёба', keys: [
           { key: 'schedule_reminder', label: 'О предстоящих занятиях' },
           { key: 'topic_unlocked', label: 'Открылась новая тема' },
-          { key: 'new_challenge', label: 'Новое задание месяца' },
         ] },
         { title: 'Обратная связь', keys: [
           { key: 'error_report_resolved', label: 'Ответ на сообщение об ошибке' },
@@ -3075,84 +2950,23 @@
       }
 
       swapScreen((screen) => {
-        const tabs = document.createElement('div');
-        tabs.style.cssText = 'display:flex;gap:6px;margin-bottom:16px;';
-        [{ key: 'list', label: 'Уведомления' }, { key: 'center', label: 'Центр уведомлений' }].forEach((t) => {
-          const btn = document.createElement('button');
-          const active = view === t.key;
-          btn.textContent = t.label;
-          btn.style.cssText = `flex:1;padding:9px 6px;border-radius:10px;border:2px solid ${active ? 'var(--blue)' : 'var(--border)'};background:${active ? 'var(--blue-tint)' : 'var(--bg)'};color:${active ? 'var(--blue-dark)' : 'var(--text-soft)'};font-family:'Jost',sans-serif;font-size:12px;font-weight:800;cursor:pointer;`;
-          btn.onclick = () => { current.notifView = t.key; renderProfile(false); };
-          tabs.appendChild(btn);
+        CATEGORIES.forEach((cat) => {
+          const catTitle = document.createElement('div');
+          catTitle.className = 'field-hint';
+          catTitle.style.cssText = 'margin:14px 0 6px;text-transform:uppercase;font-weight:800;letter-spacing:0.03em;';
+          catTitle.textContent = cat.title;
+          screen.appendChild(catTitle);
+          cat.keys.forEach(({ key, label }) => {
+            const row = document.createElement('div');
+            row.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 0;border-bottom:1px solid var(--border);';
+            const lbl = document.createElement('span');
+            lbl.style.cssText = "font-size:14px;font-weight:600;";
+            lbl.textContent = label;
+            row.appendChild(lbl);
+            row.appendChild(buildToggle(prefs[key], (v) => toggle(key, v)));
+            screen.appendChild(row);
+          });
         });
-        screen.appendChild(tabs);
-
-        if (view === 'list') {
-          CATEGORIES.forEach((cat) => {
-            const catTitle = document.createElement('div');
-            catTitle.className = 'field-hint';
-            catTitle.style.cssText = 'margin:14px 0 6px;text-transform:uppercase;font-weight:800;letter-spacing:0.03em;';
-            catTitle.textContent = cat.title;
-            screen.appendChild(catTitle);
-            cat.keys.forEach(({ key, label }) => {
-              const row = document.createElement('div');
-              row.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 0;border-bottom:1px solid var(--border);';
-              const lbl = document.createElement('span');
-              lbl.style.cssText = "font-size:14px;font-weight:600;";
-              lbl.textContent = label;
-              row.appendChild(lbl);
-              row.appendChild(buildToggle(prefs[key], (v) => toggle(key, v)));
-              screen.appendChild(row);
-            });
-          });
-        } else {
-          CATEGORIES.forEach((cat) => {
-            const enabledCount = cat.keys.filter((k) => prefs[k.key]).length;
-            const card = document.createElement('div');
-            card.style.cssText = 'background:var(--bg);border:2px solid var(--border);border-radius:14px;padding:14px;margin-bottom:12px;box-shadow:0 2px 8px rgba(60,60,60,0.05);';
-
-            const head = document.createElement('div');
-            head.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:10px;cursor:pointer;';
-            const left = document.createElement('div');
-            left.innerHTML = `<div style="font-family:'Jost',sans-serif;font-weight:700;font-size:15px;">${cat.title}</div><div class="field-hint" style="margin:2px 0 0;">Включено ${enabledCount} из ${cat.keys.length}</div>`;
-            head.appendChild(left);
-            const right = document.createElement('div');
-            right.style.cssText = 'display:flex;align-items:center;gap:10px;';
-            const catToggle = buildToggle(enabledCount === cat.keys.length, async (v) => {
-              for (const { key } of cat.keys) await toggle(key, v);
-              renderProfile(false);
-            });
-            right.appendChild(catToggle);
-            const chevron = document.createElement('span');
-            chevron.textContent = card.dataset.open === '1' ? '▲' : '▼';
-            chevron.style.cssText = 'color:var(--text-soft);font-size:12px;';
-            right.appendChild(chevron);
-            head.appendChild(right);
-            card.appendChild(head);
-
-            const body = document.createElement('div');
-            body.style.cssText = 'margin-top:12px;padding-top:10px;border-top:1px solid var(--border);display:' + (card.dataset.open === '1' ? 'block' : 'none');
-            cat.keys.forEach(({ key, label }) => {
-              const row = document.createElement('div');
-              row.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 0;';
-              const lbl = document.createElement('span');
-              lbl.style.cssText = 'font-size:13.5px;font-weight:600;';
-              lbl.textContent = label;
-              row.appendChild(lbl);
-              row.appendChild(buildToggle(prefs[key], (v) => toggle(key, v)));
-              body.appendChild(row);
-            });
-            card.appendChild(body);
-
-            head.onclick = (e) => {
-              if (e.target === catToggle || catToggle.contains(e.target)) return;
-              card.dataset.open = card.dataset.open === '1' ? '0' : '1';
-              body.style.display = card.dataset.open === '1' ? 'block' : 'none';
-              chevron.textContent = card.dataset.open === '1' ? '▲' : '▼';
-            };
-            screen.appendChild(card);
-          });
-        }
       }, isBack);
     } else if (current.level === 'profile_leaderboard') {
       if (leaderboardType === undefined) leaderboardType = 'correct_tasks';
@@ -3351,6 +3165,105 @@
               <div class="p-row">🏆 ${scoreText} · ✅ ${item.correct} ❌ ${item.wrong}</div>
             `;
             screen.appendChild(card);
+          });
+        }
+      }, isBack);
+    } else if (current.level === 'schedule') {
+      const [subjects, events] = await Promise.all([
+        apiGet('/api/subjects'),
+        apiGet('/api/schedule'),
+      ]);
+      const now = new Date();
+      if (calYear === undefined) {
+        calYear = now.getFullYear();
+        calMonth = now.getMonth();
+      }
+      const todayStr = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
+      if (calSelected === undefined || calSelected === null) calSelected = todayStr;
+
+      swapScreen((screen) => {
+        const subjectColors = ['var(--accent)', 'var(--green)', 'var(--yellow)', 'var(--red)', '#9B59B6', '#FF8C42'];
+        const colorBySubject = {};
+        subjects.forEach((s, i) => { colorBySubject[s.title] = subjectColors[i % subjectColors.length]; });
+
+        if (subjects.length > 1) {
+          const legend = document.createElement('div');
+          legend.style.cssText = 'display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;';
+          subjects.forEach((s) => {
+            const tag = document.createElement('div');
+            tag.style.cssText = 'display:flex;align-items:center;gap:5px;font-size:11px;font-weight:700;color:var(--text-soft);';
+            tag.innerHTML = `<span style="width:8px;height:8px;border-radius:50%;background:${colorBySubject[s.title]};"></span>${s.title}`;
+            legend.appendChild(tag);
+          });
+          screen.appendChild(legend);
+        }
+
+        const eventColors = new Map();
+        events.forEach((ev) => {
+          const dateStr = ev.event_time.slice(0, 10);
+          const color = colorBySubject[ev.subject_title] || 'var(--accent)';
+          if (!eventColors.has(dateStr)) eventColors.set(dateStr, []);
+          if (!eventColors.get(dateStr).includes(color)) eventColors.get(dateStr).push(color);
+        });
+
+        const cal = buildCalendarGrid(calYear, calMonth, eventColors, calSelected,
+          (dateStr) => { calSelected = dateStr; renderProfile(false); },
+          () => { calMonth--; if (calMonth < 0) { calMonth = 11; calYear--; } renderProfile(false); },
+          () => { calMonth++; if (calMonth > 11) { calMonth = 0; calYear++; } renderProfile(false); },
+        );
+        screen.appendChild(cal);
+
+        const todayBtn = document.createElement('button');
+        todayBtn.textContent = 'Сегодня';
+        todayBtn.style.cssText = 'display:block;margin:0 0 16px auto;background:none;border:none;color:var(--accent);font-size:12.5px;font-weight:700;cursor:pointer;';
+        todayBtn.onclick = () => {
+          const t = new Date();
+          calYear = t.getFullYear(); calMonth = t.getMonth();
+          calSelected = t.getFullYear() + '-' + String(t.getMonth() + 1).padStart(2, '0') + '-' + String(t.getDate()).padStart(2, '0');
+          renderProfile(false);
+        };
+        screen.appendChild(todayBtn);
+
+        const dayEvents = events
+          .filter((ev) => ev.event_time.slice(0, 10) === calSelected)
+          .sort((a, b) => a.event_time.localeCompare(b.event_time));
+
+        const dayTitle = document.createElement('div');
+        dayTitle.className = 'field-hint';
+        dayTitle.style.cssText = 'margin:0 0 10px;text-transform:uppercase;font-weight:800;letter-spacing:0.03em;';
+        const [sy, sm, sd] = calSelected.split('-').map(Number);
+        dayTitle.textContent = new Date(sy, sm - 1, sd).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', weekday: 'long' });
+        screen.appendChild(dayTitle);
+
+        if (!dayEvents.length) {
+          const p = document.createElement('p');
+          p.className = 'state-msg';
+          p.textContent = 'На этот день занятий не запланировано.';
+          screen.appendChild(p);
+        } else {
+          dayEvents.forEach((ev) => {
+            const evCard = document.createElement('div');
+            evCard.style.cssText = `display:flex;gap:10px;background:var(--bg);border:2px solid var(--border);border-radius:14px;padding:12px 14px;margin-bottom:8px;`;
+            const bar = document.createElement('div');
+            bar.style.cssText = `width:4px;border-radius:4px;background:${colorBySubject[ev.subject_title] || 'var(--accent)'};flex-shrink:0;`;
+            evCard.appendChild(bar);
+            const info = document.createElement('div');
+            info.style.flex = '1';
+            info.innerHTML = `
+              <div style="font-weight:700;color:var(--text-soft);font-size:12.5px;">🕒 ${ev.event_time.slice(11)} · ${ev.subject_title}</div>
+              <div style="font-family:'Jost',sans-serif;font-weight:800;font-size:15px;margin-top:2px;">${ev.title}</div>
+            `;
+            evCard.appendChild(info);
+            if (ev.link) {
+              const linkBtn = document.createElement('a');
+              linkBtn.href = ev.link;
+              linkBtn.target = '_blank';
+              linkBtn.style.cssText = 'align-self:center;flex-shrink:0;color:var(--accent);font-size:20px;text-decoration:none;';
+              linkBtn.innerHTML = '🔗';
+              linkBtn.onclick = (e) => { if (tg?.openLink) { e.preventDefault(); tg.openLink(ev.link); } };
+              evCard.appendChild(linkBtn);
+            }
+            screen.appendChild(evCard);
           });
         }
       }, isBack);
