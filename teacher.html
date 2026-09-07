@@ -2752,11 +2752,54 @@
 
     const courseTypeBox = overlay.querySelector('#grantCourseType');
     let selectedCourseType = 'Курс';
+    let selectedGroupId = null;
     const courseTypeOptions = [
       { key: 'Курс', label: 'Курс' },
       { key: 'Мини-группа', label: 'Мини-группа' },
       { key: 'Экспресс-курс', label: 'Экспресс' },
     ];
+    const groupPickerWrap = document.createElement('div');
+    groupPickerWrap.style.cssText = 'display:none;margin-bottom:14px;';
+    overlay.querySelector('#grantCourseType').insertAdjacentElement('afterend', groupPickerWrap);
+
+    async function renderGroupPicker() {
+      groupPickerWrap.innerHTML = '<div class="field-label">Группа</div><div class="field-hint">Загружаем группы…</div>';
+      groupPickerWrap.style.display = 'block';
+      try {
+        const groups = await apiGet(`/api/teacher/subjects/${currentSubjectId}/groups`);
+        if (!groups.length) {
+          groupPickerWrap.innerHTML = '<div class="field-label">Группа</div><div class="field-hint">У предмета пока нет ни одной группы — создайте её на экране «Группы».</div>';
+          selectedGroupId = null;
+          return;
+        }
+        selectedGroupId = groups[0].id;
+        groupPickerWrap.innerHTML = '<div class="field-label">Группа</div>';
+        const list = document.createElement('div');
+        list.style.cssText = 'display:flex;flex-direction:column;gap:6px;';
+        groups.forEach((g) => {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          const active = selectedGroupId === g.id;
+          btn.style.cssText = `text-align:left;padding:9px 12px;border-radius:10px;border:2px solid ${active ? 'var(--accent)' : 'var(--border)'};background:${active ? 'var(--blue-tint)' : 'var(--bg)'};color:${active ? 'var(--accent)' : 'var(--text)'};font-weight:700;font-size:12.5px;cursor:pointer;`;
+          btn.textContent = `${g.title} · код ${g.join_code} · ${g.student_count} уч.`;
+          btn.onclick = () => { selectedGroupId = g.id; renderGroupPickerActive(list, g.id); };
+          list.appendChild(btn);
+        });
+        groupPickerWrap.appendChild(list);
+        function renderGroupPickerActive(listEl, activeId) {
+          [...listEl.children].forEach((btn, i) => {
+            const active = groups[i].id === activeId;
+            btn.style.borderColor = active ? 'var(--accent)' : 'var(--border)';
+            btn.style.background = active ? 'var(--blue-tint)' : 'var(--bg)';
+            btn.style.color = active ? 'var(--accent)' : 'var(--text)';
+          });
+        }
+      } catch (err) {
+        groupPickerWrap.innerHTML = '<div class="field-hint" style="color:var(--red-dark);">Не получилось загрузить группы.</div>';
+        selectedGroupId = null;
+      }
+    }
+
     function renderCourseTypeButtons() {
       courseTypeBox.innerHTML = '';
       courseTypeOptions.forEach((opt) => {
@@ -2765,7 +2808,12 @@
         const active = selectedCourseType === opt.key;
         btn.style.cssText = `flex:1;padding:8px 2px;border-radius:10px;border:2px solid ${active ? 'var(--accent)' : 'var(--border)'};background:${active ? 'var(--blue-tint)' : 'var(--bg)'};color:${active ? 'var(--accent)' : 'var(--text-soft)'};font-weight:700;font-size:11.5px;cursor:pointer;`;
         btn.textContent = opt.label;
-        btn.onclick = () => { selectedCourseType = opt.key; renderCourseTypeButtons(); };
+        btn.onclick = () => {
+          selectedCourseType = opt.key;
+          renderCourseTypeButtons();
+          if (selectedCourseType === 'Мини-группа') { renderGroupPicker(); }
+          else { groupPickerWrap.style.display = 'none'; selectedGroupId = null; }
+        };
         courseTypeBox.appendChild(btn);
       });
     }
@@ -2822,6 +2870,9 @@
       saveBtn.textContent = 'Добавляю…';
       try {
         await apiSend('POST', `/api/teacher/subjects/${currentSubjectId}/grant-subscription`, payload);
+        if (selectedCourseType === 'Мини-группа' && selectedGroupId) {
+          await apiSend('POST', `/api/teacher/students/${telegram_id}/group`, { group_id: selectedGroupId });
+        }
         closeOverlay();
         showToast('Ученик добавлен');
         render(false);
