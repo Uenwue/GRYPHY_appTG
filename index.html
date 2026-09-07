@@ -31,16 +31,17 @@
     --nav-active: #539DF3;
     --nav-inactive: #484C52;
     --accent: #539DF3;
+    --accent-dark: #2F7BD9;
   }
 
   /* Тёмная тема — включается автоматически по системной настройке... */
   @media (prefers-color-scheme: dark) {
     html:not([data-theme="light"]) {
-      --bg: #14181F;
-      --bg-soft: #1C222C;
-      --border: #2B323F;
+      --bg: #1B2029;
+      --bg-soft: #262D3A;
+      --border: #3A4252;
       --text: #F1F3F6;
-      --text-soft: #8B93A3;
+      --text-soft: #A6AFC0;
       --green-tint: rgba(88, 204, 2, 0.16);
       --blue-tint: rgba(28, 176, 246, 0.16);
       --red-tint: rgba(255, 75, 75, 0.16);
@@ -50,11 +51,11 @@
   }
   /* ...или вручную через переключатель (сохраняется в localStorage) */
   html[data-theme="dark"] {
-    --bg: #14181F;
-    --bg-soft: #1C222C;
-    --border: #2B323F;
+    --bg: #1B2029;
+    --bg-soft: #262D3A;
+    --border: #3A4252;
     --text: #F1F3F6;
-    --text-soft: #8B93A3;
+    --text-soft: #A6AFC0;
     --green-tint: rgba(88, 204, 2, 0.16);
     --blue-tint: rgba(28, 176, 246, 0.16);
     --red-tint: rgba(255, 75, 75, 0.16);
@@ -117,15 +118,16 @@
   .crumbs { display: flex; align-items: flex-start; gap: 8px; margin-bottom: 14px; min-height: 36px; }
 
   .back-btn {
-    background: var(--bg); border: 2px solid var(--border); border-bottom: 4px solid var(--border);
-    border-radius: 12px;
-    padding: 6px 14px; font-family: 'Nunito', sans-serif; font-size: 13px; font-weight: 700;
-    color: var(--text-soft); cursor: pointer; transition: transform 0.12s var(--bounce);
-    text-transform: uppercase; letter-spacing: 0.02em;
-    flex-shrink: 0; white-space: nowrap;
+    background: var(--bg-soft); border: none;
+    border-radius: 50%;
+    width: 34px; height: 34px; padding: 0;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--text); cursor: pointer; transition: transform 0.12s var(--bounce);
+    flex-shrink: 0;
   }
+  .back-btn svg { width: 18px; height: 18px; }
   .back-btn:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
-  .back-btn:active { transform: translateY(3px); border-bottom-width: 1px; }
+  .back-btn:active { transform: scale(0.9); }
   .crumb-title {
     font-family: 'Jost', sans-serif; font-size: 16px; font-weight: 700; color: var(--text);
     white-space: normal; min-width: 0; line-height: 1.3; padding-top: 6px;
@@ -219,7 +221,7 @@
   .loading-row { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 30px 10px; color: var(--text-soft); font-size: 15px; font-weight: 700; }
   .pencil-dots span {
     display: inline-block; width: 7px; height: 7px; border-radius: 50%;
-    background: var(--green); margin: 0 2px; animation: dot-bounce 0.9s var(--bounce) infinite;
+    background: var(--accent); margin: 0 2px; animation: dot-bounce 0.9s var(--bounce) infinite;
   }
   .pencil-dots span:nth-child(2) { animation-delay: 0.13s; }
   .pencil-dots span:nth-child(3) { animation-delay: 0.26s; }
@@ -259,8 +261,8 @@
   .text-input:focus-visible { outline: 2px solid var(--blue); border-color: var(--blue); }
 
   .submit-btn {
-    width: 100%; padding: 10px 16px; background: var(--green); color: white; border: none;
-    border-bottom: 3px solid var(--green-dark);
+    width: 100%; padding: 10px 16px; background: var(--accent); color: white; border: none;
+    border-bottom: 3px solid var(--accent-dark);
     border-radius: 10px; font-family: 'Jost', sans-serif; font-size: 13px; font-weight: 700; cursor: pointer;
     text-transform: uppercase; letter-spacing: 0.02em;
     transition: transform 0.12s var(--bounce), border-bottom-width 0.12s ease;
@@ -448,6 +450,14 @@
   }
   .skip-btn:active { transform: translateY(2px); border-bottom-width: 2px; }
 
+  .choice-outline-btn {
+    width: 100%; padding: 12px 16px;
+    background: var(--blue-tint); color: var(--accent); border: 2px solid var(--accent);
+    border-radius: 12px; font-family: 'Jost', sans-serif; font-size: 13.5px; font-weight: 700; cursor: pointer;
+    transition: transform 0.12s var(--bounce);
+  }
+  .choice-outline-btn:active { transform: scale(0.98); }
+
   /* --- Пронумерованные варианты ответа (переключаемые, до "Проверить") --- */
   .option-btn {
     position: relative;
@@ -519,6 +529,14 @@
   .hw-status.done { color: var(--green); }
   .hw-status.arrow { color: var(--accent); }
   .hw-status.locked { color: var(--text-soft); opacity: 0.6; }
+  .hw-cta-btn {
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    width: 100%; padding: 14px; margin-bottom: 14px;
+    background: var(--accent); border: none; border-radius: 16px;
+    font-family: 'Jost', sans-serif; font-size: 14.5px; font-weight: 700; color: white; cursor: pointer;
+    transition: transform 0.12s var(--bounce);
+  }
+  .hw-cta-btn:active { transform: scale(0.98); }
 
   /* --- Статистика (дизайн под референс) --- */
   .stat-predict-card { background: var(--blue-tint); border-radius: 20px; padding: 16px 18px; margin-bottom: 16px; }
@@ -564,14 +582,18 @@
   .lb-segmented { display: flex; background: var(--bg-soft); border-radius: 14px; padding: 4px; gap: 4px; margin-bottom: 20px; }
   .lb-segment { flex: 1; border: none; background: none; padding: 9px 4px; border-radius: 10px; font-family: 'Jost', sans-serif; font-size: 11.5px; font-weight: 700; color: var(--text-soft); cursor: pointer; transition: background 0.15s ease, color 0.15s ease; }
   .lb-segment.active { background: var(--accent); color: white; }
+  .lb-period-label { text-align: center; font-size: 12.5px; font-weight: 700; color: var(--text-soft); margin-bottom: 12px; }
+  .lb-pager { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; width: 100%; }
+  .lb-pager::-webkit-scrollbar { display: none; }
+  .lb-pager-page { flex: 0 0 100%; width: 100%; scroll-snap-align: start; box-sizing: border-box; }
   .lb-podium { display: flex; align-items: flex-end; justify-content: center; gap: 10px; margin-bottom: 24px; }
   .lb-podium-item { display: flex; flex-direction: column; align-items: center; gap: 2px; flex: 1; max-width: 110px; }
   .lb-avatar-wrap { position: relative; }
-  .lb-avatar { width: 56px; height: 56px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-family: 'Jost', sans-serif; font-weight: 800; font-size: 20px; color: white; border: 3px solid var(--bg); box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+  .lb-avatar { width: 56px; height: 56px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-family: 'Jost', sans-serif; font-weight: 800; font-size: 20px; color: white; border: 3px solid var(--bg); box-shadow: 0 2px 8px rgba(0,0,0,0.1); flex-shrink: 0; }
   .lb-podium-item.first .lb-avatar { width: 72px; height: 72px; font-size: 26px; border-color: var(--accent); }
   .lb-crown { position: absolute; top: -18px; left: 50%; transform: translateX(-50%); font-size: 22px; }
   .lb-rank-badge { position: absolute; bottom: -4px; left: 50%; transform: translateX(-50%); width: 22px; height: 22px; border-radius: 50%; background: var(--accent); color: white; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 800; border: 2px solid var(--bg); }
-  .lb-podium-name { font-family: 'Jost', sans-serif; font-weight: 800; font-size: 13px; text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; margin-top: 8px; }
+  .lb-podium-name { font-family: 'Jost', sans-serif; font-weight: 800; font-size: 12.5px; text-align: center; max-width: 100%; margin-top: 8px; line-height: 1.25; word-break: break-word; }
   .lb-podium-points { font-size: 12px; font-weight: 700; color: var(--text-soft); }
   .lb-list-header { display: flex; align-items: center; gap: 12px; padding: 0 4px 8px; font-size: 11.5px; font-weight: 700; color: var(--text-soft); text-transform: uppercase; letter-spacing: 0.03em; }
   .lb-list-header .lb-col-rank { width: 22px; }
@@ -579,8 +601,8 @@
   .lb-row { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 14px; margin-bottom: 8px; background: var(--blue-tint); }
   .lb-row-rank { width: 22px; font-family: 'Jost', sans-serif; font-weight: 800; font-size: 13px; color: var(--accent); flex-shrink: 0; }
   .lb-row-avatar { width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-family: 'Jost', sans-serif; font-weight: 800; font-size: 13px; color: white; flex-shrink: 0; }
-  .lb-row-name { flex: 1; font-size: 13.5px; font-weight: 700; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .lb-row-points { font-family: 'Jost', sans-serif; font-weight: 800; font-size: 13px; color: var(--text); flex-shrink: 0; }
+  .lb-row-name { flex: 1; font-size: 13px; font-weight: 700; color: var(--text); line-height: 1.25; word-break: break-word; }
+  .lb-row-points { font-family: 'Jost', sans-serif; font-weight: 800; font-size: 13px; color: var(--text); flex-shrink: 0; align-self: center; }
   .lb-row.me { background: var(--accent); }
   .lb-row.me .lb-row-rank, .lb-row.me .lb-row-name, .lb-row.me .lb-row-points { color: white; }
 </style>
@@ -725,7 +747,7 @@
     if (hasBack) {
       const btn = document.createElement('button');
       btn.className = 'back-btn';
-      btn.textContent = '← Назад';
+      btn.innerHTML = '<svg viewBox="0 0 20 20" fill="none"><path d="M12.5 5L7.5 10L12.5 15" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
       btn.onclick = () => {
         // С результата теста и с самого теста "назад" всегда возвращает
         // к списку тестов целиком, а не на промежуточный шаг прохождения.
@@ -1016,7 +1038,7 @@
             lockMessage: t.lock_message,
             isDone,
             onClick: () => {
-              stack.push({ level: 'order_choice', scope: 'topic', scopeId: t.id, title: t.title });
+              stack.push({ level: 'order_choice', scope: 'topic', scopeId: t.id, title: `Урок ${i + 1}: ${t.title}` });
               renderCrumbs();
               render(false);
             },
@@ -1044,7 +1066,7 @@
       card.appendChild(seqBtn);
 
       const randBtn = document.createElement('button');
-      randBtn.className = 'skip-btn';
+      randBtn.className = 'choice-outline-btn';
       randBtn.style.marginTop = '10px';
       randBtn.textContent = '🔀 Вперемешку';
       randBtn.onclick = () => { chosenOrder = 'random'; showFeedbackChoice(); };
@@ -1067,7 +1089,7 @@
         feedbackWrap.appendChild(immBtn);
 
         const defBtn = document.createElement('button');
-        defBtn.className = 'skip-btn';
+        defBtn.className = 'choice-outline-btn';
         defBtn.style.marginTop = '10px';
         defBtn.textContent = '⏳ С промежутком (каждые 20)';
         defBtn.onclick = () => beginSolving(scope, scopeId, title, chosenOrder, 'deferred');
@@ -1478,7 +1500,7 @@
     wrap.style.cssText = 'text-align:center;margin-top:10px;';
     const btn = document.createElement('button');
     btn.style.cssText = 'background:none;border:none;color:var(--text-soft);font-size:12px;font-weight:700;cursor:pointer;padding:6px;';
-    btn.textContent = '\uD83D\uDC1E Сообщить об ошибке';
+    btn.textContent = 'Сообщить об ошибке';
     btn.onclick = () => promptReportError(context);
     wrap.appendChild(btn);
     return wrap;
@@ -1625,15 +1647,16 @@
         });
       }
 
+      const isPartial = result.status === 'partial';
       const feedback = document.createElement('div');
-      feedback.className = 'feedback ' + (result.correct ? 'ok' : 'bad');
+      feedback.className = 'feedback ' + (result.correct ? 'ok' : (isPartial ? 'mid' : 'bad'));
 
       const title = document.createElement('p');
       title.className = 'feedback-title';
-      title.textContent = result.correct ? '✅ Верно!' : '❌ Неверно';
+      title.textContent = result.correct ? '✅ Верно!' : (isPartial ? '🟡 Частично верно (была 1 ошибка в выборе)' : '❌ Неверно');
       feedback.appendChild(title);
 
-      if (!result.correct && !optionEls) {
+      if (!result.correct && !isPartial && !optionEls) {
         const body = document.createElement('p');
         body.className = 'feedback-body';
         body.innerHTML = `Правильный ответ: ${escapeHtml(result.correct_answer)}`;
@@ -1805,8 +1828,7 @@
 
             if (topics.some(t => !t.is_locked && t.task_count > 0)) {
               const wholeBtn = document.createElement('button');
-              wholeBtn.className = 'add-row-btn';
-              wholeBtn.style.cssText = 'width:100%;margin-bottom:14px;padding:16px;font-size:15.5px;color:var(--accent);';
+              wholeBtn.className = 'hw-cta-btn';
               wholeBtn.textContent = '🎯 Решить весь раздел целиком';
               wholeBtn.onclick = () => {
                 stack.push({ level: 'order_choice', scope: 'section', scopeId: current.sectionId, title: current.title });
@@ -2577,7 +2599,6 @@
 
   let calYear, calMonth, calSelected;
   let leaderboardType;
-  let leaderboardPeriod;
 
   function buildCalendarGrid(year, month, eventDatesSet, selectedDate, onDayClick, onPrev, onNext) {
     const wrap = document.createElement('div');
@@ -2663,7 +2684,7 @@
     if (hasBack) {
       const btn = document.createElement('button');
       btn.className = 'back-btn';
-      btn.textContent = '← Назад';
+      btn.innerHTML = '<svg viewBox="0 0 20 20" fill="none"><path d="M12.5 5L7.5 10L12.5 15" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
       btn.onclick = () => { profileStack.pop(); renderProfileCrumbs(); renderProfile(true); };
       crumbsEl.appendChild(btn);
     }
@@ -2682,25 +2703,55 @@
 
     try {
     if (current.level === 'profile_subjects') {
-      const subjects = await apiGet('/api/subjects');
+      const [profileInfo, subStatus] = await Promise.all([
+        apiGet('/api/me/profile-info').catch(() => ({})),
+        apiGet('/api/me/subscription-status').catch(() => ({ subscriptions: [] })),
+      ]);
       swapScreen((screen) => {
         const subtitle = document.createElement('p');
         subtitle.className = 'field-hint';
         subtitle.style.cssText = 'margin:0 0 16px;font-size:13px;';
-        subtitle.textContent = 'Данные аккаунта и доступ к предметам';
+        subtitle.textContent = 'Данные аккаунта';
         screen.appendChild(subtitle);
 
         const user = tg?.initDataUnsafe?.user;
-        const displayName = user?.first_name || 'Гость';
+        const fio = [profileInfo.surname, profileInfo.given_name, profileInfo.patronymic].filter(Boolean).join(' ');
+        const displayName = fio || user?.first_name || 'Гость';
+        const photoUrl = user?.photo_url;
         const userCard = document.createElement('div');
-        userCard.style.cssText = 'background:var(--bg);border:2px solid var(--border);border-radius:16px;padding:16px;display:flex;align-items:center;gap:14px;margin-bottom:20px;';
+        userCard.style.cssText = 'background:var(--bg);border:2px solid var(--border);border-radius:16px;padding:16px;margin-bottom:20px;';
         userCard.innerHTML = `
-          <div style="width:52px;height:52px;border-radius:50%;background:var(--blue-tint);color:var(--blue-dark);display:flex;align-items:center;justify-content:center;font-family:'Jost',sans-serif;font-size:22px;font-weight:800;flex-shrink:0;">${displayName.charAt(0).toUpperCase()}</div>
-          <div>
-            <div style="font-family:'Jost',sans-serif;font-size:17px;font-weight:800;">${displayName}</div>
-            ${user?.username ? `<div class="field-hint" style="margin:1px 0 0;">@${user.username}</div>` : ''}
-          </div>`;
+          <div style="display:flex;align-items:center;gap:14px;">
+            ${photoUrl
+              ? `<img src="${photoUrl}" style="width:52px;height:52px;border-radius:50%;object-fit:cover;flex-shrink:0;">`
+              : `<div style="width:52px;height:52px;border-radius:50%;background:var(--bg-soft);color:var(--accent);display:flex;align-items:center;justify-content:center;font-family:'Jost',sans-serif;font-size:22px;font-weight:800;flex-shrink:0;">${displayName.charAt(0).toUpperCase()}</div>`}
+            <div style="min-width:0;">
+              <div style="font-family:'Jost',sans-serif;font-size:17px;font-weight:800;">${escapeHtml(displayName)}</div>
+              ${user?.username ? `<div class="field-hint" style="margin:1px 0 0;">@${user.username}</div>` : ''}
+            </div>
+          </div>
+          ${!fio ? `<div class="field-hint" style="margin-top:10px;color:var(--red-dark);">Укажите настоящие фамилию и имя в анкете — они видны в рейтинге.</div>` : ''}
+        `;
         screen.appendChild(userCard);
+
+        const sub = subStatus.subscriptions && subStatus.subscriptions[0];
+        if (sub) {
+          const courseCard = document.createElement('div');
+          courseCard.style.cssText = 'background:var(--bg-soft);border-radius:16px;padding:14px 16px;margin-bottom:20px;';
+          const [y, m, d] = (sub.expires_at || '').split('-');
+          const expiresText = (y && m && d) ? `${d}.${m}.${y}` : '—';
+          courseCard.innerHTML = `
+            <div style="display:flex;justify-content:space-between;gap:10px;margin-bottom:6px;">
+              <span class="field-hint" style="margin:0;">Вид курса</span>
+              <span style="font-weight:700;font-size:13.5px;">${escapeHtml(sub.course_type || 'Курс')}</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;gap:10px;">
+              <span class="field-hint" style="margin:0;">Курс действует до</span>
+              <span style="font-weight:700;font-size:13.5px;">${expiresText}</span>
+            </div>
+          `;
+          screen.appendChild(courseCard);
+        }
 
         const themeTitle = document.createElement('div');
         themeTitle.className = 'field-hint';
@@ -2719,7 +2770,7 @@
         themeOptions.forEach((opt) => {
           const btn = document.createElement('button');
           const active = savedTheme === opt.key;
-          btn.style.cssText = `display:flex;flex-direction:column;align-items:center;gap:5px;padding:12px 4px;border-radius:14px;border:2px solid ${active ? 'var(--blue)' : 'var(--border)'};background:${active ? 'var(--blue-tint)' : 'var(--bg)'};color:${active ? 'var(--blue-dark)' : 'var(--text-soft)'};cursor:pointer;`;
+          btn.style.cssText = `display:flex;flex-direction:column;align-items:center;gap:5px;padding:12px 4px;border-radius:14px;border:2px solid ${active ? 'var(--accent)' : 'var(--border)'};background:${active ? 'var(--blue-tint)' : 'var(--bg)'};color:${active ? 'var(--accent)' : 'var(--text-soft)'};cursor:pointer;`;
           btn.innerHTML = `<span style="width:20px;height:20px;">${opt.icon}</span><span style="font-family:'Jost',sans-serif;font-size:11.5px;font-weight:700;">${opt.label}</span>`;
           btn.onclick = () => { applyThemeChoice(opt.key); renderProfile(false); };
           themeGrid.appendChild(btn);
@@ -2730,7 +2781,7 @@
         notifBtn.className = 'row-card';
         notifBtn.style.cssText = 'width:100%;cursor:pointer;align-items:center;margin-bottom:20px;';
         notifBtn.innerHTML = `
-          <div style="width:36px;height:36px;border-radius:10px;background:var(--blue-tint);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:18px;">🔔</div>
+          <div style="width:36px;height:36px;border-radius:10px;background:var(--bg-soft);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:18px;">🔔</div>
           <div class="row-title" style="flex:1;">Уведомления</div>
           <span style="color:var(--border);font-size:18px;font-weight:700;">›</span>
         `;
@@ -2739,60 +2790,14 @@
 
         const scheduleBtn = document.createElement('button');
         scheduleBtn.className = 'row-card';
-        scheduleBtn.style.cssText = 'width:100%;cursor:pointer;align-items:center;margin-bottom:20px;';
+        scheduleBtn.style.cssText = 'width:100%;cursor:pointer;align-items:center;';
         scheduleBtn.innerHTML = `
-          <div style="width:36px;height:36px;border-radius:10px;background:var(--blue-tint);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:18px;">📅</div>
+          <div style="width:36px;height:36px;border-radius:10px;background:var(--bg-soft);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:18px;">📅</div>
           <div class="row-title" style="flex:1;">Расписание занятий</div>
           <span style="color:var(--border);font-size:18px;font-weight:700;">›</span>
         `;
         scheduleBtn.onclick = () => { profileStack.push({ level: 'schedule', title: 'Расписание' }); renderProfileCrumbs(); renderProfile(false); };
         screen.appendChild(scheduleBtn);
-
-        const subjTitle = document.createElement('div');
-        subjTitle.className = 'field-hint';
-        subjTitle.style.cssText = 'margin:0 0 8px;text-transform:uppercase;font-weight:800;letter-spacing:0.03em;';
-        subjTitle.textContent = 'Предметы';
-        screen.appendChild(subjTitle);
-
-        if (!subjects.length) {
-          const empty = document.createElement('div');
-          empty.style.cssText = 'background:var(--bg);border:2px solid var(--border);border-radius:16px;padding:30px 16px;text-align:center;margin-bottom:20px;';
-          empty.innerHTML = `
-            <svg width="34" height="34" viewBox="0 0 20 20" fill="none" style="margin:0 auto 10px;color:var(--text-soft);"><rect x="4" y="3" width="12" height="15" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M7.5 8L12.5 13M12.5 8L7.5 13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
-            <div style="font-family:'Jost',sans-serif;font-weight:800;font-size:15px;">Нет подключённых предметов</div>
-            <div class="field-hint" style="margin-top:4px;">Доступ откроется после оплаты</div>`;
-          screen.appendChild(empty);
-        } else {
-          const list = document.createElement('div');
-          list.className = 'list';
-          list.style.marginBottom = '20px';
-          screen.appendChild(list);
-          subjects.forEach((s, i) => {
-            const card = document.createElement('button');
-            card.className = 'item-card';
-            card.style.animationDelay = (i * 0.045) + 's';
-            const iconSq = document.createElement('div');
-            iconSq.className = 'item-icon-square';
-            const PASTEL_COLORS = ['#FFB4A8', '#F5B8E0', '#FFDB70', '#C9B8F5', '#A8E6D4', '#A8D8F5'];
-            iconSq.style.background = PASTEL_COLORS[i % PASTEL_COLORS.length];
-            iconSq.textContent = (s.title || '?').trim().charAt(0).toUpperCase();
-            card.appendChild(iconSq);
-            const left = document.createElement('div');
-            left.style.flex = '1';
-            left.style.minWidth = '0';
-            const t = document.createElement('div');
-            t.className = 'item-title';
-            t.textContent = s.title;
-            left.appendChild(t);
-            card.appendChild(left);
-            const status = document.createElement('span');
-            status.className = 'item-arrow-btn';
-            status.innerHTML = '<svg viewBox="0 0 20 20" fill="none"><path d="M8 5L13 10L8 15" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-            card.appendChild(status);
-            card.onclick = () => { trainerStack = [{ level: 'subject_home', subjectId: s.id, title: '' }]; trainerInitialized = true; switchTab('challenges'); };
-            list.appendChild(card);
-          });
-        }
       }, isBack);
     } else if (current.level === 'profile_subject_home') {
       const [stats, dailyStats] = await Promise.all([
@@ -2839,8 +2844,8 @@
           return c;
         };
 
-        grid.appendChild(cell('📚', 'Решено заданий', stats.total_solved || 0, `+${stats.solved_this_month || 0} за месяц`));
-        grid.appendChild(cell('🎯', 'Точность', `${stats.accuracy || 0}%`, `верно ${stats.correct_solved || 0}`));
+        grid.appendChild(cell('📚', 'Решено заданий', `${stats.correct_solved || 0} / ${stats.total_solved || 0}`, `верно из всех, +${stats.solved_this_month || 0} за месяц`));
+        grid.appendChild(cell('🎯', 'Точность', `${stats.accuracy || 0}%`));
         grid.appendChild(cell('📖', 'Уроки', `${stats.homework_done || 0} / ${stats.homework_total || 0}`));
         grid.appendChild(cell('⏱', 'В приложении', `${Math.round((stats.time_today_seconds || 0) / 60)} мин`));
         const bestTestScore = stats.tests && stats.tests.length ? Math.max(...stats.tests.map(t => t.actual_score ?? t.primary_score ?? 0)) : null;
@@ -2965,7 +2970,7 @@
 
         const reportBtn = document.createElement('button');
         reportBtn.className = 'stat-report-btn';
-        reportBtn.innerHTML = `<span>🐞</span><span>Сообщить об ошибке</span>`;
+        reportBtn.innerHTML = `<span>Сообщить об ошибке</span>`;
         reportBtn.onclick = () => promptReportError({ subject_id: current.subjectId });
         screen.appendChild(reportBtn);
       }, isBack);
@@ -3053,51 +3058,29 @@
       }, isBack);
     } else if (current.level === 'profile_leaderboard') {
       if (leaderboardType === undefined) leaderboardType = 'correct_tasks';
-      if (leaderboardPeriod === undefined) leaderboardPeriod = 'week';
-      const rows = await apiGet(`/api/subjects/${current.subjectId}/leaderboard?type=${leaderboardType}&period=${leaderboardPeriod}`);
+      const periodDefs = [
+        { key: 'week', label: 'На этой неделе' },
+        { key: 'month', label: 'В этом месяце' },
+        { key: 'all', label: 'За всё время' },
+      ];
+      const [weekRows, monthRows, allRows] = await Promise.all(
+        periodDefs.map((p) => apiGet(`/api/subjects/${current.subjectId}/leaderboard?type=${leaderboardType}&period=${p.key}`))
+      );
+      const rowsByPeriod = { week: weekRows, month: monthRows, all: allRows };
       const myId = String(tg?.initDataUnsafe?.user?.id || '');
       const PASTEL_COLORS = ['#FFB4A8', '#F5B8E0', '#FFDB70', '#C9B8F5', '#A8E6D4', '#A8D8F5'];
       const initialOf = (name) => (name || '?').trim().charAt(0).toUpperCase();
 
-      swapScreen((screen) => {
-        const periodSegmented = document.createElement('div');
-        periodSegmented.className = 'lb-segmented';
-        const periodDefs = [
-          { key: 'week', label: 'Неделя' },
-          { key: 'month', label: 'Месяц' },
-          { key: 'all', label: 'Всё время' },
-        ];
-        periodDefs.forEach((p) => {
-          const btn = document.createElement('button');
-          btn.className = 'lb-segment' + (leaderboardPeriod === p.key ? ' active' : '');
-          btn.textContent = p.label;
-          btn.onclick = () => { leaderboardPeriod = p.key; renderProfile(false); };
-          periodSegmented.appendChild(btn);
-        });
-        screen.appendChild(periodSegmented);
-
-        const segmented = document.createElement('div');
-        segmented.className = 'lb-segmented';
-        const tabDefs = [
-          { key: 'total_tasks', label: 'Решено всего' },
-          { key: 'correct_tasks', label: 'Верно решено' },
-          { key: 'test_scores', label: 'Баллы тестов' },
-        ];
-        tabDefs.forEach((tab) => {
-          const btn = document.createElement('button');
-          btn.className = 'lb-segment' + (leaderboardType === tab.key ? ' active' : '');
-          btn.textContent = tab.label;
-          btn.onclick = () => { leaderboardType = tab.key; renderProfile(false); };
-          segmented.appendChild(btn);
-        });
-        screen.appendChild(segmented);
+      const buildLeaderboardPage = (rows) => {
+        const page = document.createElement('div');
+        page.className = 'lb-page';
 
         if (!rows.length) {
           const p = document.createElement('p');
           p.className = 'state-msg';
           p.textContent = 'Пока никто не решил ни одного задания — станьте первым!';
-          screen.appendChild(p);
-          return;
+          page.appendChild(p);
+          return page;
         }
 
         const podium = rows.slice(0, 3);
@@ -3140,14 +3123,14 @@
             item.appendChild(points);
             podiumWrap.appendChild(item);
           });
-          screen.appendChild(podiumWrap);
+          page.appendChild(podiumWrap);
         }
 
         if (rest.length) {
           const header = document.createElement('div');
           header.className = 'lb-list-header';
           header.innerHTML = '<span class="lb-col-rank">Ранг</span><span class="lb-col-player">Игрок</span><span>Очки</span>';
-          screen.appendChild(header);
+          page.appendChild(header);
 
           rest.forEach((row) => {
             const isMe = String(row.telegram_id) === myId;
@@ -3170,9 +3153,58 @@
             pts.className = 'lb-row-points';
             pts.textContent = row.points;
             item.appendChild(pts);
-            screen.appendChild(item);
+            page.appendChild(item);
           });
         }
+        return page;
+      };
+
+      swapScreen((screen) => {
+        const segmented = document.createElement('div');
+        segmented.className = 'lb-segmented';
+        const tabDefs = [
+          { key: 'total_tasks', label: 'Решено всего' },
+          { key: 'correct_tasks', label: 'Верно решено' },
+          { key: 'test_scores', label: 'Баллы тестов' },
+        ];
+        tabDefs.forEach((tab) => {
+          const btn = document.createElement('button');
+          btn.className = 'lb-segment' + (leaderboardType === tab.key ? ' active' : '');
+          btn.textContent = tab.label;
+          btn.onclick = () => { leaderboardType = tab.key; renderProfile(false); };
+          segmented.appendChild(btn);
+        });
+        screen.appendChild(segmented);
+
+        const periodLabel = document.createElement('div');
+        periodLabel.className = 'lb-period-label';
+        periodLabel.textContent = periodDefs[0].label + ' — листайте вправо';
+        screen.appendChild(periodLabel);
+
+        const pager = document.createElement('div');
+        pager.className = 'lb-pager';
+        periodDefs.forEach((p) => {
+          const page = buildLeaderboardPage(rowsByPeriod[p.key]);
+          page.classList.add('lb-pager-page');
+          pager.appendChild(page);
+        });
+        screen.appendChild(pager);
+
+        const dots = document.createElement('div');
+        dots.className = 'stat-chart-dots';
+        periodDefs.forEach((p, i) => {
+          const dot = document.createElement('span');
+          dot.className = 'stat-chart-dot' + (i === 0 ? ' active' : '');
+          dots.appendChild(dot);
+        });
+        screen.appendChild(dots);
+
+        pager.addEventListener('scroll', () => {
+          if (!pager.clientWidth) return;
+          const idx = Math.min(periodDefs.length - 1, Math.max(0, Math.round(pager.scrollLeft / pager.clientWidth)));
+          [...dots.children].forEach((dot, i) => dot.classList.toggle('active', i === idx));
+          periodLabel.textContent = periodDefs[idx].label + (idx === 0 ? ' — листайте вправо' : '');
+        });
       }, isBack);
     } else if (current.level === 'profile_challenges') {
       const items = await apiGet(`/api/subjects/${current.subjectId}/challenges`);
@@ -3383,6 +3415,48 @@
             screen.appendChild(evCard);
           });
         }
+
+        // --- Полный список занятий месяца, прошедшие — бледнее ---
+        const monthEvents = events
+          .filter((ev) => {
+            const [ey, em] = ev.event_time.slice(0, 7).split('-').map(Number);
+            return ey === calYear && (em - 1) === calMonth;
+          })
+          .sort((a, b) => a.event_time.localeCompare(b.event_time));
+
+        if (monthEvents.length) {
+          const monthTitle = document.createElement('div');
+          monthTitle.className = 'field-hint';
+          monthTitle.style.cssText = 'margin:22px 0 10px;text-transform:uppercase;font-weight:800;letter-spacing:0.03em;';
+          const monthNamesFull = ['январь', 'февраль', 'март', 'апрель', 'май', 'июнь', 'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь'];
+          monthTitle.textContent = 'Все занятия — ' + monthNamesFull[calMonth];
+          screen.appendChild(monthTitle);
+
+          const nowMs = Date.now();
+          monthEvents.forEach((ev) => {
+            const isPast = new Date(ev.event_time.replace(' ', 'T')).getTime() < nowMs;
+            const row = document.createElement('div');
+            row.style.cssText = `display:flex;gap:10px;align-items:center;padding:9px 4px;border-bottom:1px solid var(--border);${isPast ? 'opacity:0.45;' : ''}`;
+            const [ry, rm, rd] = ev.event_time.slice(0, 10).split('-');
+            const dateBadge = document.createElement('div');
+            dateBadge.style.cssText = 'width:34px;flex-shrink:0;text-align:center;font-family:\'Jost\',sans-serif;';
+            dateBadge.innerHTML = `<div style="font-size:15px;font-weight:800;line-height:1;">${rd}</div><div style="font-size:9.5px;color:var(--text-soft);text-transform:uppercase;">${monthNamesFull[calMonth].slice(0, 3)}</div>`;
+            row.appendChild(dateBadge);
+            const dot = document.createElement('span');
+            dot.style.cssText = `width:6px;height:6px;border-radius:50%;background:${colorBySubject[ev.subject_title] || 'var(--accent)'};flex-shrink:0;`;
+            row.appendChild(dot);
+            const info = document.createElement('div');
+            info.style.flex = '1';
+            info.style.minWidth = '0';
+            info.innerHTML = `
+              <div style="font-size:13.5px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(ev.title)}</div>
+              <div style="font-size:11.5px;color:var(--text-soft);">${ev.event_time.slice(11)} · ${escapeHtml(ev.subject_title)}</div>
+            `;
+            row.appendChild(info);
+            row.onclick = () => { calSelected = ev.event_time.slice(0, 10); renderProfile(false); };
+            screen.appendChild(row);
+          });
+        }
       }, isBack);
     }
     } catch (err) {
@@ -3538,6 +3612,12 @@
     hint.className = 'task-description';
     hint.textContent = 'Расскажите немного о себе — это займёт одну минуту.';
     card.appendChild(hint);
+
+    const nameHint = document.createElement('p');
+    nameHint.className = 'field-hint';
+    nameHint.style.cssText = 'margin:-8px 0 14px;color:var(--red-dark);';
+    nameHint.textContent = 'Указывайте настоящие фамилию и имя — они видны в рейтинге и учителю.';
+    card.appendChild(nameHint);
 
     const makeField = (labelText, placeholder) => {
       const label = document.createElement('div');
