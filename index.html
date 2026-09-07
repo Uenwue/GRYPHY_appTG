@@ -573,7 +573,7 @@
   .stat-chart-col { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; gap: 4px; }
   .stat-chart-num { font-family: 'Jost', sans-serif; font-size: 10.5px; font-weight: 800; color: var(--text-soft); }
   .stat-chart-bar { width: 100%; max-width: 22px; border-radius: 6px; transition: height 0.4s var(--bounce); }
-  .stat-chart-daylabel { font-size: 10.5px; font-weight: 700; color: var(--text-soft); margin-top: 2px; }
+  .stat-chart-daylabel { font-size: 11px; font-weight: 800; color: var(--text); margin-top: 3px; }
   .stat-chart-dots { display: flex; justify-content: center; gap: 6px; margin-top: 10px; }
   .stat-chart-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--border); transition: background 0.2s ease; }
   .stat-chart-dot.active { background: var(--accent); }
@@ -596,7 +596,7 @@
   .lb-podium-name { font-family: 'Jost', sans-serif; font-weight: 800; font-size: 12.5px; text-align: center; max-width: 100%; margin-top: 8px; line-height: 1.25; word-break: break-word; }
   .lb-podium-points { font-size: 12px; font-weight: 700; color: var(--text-soft); }
   .lb-list-header { display: flex; align-items: center; gap: 8px; padding: 0 4px 8px; font-size: 11.5px; font-weight: 700; color: var(--text-soft); text-transform: uppercase; letter-spacing: 0.03em; }
-  .lb-list-header .lb-col-rank { width: 16px; text-align: center; }
+  .lb-list-header .lb-col-rank { width: auto; margin-right: 4px; text-align: left; }
   .lb-list-header .lb-col-player { flex: 1; }
   .lb-row { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-radius: 14px; margin-bottom: 8px; background: var(--blue-tint); }
   .lb-row-rank { width: 16px; text-align: center; font-family: 'Jost', sans-serif; font-weight: 800; font-size: 13px; color: var(--accent); flex-shrink: 0; }
@@ -2853,16 +2853,16 @@
         const themeGrid = document.createElement('div');
         themeGrid.style.cssText = 'display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:20px;';
         const themeOptions = [
-          { key: 'system', emoji: '💻' },
-          { key: 'light', emoji: '☀️' },
-          { key: 'dark', emoji: '🌙' },
+          { key: 'system', icon: '<svg viewBox="0 0 20 20" fill="none"><rect x="5" y="2" width="10" height="16" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M9 15.5H11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>' },
+          { key: 'light', icon: '<svg viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="3.5" stroke="currentColor" stroke-width="1.5"/><path d="M10 2.5V4M10 16V17.5M3.5 4.2L4.6 5.3M15.4 14.7L16.5 15.8M2 10H3.5M16.5 10H18M3.5 15.8L4.6 14.7M15.4 5.3L16.5 4.2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>' },
+          { key: 'dark', icon: '<svg viewBox="0 0 20 20" fill="none"><path d="M16.5 12.2C15.4 13 14 13.5 12.5 13.5C8.9 13.5 6 10.6 6 7C6 5.5 6.5 4.1 7.3 3C4.3 3.7 2 6.5 2 9.8C2 13.8 5.2 17 9.2 17C12.5 17 15.3 14.7 16.1 11.7C16.2 11.9 16.4 12.1 16.5 12.2Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>' },
         ];
         const savedTheme = localStorage.getItem('miniapp-theme') || 'system';
         themeOptions.forEach((opt) => {
           const btn = document.createElement('button');
           const active = savedTheme === opt.key;
-          btn.style.cssText = `display:flex;align-items:center;justify-content:center;padding:14px 4px;border-radius:14px;border:2px solid ${active ? 'var(--accent)' : 'var(--border)'};background:${active ? 'var(--blue-tint)' : 'var(--bg)'};font-size:22px;cursor:pointer;`;
-          btn.textContent = opt.emoji;
+          btn.style.cssText = `display:flex;align-items:center;justify-content:center;padding:9px 4px;border-radius:12px;border:2px solid ${active ? 'var(--accent)' : 'var(--border)'};background:${active ? 'var(--blue-tint)' : 'var(--bg)'};color:${active ? 'var(--accent)' : 'var(--text-soft)'};cursor:pointer;`;
+          btn.innerHTML = `<span style="width:16px;height:16px;display:block;">${opt.icon}</span>`;
           btn.onclick = () => { applyThemeChoice(opt.key); renderProfile(false); };
           themeGrid.appendChild(btn);
         });
@@ -3025,11 +3025,11 @@
         const predicted = stats.predicted_score || { best_topic: null, untouched_count: 0, total_topics: 0 };
         let supportText;
         if (!predicted.total_topics) {
-          supportText = 'Пока нет тем для отслеживания прогресса — начните с первого раздела.';
+          supportText = 'Всё только начинается — сделайте первый шаг с любой темы!';
         } else if (predicted.best_topic && predicted.untouched_count > 0) {
-          supportText = `Хорошо идёте по теме «${predicted.best_topic}»! Впереди ещё ${predicted.untouched_count} ${predicted.untouched_count === 1 ? 'непроработанная тема' : 'непроработанных тем'} — не останавливайтесь.`;
+          supportText = `Отлично идёте по теме «${predicted.best_topic}»! Впереди — ещё интересные темы, которые вас ждут.`;
         } else if (predicted.best_topic) {
-          supportText = `Лучше всего пока получается «${predicted.best_topic}». Продолжайте в том же духе!`;
+          supportText = `Вы прошли все темы, лучше всего получается «${predicted.best_topic}» — сильный результат!`;
         } else {
           supportText = 'Начните решать задания — и здесь появится персональная подсказка.';
         }
@@ -3041,6 +3041,31 @@
           <div class="stat-predict-text" style="margin-top:2px;">${escapeHtml(supportText)}</div>
         `;
         screen.appendChild(predictCard);
+
+        const solvedCard = document.createElement('div');
+        solvedCard.style.cssText = 'background:var(--bg-soft);border-radius:16px;padding:14px 16px;margin-bottom:10px;';
+        solvedCard.innerHTML = `
+          <div style="font-size:12px;color:var(--text-soft);font-weight:600;margin-bottom:10px;">📚 Решено заданий</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+            <div>
+              <div class="stat-cell-label">Решено всего</div>
+              <div class="stat-cell-value">${stats.total_solved || 0}</div>
+            </div>
+            <div>
+              <div class="stat-cell-label">Решено верно</div>
+              <div class="stat-cell-value">${stats.correct_solved || 0}</div>
+            </div>
+            <div>
+              <div class="stat-cell-label">Всего за сегодня</div>
+              <div class="stat-cell-value">${stats.solved_today || 0}</div>
+            </div>
+            <div>
+              <div class="stat-cell-label">Верно за сегодня</div>
+              <div class="stat-cell-value">${stats.correct_today || 0}</div>
+            </div>
+          </div>
+        `;
+        screen.appendChild(solvedCard);
 
         const grid = document.createElement('div');
         grid.className = 'stat-grid';
@@ -3056,8 +3081,7 @@
           return c;
         };
 
-        grid.appendChild(cell('📚', 'Решено сегодня', `${stats.correct_today || 0} из ${stats.solved_today || 0}`, `за месяц: ${stats.correct_this_month || 0} из ${stats.solved_this_month || 0} верно`));
-        grid.appendChild(cell('🎯', 'Точность', `${stats.accuracy || 0}%`));
+        grid.appendChild(cell('🎯', 'Точность', `${stats.accuracy || 0}%`, 'доля верных ответов из всех решённых'));
         grid.appendChild(cell('📖', 'Уроки', `${stats.homework_done || 0} / ${stats.homework_total || 0}`));
         grid.appendChild(cell('⏱', 'В приложении', `${Math.round((stats.time_today_seconds || 0) / 60)} мин`));
         const bestTestScore = stats.tests && stats.tests.length ? Math.max(...stats.tests.map(t => t.actual_score ?? t.primary_score ?? 0)) : null;
@@ -3111,7 +3135,7 @@
           });
         }
 
-        const buildBarPage = (title, values, colorFn, unit) => {
+        const buildBarPage = (title, values, colorFn, numFormatter) => {
           const page = document.createElement('div');
           page.className = 'stat-chart-page';
           const t = document.createElement('div');
@@ -3127,7 +3151,7 @@
             if (v.value > 0) {
               const num = document.createElement('div');
               num.className = 'stat-chart-num';
-              num.textContent = v.value + (unit || '');
+              num.textContent = numFormatter ? numFormatter(v) : v.value;
               col.appendChild(num);
             }
             const bar = document.createElement('div');
@@ -3152,7 +3176,8 @@
         pager.appendChild(buildBarPage(
           'Решено заданий (верно / всего)',
           last7.map((d) => ({ value: d.total, isToday: d.isToday, correct: d.correct })),
-          (v) => v.value > 0 && v.correct >= v.value ? 'var(--green)' : (v.value > 0 ? 'var(--yellow)' : 'var(--border)')
+          (v) => v.value > 0 && v.correct >= v.value ? 'var(--green)' : (v.value > 0 ? 'var(--yellow)' : 'var(--border)'),
+          (v) => `${v.correct}/${v.value}`
         ));
         pager.appendChild(buildBarPage(
           'Время в приложении, мин',
@@ -3283,6 +3308,18 @@
       const PASTEL_COLORS = ['#FFB4A8', '#F5B8E0', '#FFDB70', '#C9B8F5', '#A8E6D4', '#A8D8F5'];
       const initialOf = (name) => (name || '?').trim().charAt(0).toUpperCase();
 
+      const pointsUnit = (n) => {
+        const mod10 = n % 10, mod100 = n % 100;
+        if (leaderboardType === 'test_scores') {
+          if (mod10 === 1 && mod100 !== 11) return 'балл';
+          if ([2, 3, 4].includes(mod10) && ![12, 13, 14].includes(mod100)) return 'балла';
+          return 'баллов';
+        }
+        if (mod10 === 1 && mod100 !== 11) return 'задание';
+        if ([2, 3, 4].includes(mod10) && ![12, 13, 14].includes(mod100)) return 'задания';
+        return 'заданий';
+      };
+
       const buildLeaderboardPage = (rows) => {
         const page = document.createElement('div');
         page.className = 'lb-page';
@@ -3331,7 +3368,7 @@
             item.appendChild(name);
             const points = document.createElement('div');
             points.className = 'lb-podium-points';
-            points.textContent = p.points + ' очков';
+            points.textContent = p.points + ' ' + pointsUnit(p.points);
             item.appendChild(points);
             podiumWrap.appendChild(item);
           });
