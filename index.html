@@ -2775,11 +2775,12 @@
 
     try {
     if (current.level === 'profile_subjects') {
-      const [profileInfo, subStatus, subjects, events] = await Promise.all([
+      const [profileInfo, subStatus, subjects, events, notifSummary] = await Promise.all([
         apiGet('/api/me/profile-info').catch(() => ({})),
         apiGet('/api/me/subscription-status').catch(() => ({ subscriptions: [] })),
         apiGet('/api/subjects').catch(() => []),
         apiGet('/api/schedule').catch(() => []),
+        apiGet('/api/me/notifications').catch(() => ({ unread_count: 0, items: [] })),
       ]);
       const now = new Date();
       if (calYear === undefined) {
@@ -2871,12 +2872,14 @@
         const notifBtn = document.createElement('button');
         notifBtn.className = 'row-card';
         notifBtn.style.cssText = 'width:100%;cursor:pointer;align-items:center;margin-bottom:20px;';
+        const unreadCount = notifSummary.unread_count || 0;
         notifBtn.innerHTML = `
           <div style="width:36px;height:36px;border-radius:10px;background:var(--bg-soft);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:18px;">🔔</div>
           <div class="row-title" style="flex:1;color:var(--accent);">Уведомления</div>
+          ${unreadCount > 0 ? `<span style="background:var(--red-dark);color:white;border-radius:10px;padding:1px 8px;font-size:11.5px;font-weight:800;flex-shrink:0;">${unreadCount}</span>` : ''}
           <span style="color:var(--border);font-size:18px;font-weight:700;">›</span>
         `;
-        notifBtn.onclick = () => { profileStack.push({ level: 'notifications', title: 'Уведомления' }); renderProfileCrumbs(); renderProfile(false); };
+        notifBtn.onclick = () => { profileStack.push({ level: 'notifications_inbox', title: 'Уведомления' }); renderProfileCrumbs(); renderProfile(false); };
         screen.appendChild(notifBtn);
 
         const scheduleTitle = document.createElement('div');
@@ -3243,6 +3246,70 @@
           list.appendChild(card);
         });
         screen.appendChild(list);
+      }, isBack);
+    } else if (current.level === 'notifications_inbox') {
+      const data = await apiGet('/api/me/notifications');
+      swapScreen((screen) => {
+        const settingsLink = document.createElement('button');
+        settingsLink.style.cssText = 'display:block;margin:0 0 14px auto;background:none;border:none;color:var(--accent);font-size:12.5px;font-weight:700;cursor:pointer;';
+        settingsLink.textContent = '⚙ Настройки уведомлений';
+        settingsLink.onclick = () => { profileStack.push({ level: 'notifications', title: 'Настройки уведомлений' }); renderProfileCrumbs(); renderProfile(false); };
+        screen.appendChild(settingsLink);
+
+        if (!data.items.length) {
+          const p = document.createElement('p');
+          p.className = 'state-msg';
+          p.textContent = 'Пока нет уведомлений — здесь появится всё важное: новые уроки, расписание, ответы учителя.';
+          screen.appendChild(p);
+          return;
+        }
+
+        if (data.unread_count > 0) {
+          const readAllBtn = document.createElement('button');
+          readAllBtn.style.cssText = 'display:block;width:100%;background:var(--bg-soft);border:none;border-radius:12px;padding:10px;margin-bottom:14px;color:var(--text-soft);font-size:12.5px;font-weight:700;cursor:pointer;';
+          readAllBtn.textContent = 'Отметить все как прочитанные';
+          readAllBtn.onclick = async () => {
+            await apiPost('/api/me/notifications/read-all', {});
+            renderProfile(false);
+          };
+          screen.appendChild(readAllBtn);
+        }
+
+        const typeIcons = {
+          homework_feedback: '💬', topic_unlocked: '📖', schedule_reminder: '📅',
+          error_report_resolved: '🐞', platform_news: '📣',
+        };
+
+        data.items.forEach((item) => {
+          const card = document.createElement('div');
+          card.style.cssText = `background:${item.is_read ? 'var(--bg-soft)' : 'var(--blue-tint)'};border-radius:14px;padding:12px 14px;margin-bottom:8px;cursor:pointer;`;
+          const [dy, dm, dd] = item.created_at.slice(0, 10).split('-');
+          card.innerHTML = `
+            <div style="display:flex;gap:10px;align-items:flex-start;">
+              <span style="font-size:18px;flex-shrink:0;">${typeIcons[item.type] || '🔔'}</span>
+              <div style="flex:1;min-width:0;">
+                <div style="display:flex;justify-content:space-between;gap:8px;">
+                  <span style="font-family:'Jost',sans-serif;font-weight:800;font-size:13.5px;">${escapeHtml(item.title)}</span>
+                  ${!item.is_read ? '<span style="width:8px;height:8px;border-radius:50%;background:var(--accent);flex-shrink:0;margin-top:4px;"></span>' : ''}
+                </div>
+                <div class="notif-body" style="font-size:12.5px;color:var(--text-soft);margin-top:3px;display:none;">${escapeHtml(item.body)}</div>
+                <div style="font-size:11px;color:var(--text-soft);margin-top:4px;">${dd}.${dm}.${dy}</div>
+              </div>
+            </div>
+          `;
+          card.onclick = async () => {
+            const body = card.querySelector('.notif-body');
+            body.style.display = body.style.display === 'none' ? 'block' : 'none';
+            if (!item.is_read) {
+              item.is_read = true;
+              card.style.background = 'var(--bg-soft)';
+              const dot = card.querySelector('span[style*="border-radius:50%"]');
+              if (dot) dot.remove();
+              await apiPost(`/api/me/notifications/${item.id}/read`, {});
+            }
+          };
+          screen.appendChild(card);
+        });
       }, isBack);
     } else if (current.level === 'notifications') {
       const prefs = await apiGet('/api/me/notification-preferences');
