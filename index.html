@@ -524,6 +524,7 @@
   .hw-card-eyebrow { font-size: 11.5px; font-weight: 700; color: var(--text-soft); text-transform: uppercase; letter-spacing: 0.03em; margin-bottom: 2px; }
   .hw-card-title { font-family: 'Jost', sans-serif; font-size: 15.5px; font-weight: 700; color: var(--text); line-height: 1.35; }
   .hw-card-sub { font-size: 12.5px; color: var(--text-soft); font-weight: 600; margin-top: 4px; }
+  .hw-card-deadline { font-size: 11.5px; color: var(--accent); font-weight: 700; margin-top: 4px; }
   .hw-status { flex-shrink: 0; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; }
   .hw-status svg { width: 100%; height: 100%; }
   .hw-status.done { color: var(--green); }
@@ -595,11 +596,11 @@
   .lb-rank-badge { position: absolute; bottom: -4px; left: 50%; transform: translateX(-50%); width: 22px; height: 22px; border-radius: 50%; background: var(--accent); color: white; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 800; border: 2px solid var(--bg); }
   .lb-podium-name { font-family: 'Jost', sans-serif; font-weight: 800; font-size: 12.5px; text-align: center; max-width: 100%; margin-top: 8px; line-height: 1.25; word-break: break-word; }
   .lb-podium-points { font-size: 12px; font-weight: 700; color: var(--text-soft); }
-  .lb-list-header { display: flex; align-items: center; gap: 12px; padding: 0 4px 8px; font-size: 11.5px; font-weight: 700; color: var(--text-soft); text-transform: uppercase; letter-spacing: 0.03em; }
-  .lb-list-header .lb-col-rank { width: 22px; }
+  .lb-list-header { display: flex; align-items: center; gap: 8px; padding: 0 4px 8px; font-size: 11.5px; font-weight: 700; color: var(--text-soft); text-transform: uppercase; letter-spacing: 0.03em; }
+  .lb-list-header .lb-col-rank { width: 16px; text-align: center; }
   .lb-list-header .lb-col-player { flex: 1; }
-  .lb-row { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 14px; margin-bottom: 8px; background: var(--blue-tint); }
-  .lb-row-rank { width: 22px; font-family: 'Jost', sans-serif; font-weight: 800; font-size: 13px; color: var(--accent); flex-shrink: 0; }
+  .lb-row { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-radius: 14px; margin-bottom: 8px; background: var(--blue-tint); }
+  .lb-row-rank { width: 16px; text-align: center; font-family: 'Jost', sans-serif; font-weight: 800; font-size: 13px; color: var(--accent); flex-shrink: 0; }
   .lb-row-avatar { width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-family: 'Jost', sans-serif; font-weight: 800; font-size: 13px; color: white; flex-shrink: 0; }
   .lb-row-name { flex: 1; font-size: 13px; font-weight: 700; color: var(--text); line-height: 1.25; word-break: break-word; }
   .lb-row-points { font-family: 'Jost', sans-serif; font-weight: 800; font-size: 13px; color: var(--text); flex-shrink: 0; align-self: center; }
@@ -772,7 +773,13 @@
     crumbsEl.style.display = (hasBack || title) ? '' : 'none';
   }
 
+  let homeworkCountdownInterval = null;
+  function stopHomeworkCountdown() {
+    if (homeworkCountdownInterval) { clearInterval(homeworkCountdownInterval); homeworkCountdownInterval = null; }
+  }
+
   function swapScreen(buildFn, isBack) {
+    stopHomeworkCountdown();
     const screen = document.createElement('div');
     screen.className = 'screen' + (isBack ? ' back' : '');
     screen.id = 'content';
@@ -944,7 +951,18 @@
     container.appendChild(wrap);
   }
 
+  function formatCountdown(seconds) {
+    if (seconds <= 0) return 'срок истёк';
+    const d = Math.floor(seconds / 86400);
+    const h = Math.floor((seconds % 86400) / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    if (d > 0) return `${d}д ${h}ч ${m}м`;
+    if (h > 0) return `${h}ч ${m}м`;
+    return `${m}м`;
+  }
+
   function renderHwStyleCards(container, items) {
+    const cards = [];
     items.forEach((item, i) => {
       const card = document.createElement('button');
       card.className = 'hw-card' + (item.isLocked ? ' locked' : '');
@@ -968,6 +986,12 @@
         subEl.textContent = item.sub;
         body.appendChild(subEl);
       }
+      if (item.secondsRemaining !== undefined && item.secondsRemaining !== null) {
+        const deadlineEl = document.createElement('div');
+        deadlineEl.className = 'hw-card-deadline';
+        deadlineEl.textContent = '⏳ ' + formatCountdown(item.secondsRemaining);
+        body.appendChild(deadlineEl);
+      }
       card.appendChild(body);
 
       const status = document.createElement('span');
@@ -985,7 +1009,9 @@
         ? () => { const msg = item.lockMessage || 'Пока недоступно.'; if (tg?.showAlert) tg.showAlert(msg); else alert(msg); }
         : item.onClick;
       container.appendChild(card);
+      cards.push(card);
     });
+    return cards;
   }
 
   async function renderHomeworkList(sectionId, isBack) {
@@ -1037,6 +1063,7 @@
             isLocked: t.is_locked,
             lockMessage: t.lock_message,
             isDone,
+            secondsRemaining: (!t.is_locked && !isDone && t.seconds_remaining !== null && t.seconds_remaining !== undefined) ? t.seconds_remaining : null,
             onClick: () => {
               stack.push({ level: 'order_choice', scope: 'topic', scopeId: t.id, title: `Урок ${i + 1}: ${t.title}` });
               renderCrumbs();
@@ -1044,7 +1071,20 @@
             },
           });
         });
-        renderHwStyleCards(list, items);
+        const cards = renderHwStyleCards(list, items);
+
+        const withDeadline = items
+          .map((item, i) => ({ card: cards[i], seconds: item.secondsRemaining }))
+          .filter((x) => x.seconds !== null);
+        if (withDeadline.length) {
+          homeworkCountdownInterval = setInterval(() => {
+            withDeadline.forEach((x) => {
+              x.seconds -= 1;
+              const el = x.card.querySelector('.hw-card-deadline');
+              if (el) el.textContent = '⏳ ' + formatCountdown(x.seconds);
+            });
+          }, 1000);
+        }
       }, isBack);
     } catch (err) {
       showState('Не получилось загрузить уроки. ' + err.message, true, true, isBack);
