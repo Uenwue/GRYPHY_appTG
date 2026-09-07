@@ -563,7 +563,6 @@
     font-family: 'Nunito', sans-serif; font-size: 13.5px; font-weight: 700; color: var(--red-dark);
     cursor: pointer; text-align: left; margin: 16px 0 24px;
   }
-  .stat-report-btn span:first-child { font-size: 18px; flex-shrink: 0; }
 
   .stat-chart-title { font-size: 13px; color: var(--text-soft); font-weight: 700; margin: 20px 0 10px; text-align: center; }
   .stat-chart-pager { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; width: 100%; }
@@ -587,7 +586,7 @@
   .lb-pager { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; width: 100%; }
   .lb-pager::-webkit-scrollbar { display: none; }
   .lb-pager-page { flex: 0 0 100%; width: 100%; scroll-snap-align: start; box-sizing: border-box; }
-  .lb-podium { display: flex; align-items: flex-end; justify-content: center; gap: 10px; margin-bottom: 24px; }
+  .lb-podium { display: flex; align-items: flex-end; justify-content: center; gap: 10px; margin-top: 12px; margin-bottom: 24px; }
   .lb-podium-item { display: flex; flex-direction: column; align-items: center; gap: 2px; flex: 1; max-width: 110px; }
   .lb-avatar-wrap { position: relative; }
   .lb-avatar { width: 56px; height: 56px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-family: 'Jost', sans-serif; font-weight: 800; font-size: 20px; color: white; border: 3px solid var(--bg); box-shadow: 0 2px 8px rgba(0,0,0,0.1); flex-shrink: 0; }
@@ -1909,19 +1908,38 @@
             }));
           }, isBack);
         } else {
-          renderList(topics.map((t) => ({ id: t.id, title: t.title, is_locked: t.is_locked, lock_message: t.lock_message })),
-            async (item) => {
-              stack.push({ level: 'rules', topicId: item.id, title: item.title });
-              renderCrumbs();
-              showLoading('Загружаем правила', false);
-              try {
-                const data = await apiGet(`/api/topics/${item.id}/rules`);
-                renderRulesWithVideo(data, item.id, item.title);
-              } catch (err) {
-                showState('Не получилось загрузить правила.', true, true);
-              }
-            },
-            'topics', isBack);
+          swapScreen((screen) => {
+            const list = document.createElement('div');
+            list.className = 'hw-list';
+            screen.appendChild(list);
+
+            if (!topics.length) {
+              const p = document.createElement('p');
+              p.className = 'state-msg';
+              p.textContent = 'Темы пока не добавлены.';
+              list.appendChild(p);
+              return;
+            }
+
+            renderHwStyleCards(list, topics.map((t) => ({
+              title: t.title,
+              sub: t.is_locked ? (t.lock_message || 'Пока недоступно.') : undefined,
+              isLocked: t.is_locked,
+              lockMessage: t.lock_message,
+              isDone: false,
+              onClick: async () => {
+                stack.push({ level: 'rules', topicId: t.id, title: t.title });
+                renderCrumbs();
+                showLoading('Загружаем правила', false);
+                try {
+                  const data = await apiGet(`/api/topics/${t.id}/rules`);
+                  renderRulesWithVideo(data, t.id, t.title);
+                } catch (err) {
+                  showState('Не получилось загрузить правила.', true, true);
+                }
+              },
+            })));
+          }, isBack);
         }
       } else if (current.level === 'order_choice') {
         renderOrderChoice(current.scope, current.scopeId, current.title, isBack);
@@ -1934,17 +1952,31 @@
         renderRulesWithVideo(data, current.topicId, current.title, isBack);
       } else if (current.level === 'tests') {
         const tests = await apiGet(`/api/subjects/${current.subjectId}/tests`);
-        renderList(tests.map(t => ({
-            id: t.id, title: t.title,
-            time_limit_minutes: t.time_limit_minutes, question_count: t.question_count,
+        swapScreen((screen) => {
+          const list = document.createElement('div');
+          list.className = 'hw-list';
+          screen.appendChild(list);
+
+          if (!tests.length) {
+            const p = document.createElement('p');
+            p.className = 'state-msg';
+            p.textContent = 'Тесты пока не добавлены.';
+            list.appendChild(p);
+            return;
+          }
+
+          renderHwStyleCards(list, tests.map((t) => ({
+            title: t.title,
             sub: t.question_count + ' вопросов' + (t.time_limit_minutes ? ` · ⏱ ${t.time_limit_minutes} мин` : ''),
-          })),
-          (item) => {
-            stack.push({ level: 'test_ready', testId: item.id, title: item.title, timeLimit: item.time_limit_minutes, questionCount: item.question_count });
-            renderCrumbs();
-            render(false);
-          },
-          'tests', isBack);
+            isLocked: false,
+            isDone: false,
+            onClick: () => {
+              stack.push({ level: 'test_ready', testId: t.id, title: t.title, timeLimit: t.time_limit_minutes, questionCount: t.question_count });
+              renderCrumbs();
+              render(false);
+            },
+          })));
+        }, isBack);
       } else if (current.level === 'test_ready') {
         renderTestReadyScreen(current.testId, current.title, current.timeLimit, current.questionCount, isBack);
       } else if (current.level === 'test_taking') {
@@ -2743,10 +2775,19 @@
 
     try {
     if (current.level === 'profile_subjects') {
-      const [profileInfo, subStatus] = await Promise.all([
+      const [profileInfo, subStatus, subjects, events] = await Promise.all([
         apiGet('/api/me/profile-info').catch(() => ({})),
         apiGet('/api/me/subscription-status').catch(() => ({ subscriptions: [] })),
+        apiGet('/api/subjects').catch(() => []),
+        apiGet('/api/schedule').catch(() => []),
       ]);
+      const now = new Date();
+      if (calYear === undefined) {
+        calYear = now.getFullYear();
+        calMonth = now.getMonth();
+      }
+      const todayStr = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
+      if (calSelected === undefined || calSelected === null) calSelected = todayStr;
       swapScreen((screen) => {
         const subtitle = document.createElement('p');
         subtitle.className = 'field-hint';
@@ -2780,13 +2821,23 @@
           courseCard.style.cssText = 'background:var(--bg-soft);border-radius:16px;padding:14px 16px;margin-bottom:20px;';
           const [y, m, d] = (sub.expires_at || '').split('-');
           const expiresText = (y && m && d) ? `${d}.${m}.${y}` : '—';
+          const isMiniGroup = sub.course_type === 'Мини-группа';
           courseCard.innerHTML = `
             <div style="display:flex;justify-content:space-between;gap:10px;margin-bottom:6px;">
-              <span class="field-hint" style="margin:0;">Вид курса</span>
+              <span class="field-hint" style="margin:0;">Предмет</span>
+              <span style="font-weight:700;font-size:13.5px;">${escapeHtml(sub.subject_title)}</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;gap:10px;margin-bottom:6px;">
+              <span class="field-hint" style="margin:0;">Вид обучения</span>
               <span style="font-weight:700;font-size:13.5px;">${escapeHtml(sub.course_type || 'Курс')}</span>
             </div>
+            ${isMiniGroup && sub.group_code ? `
+            <div style="display:flex;justify-content:space-between;gap:10px;margin-bottom:6px;">
+              <span class="field-hint" style="margin:0;">Код группы</span>
+              <span style="font-weight:700;font-size:13.5px;">${escapeHtml(sub.group_code)}</span>
+            </div>` : ''}
             <div style="display:flex;justify-content:space-between;gap:10px;">
-              <span class="field-hint" style="margin:0;">Курс действует до</span>
+              <span class="field-hint" style="margin:0;">Обучение действует до</span>
               <span style="font-weight:700;font-size:13.5px;">${expiresText}</span>
             </div>
           `;
@@ -2802,16 +2853,16 @@
         const themeGrid = document.createElement('div');
         themeGrid.style.cssText = 'display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:20px;';
         const themeOptions = [
-          { key: 'system', label: 'Системная', icon: '<svg viewBox="0 0 20 20" fill="none"><rect x="5" y="2" width="10" height="16" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M9 15.5H11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>' },
-          { key: 'light', label: 'Светлая', icon: '<svg viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="3.5" stroke="currentColor" stroke-width="1.5"/><path d="M10 2.5V4M10 16V17.5M3.5 4.2L4.6 5.3M15.4 14.7L16.5 15.8M2 10H3.5M16.5 10H18M3.5 15.8L4.6 14.7M15.4 5.3L16.5 4.2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>' },
-          { key: 'dark', label: 'Тёмная', icon: '<svg viewBox="0 0 20 20" fill="none"><path d="M16.5 12.2C15.4 13 14 13.5 12.5 13.5C8.9 13.5 6 10.6 6 7C6 5.5 6.5 4.1 7.3 3C4.3 3.7 2 6.5 2 9.8C2 13.8 5.2 17 9.2 17C12.5 17 15.3 14.7 16.1 11.7C16.2 11.9 16.4 12.1 16.5 12.2Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>' },
+          { key: 'system', emoji: '💻' },
+          { key: 'light', emoji: '☀️' },
+          { key: 'dark', emoji: '🌙' },
         ];
         const savedTheme = localStorage.getItem('miniapp-theme') || 'system';
         themeOptions.forEach((opt) => {
           const btn = document.createElement('button');
           const active = savedTheme === opt.key;
-          btn.style.cssText = `display:flex;flex-direction:column;align-items:center;gap:5px;padding:12px 4px;border-radius:14px;border:2px solid ${active ? 'var(--accent)' : 'var(--border)'};background:${active ? 'var(--blue-tint)' : 'var(--bg)'};color:${active ? 'var(--accent)' : 'var(--text-soft)'};cursor:pointer;`;
-          btn.innerHTML = `<span style="width:20px;height:20px;">${opt.icon}</span><span style="font-family:'Jost',sans-serif;font-size:11.5px;font-weight:700;">${opt.label}</span>`;
+          btn.style.cssText = `display:flex;align-items:center;justify-content:center;padding:14px 4px;border-radius:14px;border:2px solid ${active ? 'var(--accent)' : 'var(--border)'};background:${active ? 'var(--blue-tint)' : 'var(--bg)'};font-size:22px;cursor:pointer;`;
+          btn.textContent = opt.emoji;
           btn.onclick = () => { applyThemeChoice(opt.key); renderProfile(false); };
           themeGrid.appendChild(btn);
         });
@@ -2822,22 +2873,143 @@
         notifBtn.style.cssText = 'width:100%;cursor:pointer;align-items:center;margin-bottom:20px;';
         notifBtn.innerHTML = `
           <div style="width:36px;height:36px;border-radius:10px;background:var(--bg-soft);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:18px;">🔔</div>
-          <div class="row-title" style="flex:1;">Уведомления</div>
+          <div class="row-title" style="flex:1;color:var(--accent);">Уведомления</div>
           <span style="color:var(--border);font-size:18px;font-weight:700;">›</span>
         `;
         notifBtn.onclick = () => { profileStack.push({ level: 'notifications', title: 'Уведомления' }); renderProfileCrumbs(); renderProfile(false); };
         screen.appendChild(notifBtn);
 
-        const scheduleBtn = document.createElement('button');
-        scheduleBtn.className = 'row-card';
-        scheduleBtn.style.cssText = 'width:100%;cursor:pointer;align-items:center;';
-        scheduleBtn.innerHTML = `
-          <div style="width:36px;height:36px;border-radius:10px;background:var(--bg-soft);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:18px;">📅</div>
-          <div class="row-title" style="flex:1;">Расписание занятий</div>
-          <span style="color:var(--border);font-size:18px;font-weight:700;">›</span>
-        `;
-        scheduleBtn.onclick = () => { profileStack.push({ level: 'schedule', title: 'Расписание' }); renderProfileCrumbs(); renderProfile(false); };
-        screen.appendChild(scheduleBtn);
+        const scheduleTitle = document.createElement('div');
+        scheduleTitle.className = 'field-hint';
+        scheduleTitle.style.cssText = 'margin:0 0 8px;text-transform:uppercase;font-weight:800;letter-spacing:0.03em;';
+        scheduleTitle.textContent = '📅 Расписание занятий';
+        screen.appendChild(scheduleTitle);
+
+        const subjectColors = ['var(--accent)', 'var(--green)', 'var(--yellow)', 'var(--red)', '#9B59B6', '#FF8C42'];
+        const colorBySubject = {};
+        subjects.forEach((s, i) => { colorBySubject[s.title] = subjectColors[i % subjectColors.length]; });
+
+        if (subjects.length > 1) {
+          const legend = document.createElement('div');
+          legend.style.cssText = 'display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;';
+          subjects.forEach((s) => {
+            const tag = document.createElement('div');
+            tag.style.cssText = 'display:flex;align-items:center;gap:5px;font-size:11px;font-weight:700;color:var(--text-soft);';
+            tag.innerHTML = `<span style="width:8px;height:8px;border-radius:50%;background:${colorBySubject[s.title]};"></span>${s.title}`;
+            legend.appendChild(tag);
+          });
+          screen.appendChild(legend);
+        }
+
+        const eventColors = new Map();
+        events.forEach((ev) => {
+          const dateStr = ev.event_time.slice(0, 10);
+          const color = colorBySubject[ev.subject_title] || 'var(--accent)';
+          if (!eventColors.has(dateStr)) eventColors.set(dateStr, []);
+          if (!eventColors.get(dateStr).includes(color)) eventColors.get(dateStr).push(color);
+        });
+
+        const cal = buildCalendarGrid(calYear, calMonth, eventColors, calSelected,
+          (dateStr) => { calSelected = dateStr; renderProfile(false); },
+          () => { calMonth--; if (calMonth < 0) { calMonth = 11; calYear--; } renderProfile(false); },
+          () => { calMonth++; if (calMonth > 11) { calMonth = 0; calYear++; } renderProfile(false); },
+        );
+        screen.appendChild(cal);
+
+        const todayBtn = document.createElement('button');
+        todayBtn.textContent = 'Сегодня';
+        todayBtn.style.cssText = 'display:block;margin:0 0 16px auto;background:none;border:none;color:var(--accent);font-size:12.5px;font-weight:700;cursor:pointer;';
+        todayBtn.onclick = () => {
+          const t = new Date();
+          calYear = t.getFullYear(); calMonth = t.getMonth();
+          calSelected = t.getFullYear() + '-' + String(t.getMonth() + 1).padStart(2, '0') + '-' + String(t.getDate()).padStart(2, '0');
+          renderProfile(false);
+        };
+        screen.appendChild(todayBtn);
+
+        const dayEvents = events
+          .filter((ev) => ev.event_time.slice(0, 10) === calSelected)
+          .sort((a, b) => a.event_time.localeCompare(b.event_time));
+
+        const dayTitle = document.createElement('div');
+        dayTitle.className = 'field-hint';
+        dayTitle.style.cssText = 'margin:0 0 10px;text-transform:uppercase;font-weight:800;letter-spacing:0.03em;';
+        const [sy, sm, sd] = calSelected.split('-').map(Number);
+        dayTitle.textContent = new Date(sy, sm - 1, sd).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', weekday: 'long' });
+        screen.appendChild(dayTitle);
+
+        if (!dayEvents.length) {
+          const p = document.createElement('p');
+          p.className = 'state-msg';
+          p.textContent = 'На этот день занятий не запланировано.';
+          screen.appendChild(p);
+        } else {
+          dayEvents.forEach((ev) => {
+            const evCard = document.createElement('div');
+            evCard.style.cssText = `display:flex;gap:10px;background:var(--bg);border:2px solid var(--border);border-radius:14px;padding:12px 14px;margin-bottom:8px;`;
+            const bar = document.createElement('div');
+            bar.style.cssText = `width:4px;border-radius:4px;background:${colorBySubject[ev.subject_title] || 'var(--accent)'};flex-shrink:0;`;
+            evCard.appendChild(bar);
+            const info = document.createElement('div');
+            info.style.flex = '1';
+            info.innerHTML = `
+              <div style="font-weight:700;color:var(--text-soft);font-size:12.5px;">🕒 ${ev.event_time.slice(11)} · ${ev.subject_title}</div>
+              <div style="font-family:'Jost',sans-serif;font-weight:800;font-size:15px;margin-top:2px;">${ev.title}</div>
+            `;
+            evCard.appendChild(info);
+            if (ev.link) {
+              const linkBtn = document.createElement('a');
+              linkBtn.href = ev.link;
+              linkBtn.target = '_blank';
+              linkBtn.style.cssText = 'align-self:center;flex-shrink:0;color:var(--accent);font-size:20px;text-decoration:none;';
+              linkBtn.innerHTML = '🔗';
+              linkBtn.onclick = (e) => { if (tg?.openLink) { e.preventDefault(); tg.openLink(ev.link); } };
+              evCard.appendChild(linkBtn);
+            }
+            screen.appendChild(evCard);
+          });
+        }
+
+        const monthEvents = events
+          .filter((ev) => {
+            const [ey, em] = ev.event_time.slice(0, 7).split('-').map(Number);
+            return ey === calYear && (em - 1) === calMonth;
+          })
+          .sort((a, b) => a.event_time.localeCompare(b.event_time));
+
+        if (monthEvents.length) {
+          const monthTitle = document.createElement('div');
+          monthTitle.className = 'field-hint';
+          monthTitle.style.cssText = 'margin:22px 0 10px;text-transform:uppercase;font-weight:800;letter-spacing:0.03em;';
+          const monthNamesFull = ['январь', 'февраль', 'март', 'апрель', 'май', 'июнь', 'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь'];
+          monthTitle.textContent = 'Все занятия — ' + monthNamesFull[calMonth];
+          screen.appendChild(monthTitle);
+
+          const nowMs = Date.now();
+          monthEvents.forEach((ev) => {
+            const isPast = new Date(ev.event_time.replace(' ', 'T')).getTime() < nowMs;
+            const row = document.createElement('div');
+            row.style.cssText = `display:flex;gap:10px;align-items:center;padding:9px 4px;border-bottom:1px solid var(--border);${isPast ? 'opacity:0.45;' : ''}`;
+            const [ry, rm, rd] = ev.event_time.slice(0, 10).split('-');
+            const dateBadge = document.createElement('div');
+            dateBadge.style.cssText = 'width:34px;flex-shrink:0;text-align:center;font-family:\'Jost\',sans-serif;';
+            dateBadge.innerHTML = `<div style="font-size:15px;font-weight:800;line-height:1;">${rd}</div><div style="font-size:9.5px;color:var(--text-soft);text-transform:uppercase;">${monthNamesFull[calMonth].slice(0, 3)}</div>`;
+            row.appendChild(dateBadge);
+            const dot = document.createElement('span');
+            dot.style.cssText = `width:6px;height:6px;border-radius:50%;background:${colorBySubject[ev.subject_title] || 'var(--accent)'};flex-shrink:0;`;
+            row.appendChild(dot);
+            const info = document.createElement('div');
+            info.style.flex = '1';
+            info.style.minWidth = '0';
+            info.innerHTML = `
+              <div style="font-size:13.5px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(ev.title)}</div>
+              <div style="font-size:11.5px;color:var(--text-soft);">${ev.event_time.slice(11)} · ${escapeHtml(ev.subject_title)}</div>
+            `;
+            row.appendChild(info);
+            row.onclick = () => { calSelected = ev.event_time.slice(0, 10); renderProfile(false); };
+            screen.appendChild(row);
+          });
+        }
       }, isBack);
     } else if (current.level === 'profile_subject_home') {
       const [stats, dailyStats] = await Promise.all([
@@ -2884,7 +3056,7 @@
           return c;
         };
 
-        grid.appendChild(cell('📚', 'Решено заданий', `${stats.correct_solved || 0} / ${stats.total_solved || 0}`, `верно из всех, +${stats.solved_this_month || 0} за месяц`));
+        grid.appendChild(cell('📚', 'Решено сегодня', `${stats.correct_today || 0} из ${stats.solved_today || 0}`, `за месяц: ${stats.correct_this_month || 0} из ${stats.solved_this_month || 0} верно`));
         grid.appendChild(cell('🎯', 'Точность', `${stats.accuracy || 0}%`));
         grid.appendChild(cell('📖', 'Уроки', `${stats.homework_done || 0} / ${stats.homework_total || 0}`));
         grid.appendChild(cell('⏱', 'В приложении', `${Math.round((stats.time_today_seconds || 0) / 60)} мин`));
@@ -3221,6 +3393,16 @@
         periodLabel.textContent = periodDefs[0].label + ' — листайте вправо';
         screen.appendChild(periodLabel);
 
+        const dots = document.createElement('div');
+        dots.className = 'stat-chart-dots';
+        dots.style.marginBottom = '14px';
+        periodDefs.forEach((p, i) => {
+          const dot = document.createElement('span');
+          dot.className = 'stat-chart-dot' + (i === 0 ? ' active' : '');
+          dots.appendChild(dot);
+        });
+        screen.appendChild(dots);
+
         const pager = document.createElement('div');
         pager.className = 'lb-pager';
         periodDefs.forEach((p) => {
@@ -3229,15 +3411,6 @@
           pager.appendChild(page);
         });
         screen.appendChild(pager);
-
-        const dots = document.createElement('div');
-        dots.className = 'stat-chart-dots';
-        periodDefs.forEach((p, i) => {
-          const dot = document.createElement('span');
-          dot.className = 'stat-chart-dot' + (i === 0 ? ' active' : '');
-          dots.appendChild(dot);
-        });
-        screen.appendChild(dots);
 
         pager.addEventListener('scroll', () => {
           if (!pager.clientWidth) return;
@@ -3354,147 +3527,6 @@
               <div class="p-row">🏆 ${scoreText} · ✅ ${item.correct} ❌ ${item.wrong}</div>
             `;
             screen.appendChild(card);
-          });
-        }
-      }, isBack);
-    } else if (current.level === 'schedule') {
-      const [subjects, events] = await Promise.all([
-        apiGet('/api/subjects'),
-        apiGet('/api/schedule'),
-      ]);
-      const now = new Date();
-      if (calYear === undefined) {
-        calYear = now.getFullYear();
-        calMonth = now.getMonth();
-      }
-      const todayStr = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
-      if (calSelected === undefined || calSelected === null) calSelected = todayStr;
-
-      swapScreen((screen) => {
-        const subjectColors = ['var(--accent)', 'var(--green)', 'var(--yellow)', 'var(--red)', '#9B59B6', '#FF8C42'];
-        const colorBySubject = {};
-        subjects.forEach((s, i) => { colorBySubject[s.title] = subjectColors[i % subjectColors.length]; });
-
-        if (subjects.length > 1) {
-          const legend = document.createElement('div');
-          legend.style.cssText = 'display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;';
-          subjects.forEach((s) => {
-            const tag = document.createElement('div');
-            tag.style.cssText = 'display:flex;align-items:center;gap:5px;font-size:11px;font-weight:700;color:var(--text-soft);';
-            tag.innerHTML = `<span style="width:8px;height:8px;border-radius:50%;background:${colorBySubject[s.title]};"></span>${s.title}`;
-            legend.appendChild(tag);
-          });
-          screen.appendChild(legend);
-        }
-
-        const eventColors = new Map();
-        events.forEach((ev) => {
-          const dateStr = ev.event_time.slice(0, 10);
-          const color = colorBySubject[ev.subject_title] || 'var(--accent)';
-          if (!eventColors.has(dateStr)) eventColors.set(dateStr, []);
-          if (!eventColors.get(dateStr).includes(color)) eventColors.get(dateStr).push(color);
-        });
-
-        const cal = buildCalendarGrid(calYear, calMonth, eventColors, calSelected,
-          (dateStr) => { calSelected = dateStr; renderProfile(false); },
-          () => { calMonth--; if (calMonth < 0) { calMonth = 11; calYear--; } renderProfile(false); },
-          () => { calMonth++; if (calMonth > 11) { calMonth = 0; calYear++; } renderProfile(false); },
-        );
-        screen.appendChild(cal);
-
-        const todayBtn = document.createElement('button');
-        todayBtn.textContent = 'Сегодня';
-        todayBtn.style.cssText = 'display:block;margin:0 0 16px auto;background:none;border:none;color:var(--accent);font-size:12.5px;font-weight:700;cursor:pointer;';
-        todayBtn.onclick = () => {
-          const t = new Date();
-          calYear = t.getFullYear(); calMonth = t.getMonth();
-          calSelected = t.getFullYear() + '-' + String(t.getMonth() + 1).padStart(2, '0') + '-' + String(t.getDate()).padStart(2, '0');
-          renderProfile(false);
-        };
-        screen.appendChild(todayBtn);
-
-        const dayEvents = events
-          .filter((ev) => ev.event_time.slice(0, 10) === calSelected)
-          .sort((a, b) => a.event_time.localeCompare(b.event_time));
-
-        const dayTitle = document.createElement('div');
-        dayTitle.className = 'field-hint';
-        dayTitle.style.cssText = 'margin:0 0 10px;text-transform:uppercase;font-weight:800;letter-spacing:0.03em;';
-        const [sy, sm, sd] = calSelected.split('-').map(Number);
-        dayTitle.textContent = new Date(sy, sm - 1, sd).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', weekday: 'long' });
-        screen.appendChild(dayTitle);
-
-        if (!dayEvents.length) {
-          const p = document.createElement('p');
-          p.className = 'state-msg';
-          p.textContent = 'На этот день занятий не запланировано.';
-          screen.appendChild(p);
-        } else {
-          dayEvents.forEach((ev) => {
-            const evCard = document.createElement('div');
-            evCard.style.cssText = `display:flex;gap:10px;background:var(--bg);border:2px solid var(--border);border-radius:14px;padding:12px 14px;margin-bottom:8px;`;
-            const bar = document.createElement('div');
-            bar.style.cssText = `width:4px;border-radius:4px;background:${colorBySubject[ev.subject_title] || 'var(--accent)'};flex-shrink:0;`;
-            evCard.appendChild(bar);
-            const info = document.createElement('div');
-            info.style.flex = '1';
-            info.innerHTML = `
-              <div style="font-weight:700;color:var(--text-soft);font-size:12.5px;">🕒 ${ev.event_time.slice(11)} · ${ev.subject_title}</div>
-              <div style="font-family:'Jost',sans-serif;font-weight:800;font-size:15px;margin-top:2px;">${ev.title}</div>
-            `;
-            evCard.appendChild(info);
-            if (ev.link) {
-              const linkBtn = document.createElement('a');
-              linkBtn.href = ev.link;
-              linkBtn.target = '_blank';
-              linkBtn.style.cssText = 'align-self:center;flex-shrink:0;color:var(--accent);font-size:20px;text-decoration:none;';
-              linkBtn.innerHTML = '🔗';
-              linkBtn.onclick = (e) => { if (tg?.openLink) { e.preventDefault(); tg.openLink(ev.link); } };
-              evCard.appendChild(linkBtn);
-            }
-            screen.appendChild(evCard);
-          });
-        }
-
-        // --- Полный список занятий месяца, прошедшие — бледнее ---
-        const monthEvents = events
-          .filter((ev) => {
-            const [ey, em] = ev.event_time.slice(0, 7).split('-').map(Number);
-            return ey === calYear && (em - 1) === calMonth;
-          })
-          .sort((a, b) => a.event_time.localeCompare(b.event_time));
-
-        if (monthEvents.length) {
-          const monthTitle = document.createElement('div');
-          monthTitle.className = 'field-hint';
-          monthTitle.style.cssText = 'margin:22px 0 10px;text-transform:uppercase;font-weight:800;letter-spacing:0.03em;';
-          const monthNamesFull = ['январь', 'февраль', 'март', 'апрель', 'май', 'июнь', 'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь'];
-          monthTitle.textContent = 'Все занятия — ' + monthNamesFull[calMonth];
-          screen.appendChild(monthTitle);
-
-          const nowMs = Date.now();
-          monthEvents.forEach((ev) => {
-            const isPast = new Date(ev.event_time.replace(' ', 'T')).getTime() < nowMs;
-            const row = document.createElement('div');
-            row.style.cssText = `display:flex;gap:10px;align-items:center;padding:9px 4px;border-bottom:1px solid var(--border);${isPast ? 'opacity:0.45;' : ''}`;
-            const [ry, rm, rd] = ev.event_time.slice(0, 10).split('-');
-            const dateBadge = document.createElement('div');
-            dateBadge.style.cssText = 'width:34px;flex-shrink:0;text-align:center;font-family:\'Jost\',sans-serif;';
-            dateBadge.innerHTML = `<div style="font-size:15px;font-weight:800;line-height:1;">${rd}</div><div style="font-size:9.5px;color:var(--text-soft);text-transform:uppercase;">${monthNamesFull[calMonth].slice(0, 3)}</div>`;
-            row.appendChild(dateBadge);
-            const dot = document.createElement('span');
-            dot.style.cssText = `width:6px;height:6px;border-radius:50%;background:${colorBySubject[ev.subject_title] || 'var(--accent)'};flex-shrink:0;`;
-            row.appendChild(dot);
-            const info = document.createElement('div');
-            info.style.flex = '1';
-            info.style.minWidth = '0';
-            info.innerHTML = `
-              <div style="font-size:13.5px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(ev.title)}</div>
-              <div style="font-size:11.5px;color:var(--text-soft);">${ev.event_time.slice(11)} · ${escapeHtml(ev.subject_title)}</div>
-            `;
-            row.appendChild(info);
-            row.onclick = () => { calSelected = ev.event_time.slice(0, 10); renderProfile(false); };
-            screen.appendChild(row);
           });
         }
       }, isBack);
