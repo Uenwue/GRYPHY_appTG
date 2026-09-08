@@ -391,8 +391,10 @@
   .cal-day.today .cal-day-num { color: var(--accent); font-weight: 800; }
   .cal-day.selected .cal-day-num { background: var(--accent); color: white; font-weight: 800; }
   .cal-day.today.selected .cal-day-num { color: white; }
+  .cal-day.has-event .cal-day-num { background: var(--blue-tint); border-radius: 50%; }
+  .cal-day.has-event.today .cal-day-num, .cal-day.has-event.selected .cal-day-num { background: transparent; }
   .cal-day-dots { display: flex; gap: 2px; height: 5px; }
-  .cal-day-dot { width: 4px; height: 4px; border-radius: 50%; }
+  .cal-day-dot { width: 5px; height: 5px; border-radius: 50%; }
   @keyframes dot-pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(1.3); } }
   .result-score { font-family: 'Jost', sans-serif; font-size: 40px; font-weight: 700; color: var(--green-dark); margin: 6px 0; }
   .result-label { font-size: 13px; font-weight: 700; color: var(--text-soft); text-transform: uppercase; letter-spacing: 0.03em; }
@@ -428,7 +430,7 @@
     margin-bottom: 6px; text-align: center; text-transform: uppercase; letter-spacing: 0.02em;
   }
   .progress-bar-track { height: 14px; background: var(--border); border-radius: 20px; overflow: hidden; }
-  .progress-bar-fill { height: 100%; background: var(--green); border-radius: 20px; transition: width 0.35s var(--bounce); }
+  .progress-bar-fill { height: 100%; background: var(--accent); border-radius: 20px; transition: width 0.35s var(--bounce); }
 
   .add-row-btn {
     display: flex; align-items: center; justify-content: center; gap: 8px;
@@ -569,7 +571,7 @@
   .stat-chart-pager::-webkit-scrollbar { display: none; }
   .stat-chart-page { flex: 0 0 100%; width: 100%; scroll-snap-align: start; background: var(--bg-soft); border-radius: 16px; padding: 14px 12px 12px; box-sizing: border-box; }
   .stat-chart-page-title { font-size: 12px; font-weight: 700; color: var(--text-soft); margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.02em; text-align: center; }
-  .stat-chart-bars { display: flex; align-items: flex-end; justify-content: space-between; gap: 5px; height: 110px; }
+  .stat-chart-bars { display: flex; align-items: flex-end; justify-content: space-between; gap: 5px; height: 122px; }
   .stat-chart-col { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; gap: 4px; }
   .stat-chart-num { font-family: 'Jost', sans-serif; font-size: 10.5px; font-weight: 800; color: var(--text-soft); }
   .stat-chart-bar { width: 100%; max-width: 22px; border-radius: 6px; transition: height 0.4s var(--bounce); }
@@ -629,7 +631,7 @@
         Домашка
       </button>
       <button class="tab-btn" id="tabChallenges" onclick="switchTab('challenges')">
-        <svg viewBox="0 0 24 24" fill="none"><path d="M4 9L7.5 12L12 6L16.5 12L20 9L18.5 17H5.5L4 9Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/></svg>
+        <svg viewBox="0 0 24 24" fill="none"><path d="M4 8V16M7 6V18M17 6V18M20 8V16M7 12H17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
         Тренажёр
       </button>
       <button class="tab-btn" id="tabRating" onclick="switchTab('rating')">
@@ -2845,42 +2847,13 @@
           screen.appendChild(courseCard);
         }
 
-        const themeTitle = document.createElement('div');
-        themeTitle.className = 'field-hint';
-        themeTitle.style.cssText = 'margin:0 0 8px;text-transform:uppercase;font-weight:800;letter-spacing:0.03em;';
-        themeTitle.textContent = 'Тема оформления';
-        screen.appendChild(themeTitle);
-
-        const themeGrid = document.createElement('div');
-        themeGrid.style.cssText = 'display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:20px;';
-        const themeOptions = [
-          { key: 'system', icon: '<svg viewBox="0 0 20 20" fill="none"><rect x="5" y="2" width="10" height="16" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M9 15.5H11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>' },
-          { key: 'light', icon: '<svg viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="3.5" stroke="currentColor" stroke-width="1.5"/><path d="M10 2.5V4M10 16V17.5M3.5 4.2L4.6 5.3M15.4 14.7L16.5 15.8M2 10H3.5M16.5 10H18M3.5 15.8L4.6 14.7M15.4 5.3L16.5 4.2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>' },
-          { key: 'dark', icon: '<svg viewBox="0 0 20 20" fill="none"><path d="M16.5 12.2C15.4 13 14 13.5 12.5 13.5C8.9 13.5 6 10.6 6 7C6 5.5 6.5 4.1 7.3 3C4.3 3.7 2 6.5 2 9.8C2 13.8 5.2 17 9.2 17C12.5 17 15.3 14.7 16.1 11.7C16.2 11.9 16.4 12.1 16.5 12.2Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>' },
-        ];
-        const savedTheme = localStorage.getItem('miniapp-theme') || 'system';
-        themeOptions.forEach((opt) => {
-          const btn = document.createElement('button');
-          const active = savedTheme === opt.key;
-          btn.style.cssText = `display:flex;align-items:center;justify-content:center;padding:9px 4px;border-radius:12px;border:2px solid ${active ? 'var(--accent)' : 'var(--border)'};background:${active ? 'var(--blue-tint)' : 'var(--bg)'};color:${active ? 'var(--accent)' : 'var(--text-soft)'};cursor:pointer;`;
-          btn.innerHTML = `<span style="width:16px;height:16px;display:block;">${opt.icon}</span>`;
-          btn.onclick = () => { applyThemeChoice(opt.key); renderProfile(false); };
-          themeGrid.appendChild(btn);
-        });
-        screen.appendChild(themeGrid);
-
-        const notifBtn = document.createElement('button');
-        notifBtn.className = 'row-card';
-        notifBtn.style.cssText = 'width:100%;cursor:pointer;align-items:center;margin-bottom:20px;';
         const unreadCount = notifSummary.unread_count || 0;
-        notifBtn.innerHTML = `
-          <div style="width:36px;height:36px;border-radius:10px;background:var(--bg-soft);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:18px;">🔔</div>
-          <div class="row-title" style="flex:1;color:var(--accent);">Уведомления</div>
-          ${unreadCount > 0 ? `<span style="background:var(--red-dark);color:white;border-radius:10px;padding:1px 8px;font-size:11.5px;font-weight:800;flex-shrink:0;">${unreadCount}</span>` : ''}
-          <span style="color:var(--border);font-size:18px;font-weight:700;">›</span>
-        `;
-        notifBtn.onclick = () => { profileStack.push({ level: 'notifications_inbox', title: 'Уведомления' }); renderProfileCrumbs(); renderProfile(false); };
-        screen.appendChild(notifBtn);
+        const settingsBtn = document.createElement('button');
+        settingsBtn.style.cssText = 'position:relative;display:flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:12px;border:none;background:var(--bg-soft);color:var(--text-soft);cursor:pointer;flex-shrink:0;margin:0 0 20px auto;';
+        settingsBtn.innerHTML = '<svg width="18" height="18" viewBox="0 0 20 20" fill="none"><path d="M10 2V4M10 16V18M18 10H16M4 10H2M15.5 4.5L14 6M6 14L4.5 15.5M15.5 15.5L14 14M6 6L4.5 4.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="10" cy="10" r="3" stroke="currentColor" stroke-width="1.6"/></svg>' +
+          (unreadCount > 0 ? '<span style="position:absolute;top:6px;right:6px;width:8px;height:8px;border-radius:50%;background:var(--red-dark);"></span>' : '');
+        settingsBtn.onclick = () => { profileStack.push({ level: 'app_settings', title: 'Настройки' }); renderProfileCrumbs(); renderProfile(false); };
+        screen.appendChild(settingsBtn);
 
         const scheduleTitle = document.createElement('div');
         scheduleTitle.className = 'field-hint';
@@ -3084,29 +3057,14 @@
           return c;
         };
 
+        grid.appendChild(cell('🔥', 'Дней подряд', stats.streak_days || 0, 'занимаетесь без пропусков'));
+        grid.appendChild(cell('⚡', 'Рекорд серии', stats.best_answer_streak || 0, 'верных ответов подряд в тренажёре'));
         grid.appendChild(cell('🎯', 'Точность', `${stats.accuracy || 0}%`, 'доля верных ответов из всех решённых'));
-        grid.appendChild(cell('📖', 'Уроки', `${stats.homework_done || 0} / ${stats.homework_total || 0}`));
-        grid.appendChild(cell('⏱', 'В приложении', `${Math.round((stats.time_today_seconds || 0) / 60)} мин`));
+        grid.appendChild(cell('📖', 'Уроки', `${stats.homework_done || 0} / ${stats.homework_total || 0}`, 'пройдено уроков ДЗ из всех'));
+        grid.appendChild(cell('⏱', 'В приложении', `${Math.round((stats.time_today_seconds || 0) / 60)} мин`, 'сегодня'));
         const bestTestScore = stats.tests && stats.tests.length ? Math.max(...stats.tests.map(t => t.actual_score ?? t.primary_score ?? 0)) : null;
         grid.appendChild(cell('🏆', 'Лучший балл теста', bestTestScore !== null ? bestTestScore : '—'));
-        grid.appendChild(cell('🔥', 'Дней подряд', stats.streak_days || 0));
         screen.appendChild(grid);
-
-        if (stats.best_answer_streak > 0) {
-          const n = stats.best_answer_streak;
-          const mod10 = n % 10, mod100 = n % 100;
-          const word = (mod10 === 1 && mod100 !== 11) ? 'ответ' : ([2, 3, 4].includes(mod10) && ![12, 13, 14].includes(mod100)) ? 'ответа' : 'ответов';
-          const banner = document.createElement('div');
-          banner.className = 'stat-streak-banner';
-          banner.innerHTML = `
-            <span class="stat-streak-emoji">🔥</span>
-            <span>
-              <span class="stat-streak-title">Рекорд стрика в практике</span>
-              <span class="stat-streak-value">${n} ${word} подряд</span>
-            </span>
-          `;
-          screen.appendChild(banner);
-        }
 
         const detailLink = document.createElement('button');
         detailLink.style.cssText = 'background:none;border:none;color:var(--accent);font-size:12.5px;font-weight:700;cursor:pointer;padding:16px 0 0;text-decoration:underline;';
@@ -3117,15 +3075,18 @@
         // --- Листаемый график: решено верно/всего, время в приложении, баллы тестов ---
         const chartTitle = document.createElement('div');
         chartTitle.className = 'stat-chart-title';
-        chartTitle.textContent = 'История за 7 дней — листайте вправо';
+        chartTitle.textContent = 'Эта неделя';
         screen.appendChild(chartTitle);
 
         const now = new Date();
         const todayStr = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
+        const mondayOffset = (now.getDay() + 6) % 7;
+        const monday = new Date(now);
+        monday.setDate(now.getDate() - mondayOffset);
         const last7 = [];
-        for (let i = 6; i >= 0; i--) {
-          const d = new Date(now);
-          d.setDate(now.getDate() - i);
+        for (let i = 0; i <= mondayOffset; i++) {
+          const d = new Date(monday);
+          d.setDate(monday.getDate() + i);
           const dateStr = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
           const dayData = dailyStats.days.find((x) => x.date === dateStr) || {};
           last7.push({
@@ -3138,7 +3099,65 @@
           });
         }
 
-        const buildBarPage = (title, values, colorFn, numFormatter) => {
+        const buildTasksChartPage = (values) => {
+          const page = document.createElement('div');
+          page.className = 'stat-chart-page';
+          const t = document.createElement('div');
+          t.className = 'stat-chart-page-title';
+          t.textContent = 'Решено заданий (верно в составе всего)';
+          page.appendChild(t);
+          const bars = document.createElement('div');
+          bars.className = 'stat-chart-bars';
+          const maxVal = Math.max(1, ...values.map((v) => v.total));
+          values.forEach((v) => {
+            const col = document.createElement('div');
+            col.className = 'stat-chart-col';
+            if (v.total > 0) {
+              const num = document.createElement('div');
+              num.className = 'stat-chart-num';
+              num.textContent = v.total;
+              col.appendChild(num);
+            }
+            const barWrap = document.createElement('div');
+            barWrap.style.cssText = 'width:100%;max-width:22px;display:flex;flex-direction:column-reverse;border-radius:6px;overflow:hidden;';
+            if (v.total > 0) {
+              const totalH = Math.max(10, Math.round((v.total / maxVal) * 64));
+              const correctH = Math.round((v.correct / v.total) * totalH);
+              const wrongH = totalH - correctH;
+              const correctColor = v.isToday ? 'var(--green)' : 'var(--green-tint)';
+              const wrongColor = v.isToday ? 'var(--red)' : 'var(--red-tint)';
+              const correctSeg = document.createElement('div');
+              correctSeg.style.cssText = `height:${correctH}px;background:${correctColor};`;
+              barWrap.appendChild(correctSeg);
+              if (wrongH > 0) {
+                const wrongSeg = document.createElement('div');
+                wrongSeg.style.cssText = `height:${wrongH}px;background:${wrongColor};`;
+                barWrap.appendChild(wrongSeg);
+              }
+            } else {
+              const empty = document.createElement('div');
+              empty.style.cssText = 'height:3px;background:var(--border);';
+              barWrap.appendChild(empty);
+            }
+            col.appendChild(barWrap);
+            if (v.total > 0) {
+              const correctNum = document.createElement('div');
+              correctNum.style.cssText = `font-size:9.5px;font-weight:800;margin-top:3px;color:${v.isToday ? 'var(--green-dark)' : 'var(--text-soft)'};`;
+              correctNum.textContent = '✓' + v.correct;
+              col.appendChild(correctNum);
+            }
+            const lbl = document.createElement('div');
+            lbl.className = 'stat-chart-daylabel';
+            lbl.style.color = v.isToday ? 'var(--accent)' : '';
+            lbl.textContent = v.label;
+            col.appendChild(lbl);
+            bars.appendChild(col);
+          });
+          page.appendChild(bars);
+          return page;
+        };
+
+        const buildBarPage = (title, values, colorFn) => {
           const page = document.createElement('div');
           page.className = 'stat-chart-page';
           const t = document.createElement('div');
@@ -3154,7 +3173,7 @@
             if (v.value > 0) {
               const num = document.createElement('div');
               num.className = 'stat-chart-num';
-              num.textContent = numFormatter ? numFormatter(v) : v.value;
+              num.textContent = v.value;
               col.appendChild(num);
             }
             const bar = document.createElement('div');
@@ -3176,12 +3195,7 @@
         const pager = document.createElement('div');
         pager.className = 'stat-chart-pager';
 
-        pager.appendChild(buildBarPage(
-          'Решено заданий (верно / всего)',
-          last7.map((d) => ({ value: d.total, isToday: d.isToday, correct: d.correct })),
-          (v) => v.value > 0 && v.correct >= v.value ? 'var(--green)' : (v.value > 0 ? 'var(--yellow)' : 'var(--border)'),
-          (v) => `${v.correct}/${v.value}`
-        ));
+        pager.appendChild(buildTasksChartPage(last7));
         pager.appendChild(buildBarPage(
           'Время в приложении, мин',
           last7.map((d) => ({ value: d.timeMin, isToday: d.isToday })),
@@ -3190,7 +3204,7 @@
         pager.appendChild(buildBarPage(
           'Баллы тестов',
           last7.map((d) => ({ value: d.testScore || 0, isToday: d.isToday })),
-          (v) => v.isToday ? 'var(--accent)' : 'var(--yellow)'
+          (v) => v.isToday ? 'var(--accent)' : 'var(--yellow-tint)'
         ));
         screen.appendChild(pager);
 
@@ -3247,15 +3261,60 @@
         });
         screen.appendChild(list);
       }, isBack);
+    } else if (current.level === 'app_settings') {
+      const notifData = await apiGet('/api/me/notifications').catch(() => ({ unread_count: 0 }));
+      swapScreen((screen) => {
+        const themeTitle = document.createElement('div');
+        themeTitle.className = 'field-hint';
+        themeTitle.style.cssText = 'margin:0 0 8px;text-transform:uppercase;font-weight:800;letter-spacing:0.03em;';
+        themeTitle.textContent = 'Тема оформления';
+        screen.appendChild(themeTitle);
+
+        const themeGrid = document.createElement('div');
+        themeGrid.style.cssText = 'display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:20px;';
+        const themeOptions = [
+          { key: 'system', icon: '<svg viewBox="0 0 20 20" fill="none"><rect x="5" y="2" width="10" height="16" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M9 15.5H11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>' },
+          { key: 'light', icon: '<svg viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="3.5" stroke="currentColor" stroke-width="1.5"/><path d="M10 2.5V4M10 16V17.5M3.5 4.2L4.6 5.3M15.4 14.7L16.5 15.8M2 10H3.5M16.5 10H18M3.5 15.8L4.6 14.7M15.4 5.3L16.5 4.2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>' },
+          { key: 'dark', icon: '<svg viewBox="0 0 20 20" fill="none"><path d="M16.5 12.2C15.4 13 14 13.5 12.5 13.5C8.9 13.5 6 10.6 6 7C6 5.5 6.5 4.1 7.3 3C4.3 3.7 2 6.5 2 9.8C2 13.8 5.2 17 9.2 17C12.5 17 15.3 14.7 16.1 11.7C16.2 11.9 16.4 12.1 16.5 12.2Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>' },
+        ];
+        const savedTheme = localStorage.getItem('miniapp-theme') || 'system';
+        themeOptions.forEach((opt) => {
+          const btn = document.createElement('button');
+          const active = savedTheme === opt.key;
+          btn.style.cssText = `display:flex;align-items:center;justify-content:center;padding:9px 4px;border-radius:12px;border:2px solid ${active ? 'var(--accent)' : 'var(--border)'};background:${active ? 'var(--blue-tint)' : 'var(--bg)'};color:${active ? 'var(--accent)' : 'var(--text-soft)'};cursor:pointer;`;
+          btn.innerHTML = `<span style="width:16px;height:16px;display:block;">${opt.icon}</span>`;
+          btn.onclick = () => { applyThemeChoice(opt.key); renderProfile(false); };
+          themeGrid.appendChild(btn);
+        });
+        screen.appendChild(themeGrid);
+
+        const inboxUnread = notifData.unread_count || 0;
+        const notifInboxBtn = document.createElement('button');
+        notifInboxBtn.className = 'row-card';
+        notifInboxBtn.style.cssText = 'width:100%;cursor:pointer;align-items:center;';
+        notifInboxBtn.innerHTML = `
+          <div style="width:36px;height:36px;border-radius:10px;background:var(--bg-soft);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:18px;">🔔</div>
+          <div class="row-title" style="flex:1;">Уведомления</div>
+          ${inboxUnread > 0 ? `<span style="background:var(--red-dark);color:white;border-radius:10px;padding:1px 8px;font-size:11.5px;font-weight:800;flex-shrink:0;margin-right:2px;">${inboxUnread}</span>` : ''}
+          <span style="color:var(--border);font-size:18px;font-weight:700;">›</span>
+        `;
+        notifInboxBtn.onclick = () => { profileStack.push({ level: 'notifications_inbox', title: 'Уведомления' }); renderProfileCrumbs(); renderProfile(false); };
+        screen.appendChild(notifInboxBtn);
+
+        const notifSettingsBtn = document.createElement('button');
+        notifSettingsBtn.className = 'row-card';
+        notifSettingsBtn.style.cssText = 'width:100%;cursor:pointer;align-items:center;margin-top:8px;';
+        notifSettingsBtn.innerHTML = `
+          <div style="width:36px;height:36px;border-radius:10px;background:var(--bg-soft);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:18px;">⚙</div>
+          <div class="row-title" style="flex:1;">Настройки уведомлений</div>
+          <span style="color:var(--border);font-size:18px;font-weight:700;">›</span>
+        `;
+        notifSettingsBtn.onclick = () => { profileStack.push({ level: 'notifications', title: 'Настройки уведомлений' }); renderProfileCrumbs(); renderProfile(false); };
+        screen.appendChild(notifSettingsBtn);
+      }, isBack);
     } else if (current.level === 'notifications_inbox') {
       const data = await apiGet('/api/me/notifications');
       swapScreen((screen) => {
-        const settingsLink = document.createElement('button');
-        settingsLink.style.cssText = 'display:block;margin:0 0 14px auto;background:none;border:none;color:var(--accent);font-size:12.5px;font-weight:700;cursor:pointer;';
-        settingsLink.textContent = '⚙ Настройки уведомлений';
-        settingsLink.onclick = () => { profileStack.push({ level: 'notifications', title: 'Настройки уведомлений' }); renderProfileCrumbs(); renderProfile(false); };
-        screen.appendChild(settingsLink);
-
         if (!data.items.length) {
           const p = document.createElement('p');
           p.className = 'state-msg';
@@ -3494,7 +3553,7 @@
 
         const periodLabel = document.createElement('div');
         periodLabel.className = 'lb-period-label';
-        periodLabel.textContent = periodDefs[0].label + ' — листайте вправо';
+        periodLabel.textContent = periodDefs[0].label;
         screen.appendChild(periodLabel);
 
         const dots = document.createElement('div');
@@ -3520,7 +3579,7 @@
           if (!pager.clientWidth) return;
           const idx = Math.min(periodDefs.length - 1, Math.max(0, Math.round(pager.scrollLeft / pager.clientWidth)));
           [...dots.children].forEach((dot, i) => dot.classList.toggle('active', i === idx));
-          periodLabel.textContent = periodDefs[idx].label + (idx === 0 ? ' — листайте вправо' : '');
+          periodLabel.textContent = periodDefs[idx].label;
         });
       }, isBack);
     } else if (current.level === 'profile_challenges') {
