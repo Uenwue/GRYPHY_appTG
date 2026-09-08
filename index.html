@@ -588,6 +588,18 @@
   .lb-segment.active { background: var(--accent); color: white; }
   .lb-period-label { text-align: center; font-size: 12.5px; font-weight: 700; color: var(--text-soft); margin-bottom: 12px; }
   .lb-pager { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; width: 100%; }
+  .pager-wrap { position: relative; }
+  .pager-arrow {
+    position: absolute; top: 50%; transform: translateY(-50%);
+    width: 28px; height: 28px; border-radius: 50%; border: none;
+    background: var(--bg); box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    color: var(--text); display: flex; align-items: center; justify-content: center;
+    cursor: pointer; z-index: 5; opacity: 0.9;
+  }
+  .pager-arrow:hover { opacity: 1; }
+  .pager-arrow.left { left: -6px; }
+  .pager-arrow.right { right: -6px; }
+  .pager-arrow:disabled { opacity: 0.25; cursor: default; }
   .lb-pager::-webkit-scrollbar { display: none; }
   .lb-pager-page { flex: 0 0 100%; width: 100%; scroll-snap-align: start; box-sizing: border-box; }
   .lb-podium { margin-top: 12px; margin-bottom: 24px; }
@@ -960,6 +972,31 @@
     wrap.appendChild(img);
     wrap.appendChild(expandBtn);
     container.appendChild(wrap);
+  }
+
+  function addPagerArrows(pager) {
+    const wrap = document.createElement('div');
+    wrap.className = 'pager-wrap';
+    wrap.appendChild(pager);
+
+    const leftBtn = document.createElement('button');
+    leftBtn.className = 'pager-arrow left';
+    leftBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 20 20" fill="none"><path d="M12 5L7 10L12 15" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    const rightBtn = document.createElement('button');
+    rightBtn.className = 'pager-arrow right';
+    rightBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 20 20" fill="none"><path d="M8 5L13 10L8 15" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    wrap.appendChild(leftBtn);
+    wrap.appendChild(rightBtn);
+
+    const updateArrows = () => {
+      leftBtn.disabled = pager.scrollLeft <= 4;
+      rightBtn.disabled = pager.scrollLeft >= pager.scrollWidth - pager.clientWidth - 4;
+    };
+    leftBtn.onclick = () => pager.scrollBy({ left: -pager.clientWidth, behavior: 'smooth' });
+    rightBtn.onclick = () => pager.scrollBy({ left: pager.clientWidth, behavior: 'smooth' });
+    pager.addEventListener('scroll', updateArrows);
+    setTimeout(updateArrows, 0);
+    return wrap;
   }
 
   function formatCountdown(seconds) {
@@ -3237,7 +3274,7 @@
           last7.map((d) => ({ value: d.testScore || 0, isToday: d.isToday, label: d.label })),
           (v) => v.isToday ? 'var(--accent)' : 'var(--yellow-tint)'
         ));
-        screen.appendChild(pager);
+        screen.appendChild(addPagerArrows(pager));
 
         const dots = document.createElement('div');
         dots.className = 'stat-chart-dots';
@@ -3516,7 +3553,7 @@
         if (rest.length) {
           const header = document.createElement('div');
           header.className = 'lb-list-header';
-          header.innerHTML = `<span class="lb-col-rank">Ранг</span><span class="lb-col-player">Игрок</span><span>${leaderboardType === 'test_scores' ? 'Баллы' : 'Задания'}</span>`;
+          header.innerHTML = `<span class="lb-col-rank">Ранг</span><span style="width:34px;flex-shrink:0;"></span><span class="lb-col-player">Игрок</span><span>${leaderboardType === 'test_scores' ? 'Баллы' : 'Задания'}</span>`;
           page.appendChild(header);
 
           rest.forEach((row) => {
@@ -3585,7 +3622,7 @@
           page.classList.add('lb-pager-page');
           pager.appendChild(page);
         });
-        screen.appendChild(pager);
+        screen.appendChild(addPagerArrows(pager));
 
         pager.addEventListener('scroll', () => {
           if (!pager.clientWidth) return;
