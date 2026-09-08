@@ -112,7 +112,9 @@
     background: var(--bg);
   }
   .stamp-mini { width: 40px; height: 40px; flex-shrink: 0; }
-  header h1 { font-family: 'Jost', sans-serif; font-size: 19px; font-weight: 700; margin: 0; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+  header h1 { flex: 1; font-family: 'Jost', sans-serif; font-size: 19px; font-weight: 700; margin: 0; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+  .header-icon-btn { position: relative; flex-shrink: 0; width: 34px; height: 34px; border-radius: 50%; border: none; background: var(--bg-soft); color: var(--text-soft); display: flex; align-items: center; justify-content: center; cursor: pointer; }
+  .header-icon-btn .header-icon-dot { position: absolute; top: 5px; right: 5px; width: 8px; height: 8px; border-radius: 50%; background: var(--red-dark); }
   header .who { color: var(--green-dark); }
 
   .crumbs { display: flex; align-items: flex-start; gap: 8px; margin-bottom: 14px; min-height: 36px; }
@@ -588,19 +590,21 @@
   .lb-pager { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; width: 100%; }
   .lb-pager::-webkit-scrollbar { display: none; }
   .lb-pager-page { flex: 0 0 100%; width: 100%; scroll-snap-align: start; box-sizing: border-box; }
-  .lb-podium { display: flex; align-items: flex-end; justify-content: center; gap: 10px; margin-top: 12px; margin-bottom: 24px; }
+  .lb-podium { margin-top: 12px; margin-bottom: 24px; }
+  .lb-podium-avatars { display: flex; align-items: flex-end; justify-content: center; gap: 10px; }
+  .lb-podium-labels { display: flex; align-items: flex-start; justify-content: center; gap: 10px; margin-top: 8px; }
   .lb-podium-item { display: flex; flex-direction: column; align-items: center; gap: 2px; flex: 1; max-width: 110px; }
   .lb-avatar-wrap { position: relative; }
   .lb-avatar { width: 56px; height: 56px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-family: 'Jost', sans-serif; font-weight: 800; font-size: 20px; color: white; border: 3px solid var(--bg); box-shadow: 0 2px 8px rgba(0,0,0,0.1); flex-shrink: 0; }
   .lb-podium-item.first .lb-avatar { width: 72px; height: 72px; font-size: 26px; border-color: var(--accent); }
   .lb-crown { position: absolute; top: -18px; left: 50%; transform: translateX(-50%); font-size: 22px; }
   .lb-rank-badge { position: absolute; bottom: -4px; left: 50%; transform: translateX(-50%); width: 22px; height: 22px; border-radius: 50%; background: var(--accent); color: white; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 800; border: 2px solid var(--bg); }
-  .lb-podium-name { font-family: 'Jost', sans-serif; font-weight: 800; font-size: 12.5px; text-align: center; max-width: 100%; margin-top: 8px; line-height: 1.25; word-break: break-word; }
+  .lb-podium-name { font-family: 'Jost', sans-serif; font-weight: 800; font-size: 12.5px; text-align: center; max-width: 100%; line-height: 1.25; word-break: break-word; }
   .lb-podium-points { font-size: 12px; font-weight: 700; color: var(--text-soft); }
   .lb-list-header { display: flex; align-items: center; gap: 8px; padding: 0 4px 8px; font-size: 11.5px; font-weight: 700; color: var(--text-soft); text-transform: uppercase; letter-spacing: 0.03em; }
   .lb-list-header .lb-col-rank { width: auto; margin-right: 4px; text-align: left; }
   .lb-list-header .lb-col-player { flex: 1; }
-  .lb-row { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-radius: 14px; margin-bottom: 8px; background: var(--blue-tint); }
+  .lb-row { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-radius: 14px; margin-bottom: 8px; background: var(--bg-soft); }
   .lb-row-rank { width: 16px; text-align: center; font-family: 'Jost', sans-serif; font-weight: 800; font-size: 13px; color: var(--accent); flex-shrink: 0; }
   .lb-row-avatar { width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-family: 'Jost', sans-serif; font-weight: 800; font-size: 13px; color: white; flex-shrink: 0; }
   .lb-row-name { flex: 1; font-size: 13px; font-weight: 700; color: var(--text); line-height: 1.25; word-break: break-word; }
@@ -614,6 +618,12 @@
   <div class="wrap">
     <header>
       <h1 id="headerTitle">Домашнее задание</h1>
+      <button class="header-icon-btn" id="headerNotifBtn" title="Уведомления">
+        <svg width="17" height="17" viewBox="0 0 20 20" fill="none"><path d="M5 8a5 5 0 0110 0c0 4 1.5 5 1.5 5h-13S5 12 5 8Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M8 16a2 2 0 004 0" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+      </button>
+      <button class="header-icon-btn" id="headerSettingsBtn" title="Настройки">
+        <svg width="17" height="17" viewBox="0 0 20 20" fill="none"><path d="M8.4 2.5h3.2l.5 2.1c.6.2 1.1.5 1.6.9l2-.7 1.6 2.8-1.6 1.4c.05.3.08.6.08 1s-.03.7-.08 1l1.6 1.4-1.6 2.8-2-.7c-.5.4-1 .7-1.6.9l-.5 2.1H8.4l-.5-2.1a5.6 5.6 0 01-1.6-.9l-2 .7-1.6-2.8 1.6-1.4A6 6 0 013.9 10c0-.34.03-.68.08-1L2.4 7.6 4 4.8l2 .7c.5-.4 1-.7 1.6-.9l.5-2.1Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><circle cx="10" cy="10" r="2.3" stroke="currentColor" stroke-width="1.5"/></svg>
+      </button>
     </header>
 
     <div class="crumbs" id="crumbs"></div>
@@ -920,7 +930,7 @@
     out = out.replace(/`([^`]+)`/g, '<code>$1</code>');
     out = out.replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>');
     out = out.replace(/\*([^*]+)\*/g, '<b>$1</b>');
-    out = out.replace(/_([^_]+)_/g, '<i>$1</i>');
+    out = out.replace(/(?<!_)_(?!_)([^_\n]+?)(?<!_)_(?!_)/g, '<i>$1</i>');
     return out.replace(/\n/g, '<br>');
   }
 
@@ -2606,6 +2616,34 @@
     return subjects[0];
   }
 
+  function updateHeaderNotifDot(count) {
+    const btn = document.getElementById('headerNotifBtn');
+    if (!btn) return;
+    let dot = btn.querySelector('.header-icon-dot');
+    if (count > 0) {
+      if (!dot) {
+        dot = document.createElement('span');
+        dot.className = 'header-icon-dot';
+        btn.appendChild(dot);
+      }
+    } else if (dot) {
+      dot.remove();
+    }
+  }
+
+  function openHeaderScreen(level, title) {
+    activeTab = 'profile';
+    ['tabStudy', 'tabChallenges', 'tabRating', 'tabStats', 'tabProfile'].forEach((id) => {
+      document.getElementById(id).classList.toggle('active', id === 'tabProfile');
+    });
+    profileStack = [{ level, title }];
+    renderProfileCrumbs();
+    renderProfile(false);
+  }
+
+  document.getElementById('headerNotifBtn').onclick = () => openHeaderScreen('notifications_inbox', 'Уведомления');
+  document.getElementById('headerSettingsBtn').onclick = () => openHeaderScreen('app_settings', 'Настройки');
+
   function switchTab(tab) {
     activeTab = tab;
     document.getElementById('tabStudy').classList.toggle('active', tab === 'study');
@@ -2846,14 +2884,7 @@
           `;
           screen.appendChild(courseCard);
         }
-
-        const unreadCount = notifSummary.unread_count || 0;
-        const settingsBtn = document.createElement('button');
-        settingsBtn.style.cssText = 'position:relative;display:flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:12px;border:none;background:var(--bg-soft);color:var(--text-soft);cursor:pointer;flex-shrink:0;margin:0 0 20px auto;';
-        settingsBtn.innerHTML = '<svg width="18" height="18" viewBox="0 0 20 20" fill="none"><path d="M10 2V4M10 16V18M18 10H16M4 10H2M15.5 4.5L14 6M6 14L4.5 15.5M15.5 15.5L14 14M6 6L4.5 4.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="10" cy="10" r="3" stroke="currentColor" stroke-width="1.6"/></svg>' +
-          (unreadCount > 0 ? '<span style="position:absolute;top:6px;right:6px;width:8px;height:8px;border-radius:50%;background:var(--red-dark);"></span>' : '');
-        settingsBtn.onclick = () => { profileStack.push({ level: 'app_settings', title: 'Настройки' }); renderProfileCrumbs(); renderProfile(false); };
-        screen.appendChild(settingsBtn);
+        updateHeaderNotifDot(notifSummary.unread_count || 0);
 
         const scheduleTitle = document.createElement('div');
         scheduleTitle.className = 'field-hint';
@@ -3084,7 +3115,7 @@
         const monday = new Date(now);
         monday.setDate(now.getDate() - mondayOffset);
         const last7 = [];
-        for (let i = 0; i <= mondayOffset; i++) {
+        for (let i = 0; i <= 6; i++) {
           const d = new Date(monday);
           d.setDate(monday.getDate() + i);
           const dateStr = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
@@ -3262,7 +3293,35 @@
         screen.appendChild(list);
       }, isBack);
     } else if (current.level === 'app_settings') {
-      const notifData = await apiGet('/api/me/notifications').catch(() => ({ unread_count: 0 }));
+      const prefs = await apiGet('/api/me/notification-preferences');
+      const NOTIF_CATEGORIES = [
+        { title: 'Учёба', keys: [
+          { key: 'schedule_reminder', label: 'О предстоящих занятиях' },
+          { key: 'topic_unlocked', label: 'Открылась новая тема' },
+        ] },
+        { title: 'Обратная связь', keys: [
+          { key: 'error_report_resolved', label: 'Ответ на сообщение об ошибке' },
+        ] },
+        { title: 'Другое', keys: [
+          { key: 'platform_news', label: 'Новости платформы' },
+        ] },
+      ];
+
+      async function toggleNotifPref(key, value) {
+        prefs[key] = value;
+        try { await apiPost('/api/me/notification-preferences', { [key]: value }); }
+        catch (err) { /* не критично, состояние на экране уже отражено */ }
+      }
+
+      function buildToggle(checked, onChange) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.style.cssText = `width:44px;height:26px;border-radius:13px;border:none;background:${checked ? 'var(--green, #58CC02)' : 'var(--border)'};position:relative;cursor:pointer;flex-shrink:0;transition:background 0.15s ease;`;
+        btn.innerHTML = `<span style="position:absolute;top:2px;left:${checked ? '20px' : '2px'};width:22px;height:22px;border-radius:50%;background:white;box-shadow:0 1px 3px rgba(0,0,0,0.2);transition:left 0.15s ease;"></span>`;
+        btn.onclick = () => { checked = !checked; onChange(checked); };
+        return btn;
+      }
+
       swapScreen((screen) => {
         const themeTitle = document.createElement('div');
         themeTitle.className = 'field-hint';
@@ -3271,7 +3330,7 @@
         screen.appendChild(themeTitle);
 
         const themeGrid = document.createElement('div');
-        themeGrid.style.cssText = 'display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:20px;';
+        themeGrid.style.cssText = 'display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:24px;';
         const themeOptions = [
           { key: 'system', icon: '<svg viewBox="0 0 20 20" fill="none"><rect x="5" y="2" width="10" height="16" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M9 15.5H11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>' },
           { key: 'light', icon: '<svg viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="3.5" stroke="currentColor" stroke-width="1.5"/><path d="M10 2.5V4M10 16V17.5M3.5 4.2L4.6 5.3M15.4 14.7L16.5 15.8M2 10H3.5M16.5 10H18M3.5 15.8L4.6 14.7M15.4 5.3L16.5 4.2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>' },
@@ -3288,32 +3347,33 @@
         });
         screen.appendChild(themeGrid);
 
-        const inboxUnread = notifData.unread_count || 0;
-        const notifInboxBtn = document.createElement('button');
-        notifInboxBtn.className = 'row-card';
-        notifInboxBtn.style.cssText = 'width:100%;cursor:pointer;align-items:center;';
-        notifInboxBtn.innerHTML = `
-          <div style="width:36px;height:36px;border-radius:10px;background:var(--bg-soft);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:18px;">🔔</div>
-          <div class="row-title" style="flex:1;">Уведомления</div>
-          ${inboxUnread > 0 ? `<span style="background:var(--red-dark);color:white;border-radius:10px;padding:1px 8px;font-size:11.5px;font-weight:800;flex-shrink:0;margin-right:2px;">${inboxUnread}</span>` : ''}
-          <span style="color:var(--border);font-size:18px;font-weight:700;">›</span>
-        `;
-        notifInboxBtn.onclick = () => { profileStack.push({ level: 'notifications_inbox', title: 'Уведомления' }); renderProfileCrumbs(); renderProfile(false); };
-        screen.appendChild(notifInboxBtn);
+        const notifTitle = document.createElement('div');
+        notifTitle.className = 'field-hint';
+        notifTitle.style.cssText = 'margin:0 0 8px;text-transform:uppercase;font-weight:800;letter-spacing:0.03em;';
+        notifTitle.textContent = 'Уведомления';
+        screen.appendChild(notifTitle);
 
-        const notifSettingsBtn = document.createElement('button');
-        notifSettingsBtn.className = 'row-card';
-        notifSettingsBtn.style.cssText = 'width:100%;cursor:pointer;align-items:center;margin-top:8px;';
-        notifSettingsBtn.innerHTML = `
-          <div style="width:36px;height:36px;border-radius:10px;background:var(--bg-soft);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:18px;">⚙</div>
-          <div class="row-title" style="flex:1;">Настройки уведомлений</div>
-          <span style="color:var(--border);font-size:18px;font-weight:700;">›</span>
-        `;
-        notifSettingsBtn.onclick = () => { profileStack.push({ level: 'notifications', title: 'Настройки уведомлений' }); renderProfileCrumbs(); renderProfile(false); };
-        screen.appendChild(notifSettingsBtn);
+        NOTIF_CATEGORIES.forEach((cat) => {
+          const catTitle = document.createElement('div');
+          catTitle.className = 'field-hint';
+          catTitle.style.cssText = 'margin:14px 0 6px;text-transform:uppercase;font-weight:800;letter-spacing:0.03em;font-size:11px;';
+          catTitle.textContent = cat.title;
+          screen.appendChild(catTitle);
+          cat.keys.forEach(({ key, label }) => {
+            const row = document.createElement('div');
+            row.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 0;border-bottom:1px solid var(--border);';
+            const lbl = document.createElement('span');
+            lbl.style.cssText = "font-size:14px;font-weight:600;";
+            lbl.textContent = label;
+            row.appendChild(lbl);
+            row.appendChild(buildToggle(prefs[key], (v) => toggleNotifPref(key, v)));
+            screen.appendChild(row);
+          });
+        });
       }, isBack);
     } else if (current.level === 'notifications_inbox') {
       const data = await apiGet('/api/me/notifications');
+      updateHeaderNotifDot(data.unread_count || 0);
       swapScreen((screen) => {
         if (!data.items.length) {
           const p = document.createElement('p');
@@ -3339,6 +3399,7 @@
           error_report_resolved: '🐞', platform_news: '📣',
         };
 
+        let localUnread = data.unread_count;
         data.items.forEach((item) => {
           const card = document.createElement('div');
           card.style.cssText = `background:${item.is_read ? 'var(--bg-soft)' : 'var(--blue-tint)'};border-radius:14px;padding:12px 14px;margin-bottom:8px;cursor:pointer;`;
@@ -3364,59 +3425,12 @@
               card.style.background = 'var(--bg-soft)';
               const dot = card.querySelector('span[style*="border-radius:50%"]');
               if (dot) dot.remove();
+              localUnread = Math.max(0, localUnread - 1);
+              updateHeaderNotifDot(localUnread);
               await apiPost(`/api/me/notifications/${item.id}/read`, {});
             }
           };
           screen.appendChild(card);
-        });
-      }, isBack);
-    } else if (current.level === 'notifications') {
-      const prefs = await apiGet('/api/me/notification-preferences');
-      const CATEGORIES = [
-        { title: 'Учёба', keys: [
-          { key: 'schedule_reminder', label: 'О предстоящих занятиях' },
-          { key: 'topic_unlocked', label: 'Открылась новая тема' },
-        ] },
-        { title: 'Обратная связь', keys: [
-          { key: 'error_report_resolved', label: 'Ответ на сообщение об ошибке' },
-        ] },
-        { title: 'Другое', keys: [
-          { key: 'platform_news', label: 'Новости платформы' },
-        ] },
-      ];
-
-      async function toggle(key, value) {
-        prefs[key] = value;
-        try { await apiPost('/api/me/notification-preferences', { [key]: value }); }
-        catch (err) { /* не критично, состояние на экране уже отражено */ }
-      }
-
-      function buildToggle(checked, onChange) {
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.style.cssText = `width:44px;height:26px;border-radius:13px;border:none;background:${checked ? 'var(--green, #58CC02)' : 'var(--border)'};position:relative;cursor:pointer;flex-shrink:0;transition:background 0.15s ease;`;
-        btn.innerHTML = `<span style="position:absolute;top:2px;left:${checked ? '20px' : '2px'};width:22px;height:22px;border-radius:50%;background:white;box-shadow:0 1px 3px rgba(0,0,0,0.2);transition:left 0.15s ease;"></span>`;
-        btn.onclick = () => { checked = !checked; onChange(checked); };
-        return btn;
-      }
-
-      swapScreen((screen) => {
-        CATEGORIES.forEach((cat) => {
-          const catTitle = document.createElement('div');
-          catTitle.className = 'field-hint';
-          catTitle.style.cssText = 'margin:14px 0 6px;text-transform:uppercase;font-weight:800;letter-spacing:0.03em;';
-          catTitle.textContent = cat.title;
-          screen.appendChild(catTitle);
-          cat.keys.forEach(({ key, label }) => {
-            const row = document.createElement('div');
-            row.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 0;border-bottom:1px solid var(--border);';
-            const lbl = document.createElement('span');
-            lbl.style.cssText = "font-size:14px;font-weight:600;";
-            lbl.textContent = label;
-            row.appendChild(lbl);
-            row.appendChild(buildToggle(prefs[key], (v) => toggle(key, v)));
-            screen.appendChild(row);
-          });
         });
       }, isBack);
     } else if (current.level === 'profile_leaderboard') {
@@ -3464,12 +3478,16 @@
         if (podium.length) {
           const podiumWrap = document.createElement('div');
           podiumWrap.className = 'lb-podium';
+          const avatarsRow = document.createElement('div');
+          avatarsRow.className = 'lb-podium-avatars';
+          const labelsRow = document.createElement('div');
+          labelsRow.className = 'lb-podium-labels';
           const order = podium.length >= 2 ? [1, 0, 2] : [0];
           order.forEach((idx) => {
             const p = podium[idx];
             if (!p) return;
-            const item = document.createElement('div');
-            item.className = 'lb-podium-item' + (idx === 0 ? ' first' : '');
+            const avatarSlot = document.createElement('div');
+            avatarSlot.className = 'lb-podium-item' + (idx === 0 ? ' first' : '');
             const avatarWrap = document.createElement('div');
             avatarWrap.className = 'lb-avatar-wrap';
             if (idx === 0) {
@@ -3487,17 +3505,23 @@
             rankBadge.className = 'lb-rank-badge';
             rankBadge.textContent = idx + 1;
             avatarWrap.appendChild(rankBadge);
-            item.appendChild(avatarWrap);
+            avatarSlot.appendChild(avatarWrap);
+            avatarsRow.appendChild(avatarSlot);
+
+            const labelSlot = document.createElement('div');
+            labelSlot.className = 'lb-podium-item';
             const name = document.createElement('div');
             name.className = 'lb-podium-name';
             name.textContent = p.name;
-            item.appendChild(name);
+            labelSlot.appendChild(name);
             const points = document.createElement('div');
             points.className = 'lb-podium-points';
             points.textContent = p.points + ' ' + pointsUnit(p.points);
-            item.appendChild(points);
-            podiumWrap.appendChild(item);
+            labelSlot.appendChild(points);
+            labelsRow.appendChild(labelSlot);
           });
+          podiumWrap.appendChild(avatarsRow);
+          podiumWrap.appendChild(labelsRow);
           page.appendChild(podiumWrap);
         }
 
@@ -3526,7 +3550,7 @@
             item.appendChild(name);
             const pts = document.createElement('div');
             pts.className = 'lb-row-points';
-            pts.textContent = row.points;
+            pts.textContent = row.points + ' ' + pointsUnit(row.points);
             item.appendChild(pts);
             page.appendChild(item);
           });
@@ -3971,6 +3995,7 @@
   let isTeacherViewing = false;
   apiGet('/api/me/role').then((r) => { isTeacherViewing = !!r.is_teacher; }).catch(() => {});
   checkProfileSetupThenStart();
+  apiGet('/api/me/notifications').then((d) => updateHeaderNotifDot(d.unread_count || 0)).catch(() => {});
 
   // Heartbeat «время в приложении» — раз в 30 секунд, только пока страница
   // видима, шлём накопленные секунды на дефолтный предмет пользователя.
