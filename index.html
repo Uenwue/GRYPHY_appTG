@@ -3229,12 +3229,12 @@
         pager.appendChild(buildTasksChartPage(last7));
         pager.appendChild(buildBarPage(
           'Время в приложении, мин',
-          last7.map((d) => ({ value: d.timeMin, isToday: d.isToday })),
+          last7.map((d) => ({ value: d.timeMin, isToday: d.isToday, label: d.label })),
           (v) => v.isToday ? 'var(--accent)' : 'var(--blue-tint)'
         ));
         pager.appendChild(buildBarPage(
           'Баллы тестов',
-          last7.map((d) => ({ value: d.testScore || 0, isToday: d.isToday })),
+          last7.map((d) => ({ value: d.testScore || 0, isToday: d.isToday, label: d.label })),
           (v) => v.isToday ? 'var(--accent)' : 'var(--yellow-tint)'
         ));
         screen.appendChild(pager);
@@ -3448,18 +3448,6 @@
       const PASTEL_COLORS = ['#FFB4A8', '#F5B8E0', '#FFDB70', '#C9B8F5', '#A8E6D4', '#A8D8F5'];
       const initialOf = (name) => (name || '?').trim().charAt(0).toUpperCase();
 
-      const pointsUnit = (n) => {
-        const mod10 = n % 10, mod100 = n % 100;
-        if (leaderboardType === 'test_scores') {
-          if (mod10 === 1 && mod100 !== 11) return 'балл';
-          if ([2, 3, 4].includes(mod10) && ![12, 13, 14].includes(mod100)) return 'балла';
-          return 'баллов';
-        }
-        if (mod10 === 1 && mod100 !== 11) return 'задание';
-        if ([2, 3, 4].includes(mod10) && ![12, 13, 14].includes(mod100)) return 'задания';
-        return 'заданий';
-      };
-
       const buildLeaderboardPage = (rows) => {
         const page = document.createElement('div');
         page.className = 'lb-page';
@@ -3516,7 +3504,7 @@
             labelSlot.appendChild(name);
             const points = document.createElement('div');
             points.className = 'lb-podium-points';
-            points.textContent = p.points + ' ' + pointsUnit(p.points);
+            points.textContent = p.points;
             labelSlot.appendChild(points);
             labelsRow.appendChild(labelSlot);
           });
@@ -3528,7 +3516,7 @@
         if (rest.length) {
           const header = document.createElement('div');
           header.className = 'lb-list-header';
-          header.innerHTML = '<span class="lb-col-rank">Ранг</span><span class="lb-col-player">Игрок</span><span>Очки</span>';
+          header.innerHTML = `<span class="lb-col-rank">Ранг</span><span class="lb-col-player">Игрок</span><span>${leaderboardType === 'test_scores' ? 'Баллы' : 'Задания'}</span>`;
           page.appendChild(header);
 
           rest.forEach((row) => {
@@ -3550,7 +3538,7 @@
             item.appendChild(name);
             const pts = document.createElement('div');
             pts.className = 'lb-row-points';
-            pts.textContent = row.points + ' ' + pointsUnit(row.points);
+            pts.textContent = row.points;
             item.appendChild(pts);
             page.appendChild(item);
           });
