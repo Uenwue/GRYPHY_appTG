@@ -2613,6 +2613,7 @@
     overlay.innerHTML = '<div style="background:var(--bg);border-radius:16px;padding:18px;max-width:340px;width:100%;">' +
       `<div class="field-label">${label}</div>` +
       '<div class="field-hint" style="margin-bottom:14px;">id' + u.telegram_id + '</div>' +
+      '<button id="uaSetRole" style="width:100%;text-align:left;padding:12px;border:none;border-radius:12px;background:var(--blue-tint);color:var(--blue-dark);font-weight:700;font-size:13.5px;cursor:pointer;margin-bottom:8px;">🔄 Назначить роль</button>' +
       '<button id="uaDemote" style="width:100%;text-align:left;padding:12px;border:none;border-radius:12px;background:var(--bg-soft);color:var(--text);font-weight:700;font-size:13.5px;cursor:pointer;margin-bottom:8px;">⬇ Снять роль (вернуть в «Гость»)</button>' +
       '<button id="uaDelete" style="width:100%;text-align:left;padding:12px;border:none;border-radius:12px;background:var(--red-tint);color:var(--red-dark);font-weight:700;font-size:13.5px;cursor:pointer;margin-bottom:14px;">🗑 Удалить полностью</button>' +
       '<button id="uaCancel" class="back-btn" style="width:100%;">Отмена</button>' +
@@ -2620,6 +2621,7 @@
     document.body.appendChild(overlay);
     function closeOverlay() { unlockBodyScroll(); overlay.remove(); }
     overlay.querySelector('#uaCancel').onclick = closeOverlay;
+    overlay.querySelector('#uaSetRole').onclick = () => { closeOverlay(); promptAssignRole(u, label); };
     overlay.querySelector('#uaDemote').onclick = () => {
       closeOverlay();
       confirmDelete(
@@ -2641,6 +2643,100 @@
           render(false);
         }
       );
+    };
+  }
+
+  async function promptAssignRole(u, label) {
+    lockBodyScroll();
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center;z-index:30;padding:20px;';
+    overlay.innerHTML = '<div style="background:var(--bg);border-radius:16px;padding:18px;max-width:340px;width:100%;">' +
+      `<div class="field-label">Роль для ${label}</div>` +
+      '<div id="raRoles" style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px;"></div>' +
+      '<div id="raSubjectWrap" style="display:none;margin-bottom:14px;">' +
+      '<div class="field-label">Предмет</div>' +
+      '<div id="raSubjects" style="display:flex;flex-direction:column;gap:6px;"></div>' +
+      '</div>' +
+      '<div id="raErr" style="color:var(--red-dark);font-size:12.5px;font-weight:700;margin-bottom:8px;display:none;"></div>' +
+      '<div style="display:flex;gap:8px;">' +
+      '<button class="back-btn" id="raCancel" style="flex:1;">Отмена</button>' +
+      '<button class="save-btn" id="raSave" style="flex:1;margin-top:0;" disabled>Назначить</button>' +
+      '</div></div>';
+    document.body.appendChild(overlay);
+    function closeOverlay() { unlockBodyScroll(); overlay.remove(); }
+    overlay.querySelector('#raCancel').onclick = closeOverlay;
+
+    const rolesBox = overlay.querySelector('#raRoles');
+    const subjectWrap = overlay.querySelector('#raSubjectWrap');
+    const subjectsBox = overlay.querySelector('#raSubjects');
+    const saveBtn = overlay.querySelector('#raSave');
+    const errBox = overlay.querySelector('#raErr');
+    const roleOptions = [
+      { key: 'guest', label: 'Гость' },
+      { key: 'student', label: 'Ученик' },
+      { key: 'teacher', label: 'Учитель' },
+      { key: 'admin', label: 'Админ' },
+    ];
+    let selectedRole = null;
+    let selectedSubjectId = null;
+
+    function renderRoleButtons() {
+      rolesBox.innerHTML = '';
+      roleOptions.forEach((opt) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        const active = selectedRole === opt.key;
+        btn.style.cssText = `text-align:left;padding:11px;border-radius:12px;border:2px solid ${active ? 'var(--blue)' : 'var(--border)'};background:${active ? 'var(--blue-tint)' : 'var(--bg-soft)'};color:${active ? 'var(--blue-dark)' : 'var(--text)'};font-weight:700;font-size:13.5px;cursor:pointer;`;
+        btn.textContent = opt.label;
+        btn.onclick = async () => {
+          selectedRole = opt.key;
+          renderRoleButtons();
+          saveBtn.disabled = false;
+          if (opt.key === 'teacher') {
+            subjectWrap.style.display = 'block';
+            subjectsBox.innerHTML = '<div class="field-hint">Загружаем предметы…</div>';
+            try {
+              const subjects = await apiGet('/api/admin/subjects');
+              subjectsBox.innerHTML = '';
+              subjects.forEach((s) => {
+                const sBtn = document.createElement('button');
+                sBtn.type = 'button';
+                const sActive = selectedSubjectId === s.id;
+                sBtn.style.cssText = `text-align:left;padding:9px 11px;border-radius:10px;border:2px solid ${sActive ? 'var(--blue)' : 'var(--border)'};background:${sActive ? 'var(--blue-tint)' : 'var(--bg)'};color:${sActive ? 'var(--blue-dark)' : 'var(--text)'};font-weight:700;font-size:12.5px;cursor:pointer;`;
+                sBtn.textContent = s.title;
+                sBtn.onclick = () => { selectedSubjectId = s.id; [...subjectsBox.children].forEach((b) => b.style.borderColor = 'var(--border)'); sBtn.style.borderColor = 'var(--blue)'; sBtn.style.background = 'var(--blue-tint)'; };
+                subjectsBox.appendChild(sBtn);
+              });
+            } catch (err) {
+              subjectsBox.innerHTML = '<div class="field-hint" style="color:var(--red-dark);">Не получилось загрузить предметы.</div>';
+            }
+          } else {
+            subjectWrap.style.display = 'none';
+            selectedSubjectId = null;
+          }
+        };
+        rolesBox.appendChild(btn);
+      });
+    }
+    renderRoleButtons();
+
+    saveBtn.onclick = async () => {
+      if (!selectedRole) return;
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Назначаю…';
+      try {
+        const payload = { role: selectedRole };
+        if (selectedRole === 'teacher' && selectedSubjectId) payload.subject_id = selectedSubjectId;
+        await apiSend('POST', `/api/admin/users/${u.telegram_id}/role`, payload);
+        closeOverlay();
+        showToast('Роль назначена');
+        render(false);
+      } catch (err) {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Назначить';
+        errBox.textContent = 'Не получилось: ' + err.message;
+        errBox.style.display = 'block';
+      }
     };
   }
 
