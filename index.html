@@ -3776,18 +3776,34 @@
   }
 
   async function checkProfileSetupThenStart() {
-    try {
-      const info = await apiGet('/api/me/profile-info');
-      if (info.filled) {
-        checkSubscriptionThenStart();
-      } else {
-        renderProfileSetupForm();
-      }
-    } catch (err) {
-      // Если проверку анкеты не удалось выполнить (например, сеть) — не
-      // блокируем вход в приложение совсем, просто идём дальше как обычно.
-      checkSubscriptionThenStart();
+    // Раньше это были три последовательных запроса подряд (анкета → подписка
+    // → предметы), каждый ждал предыдущий — экран заметно дольше загружался.
+    // Они друг от друга не зависят, поэтому просто запускаем все сразу и
+    // разбираемся с результатами, когда все придут.
+    const [infoRes, statusRes, subjectsRes] = await Promise.allSettled([
+      apiGet('/api/me/profile-info'),
+      apiGet('/api/me/subscription-status'),
+      apiGet('/api/subjects'),
+    ]);
+    const info = infoRes.status === 'fulfilled' ? infoRes.value : null;
+    if (info && !info.filled) {
+      renderProfileSetupForm();
+      return;
     }
+    const status = statusRes.status === 'fulfilled' ? statusRes.value : null;
+    if (status && !status.has_access) {
+      renderSubscriptionRequiredScreen();
+      return;
+    }
+    const subjects = subjectsRes.status === 'fulfilled' ? subjectsRes.value : [];
+    try {
+      if (subjects.length) {
+        const chosen = subjects[0];
+        hwStack = await buildHomeworkEntry(chosen.id);
+        stack = hwStack;
+      }
+    } catch (err) { /* остаёмся на обычном экране выбора предмета */ }
+    render(false);
   }
 
   async function checkSubscriptionThenStart() {
