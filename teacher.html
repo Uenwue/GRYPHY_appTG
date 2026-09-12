@@ -472,11 +472,13 @@
 
   async function apiGet(path) {
     const res = await fetch(API_BASE_URL + path, { headers: { 'X-Telegram-Init-Data': tg?.initData || '' } });
-    if (res.status === 401) throw new Error('Не удалось подтвердить, что это вы.');
+    if (res.status === 401) { const e = new Error('Не удалось подтвердить, что это вы.'); e.status = 401; throw e; }
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
       const fallback = res.status === 403 ? 'Нет доступа к этому предмету.' : ('Сервер ответил с ошибкой: ' + res.status);
-      throw new Error(body.message || (body.error && body.error !== 'forbidden' ? body.error : fallback));
+      const e = new Error(body.message || (body.error && body.error !== 'forbidden' ? body.error : fallback));
+      e.status = res.status;
+      throw e;
     }
     return res.json();
   }
@@ -511,13 +513,25 @@
     });
   }
 
+  let _sessionExpiredShown = false;
+  function handleSessionExpired() {
+    if (_newReportsTimer) { clearInterval(_newReportsTimer); _newReportsTimer = null; }
+    if (_sessionExpiredShown) return;
+    _sessionExpiredShown = true;
+    const msg = 'Сессия истекла (обычно это бывает, если панель была открыта больше суток). Полностью закройте мини-апп и откройте его заново через бота.';
+    if (tg?.showAlert) tg.showAlert(msg);
+  }
+
   async function refreshReportsBadge() {
     if (!currentSubjectId) return;
     try {
       const reports = await apiGet(`/api/teacher/subjects/${currentSubjectId}/error-reports?status=new`);
       _newReportsCount = reports.length;
       _newReportsSubjectId = currentSubjectId;
-    } catch (err) { /* оставляем прежнее значение, не критично */ }
+    } catch (err) {
+      if (err.status === 401) { handleSessionExpired(); return; }
+      /* остальные ошибки — не критично, оставляем прежнее значение */
+    }
     updateReportsBadgeDom();
   }
 
