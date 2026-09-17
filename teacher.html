@@ -452,6 +452,7 @@
         <svg viewBox="0 0 20 20" fill="none"><path d="M2 6L10 2L18 6L10 10L2 6Z" stroke="white" stroke-width="1.6" stroke-linejoin="round"/><path d="M5 8.5V13C5 14.5 7.2 16 10 16C12.8 16 15 14.5 15 13V8.5" stroke="white" stroke-width="1.6" stroke-linejoin="round"/></svg>
       </div>
       <h1><span id="roleLabel">Учитель</span>: <span class="subj" id="subjTitle">…</span></h1>
+      <button class="theme-toggle" id="headerSettingsBtn" title="Настройки" aria-label="Настройки" style="margin-right:4px;">⚙️</button>
       <button class="theme-toggle" id="themeToggle" title="Сменить тему" aria-label="Сменить тему"></button>
     </header>
 
@@ -608,8 +609,6 @@
       icon: '<circle cx="10" cy="10" r="2.5" stroke="currentColor" stroke-width="1.6"/><path d="M10 2V4M10 16V18M18 10H16M4 10H2M15.5 4.5L14 6M6 14L4.5 15.5M15.5 15.5L14 14M6 6L4.5 4.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>' },
     { level: 'admin_panel', title: 'Админ-панель', navLabel: 'Админка', adminOnly: true, standalone: true,
       icon: '<path d="M10 2L16 5V9C16 13 13.5 16.5 10 18C6.5 16.5 4 13 4 9V5L10 2Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>' },
-    { level: '__student_mode__', title: 'Стать учеником', navLabel: 'Ученик', standalone: true,
-      icon: '<path d="M10 2L2 6.5L10 11L18 6.5L10 2Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M5 8.7V13C5 14.7 7.4 16.3 10 16.3C12.6 16.3 15 14.7 15 13V8.7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>' },
   ];
 
   function renderSideNav() {
@@ -624,11 +623,9 @@
       btn.className = 'side-nav-item' + (item.primary ? '' : ' desktop-only');
       const isActive = rootLevel === item.level && (item.extra?.sectionsKind || undefined) === rootKind;
       if (isActive) btn.classList.add('active');
-      const label = item.level === '__student_mode__' ? (hasStudentAccess ? 'Режим ученика' : 'Стать учеником') : item.title;
-      btn.title = label;
-      btn.innerHTML = `<svg viewBox="0 0 20 20" fill="none">${item.icon}</svg><span class="side-nav-label">${item.navLabel || label}</span>`;
+      btn.title = item.title;
+      btn.innerHTML = `<svg viewBox="0 0 20 20" fill="none">${item.icon}</svg><span class="side-nav-label">${item.navLabel || item.title}</span>`;
       btn.onclick = () => {
-        if (item.level === '__student_mode__') { if (studentAppUrl) window.location.href = studentAppUrl; return; }
         if (item.level === 'students') studentsGroupFilter = 'all';
         stack = [Object.assign({ level: item.level, title: item.title }, item.extra || {})];
         render(false);
@@ -837,6 +834,35 @@
     });
   }
 
+  function withDirectParam(url) {
+    if (!url) return url;
+    return url + (url.includes('?') ? '&' : '?') + 'direct=1';
+  }
+
+  function openPersonalSettings() {
+    lockBodyScroll();
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center;z-index:30;padding:20px;';
+    overlay.innerHTML = '<div style="background:var(--bg);border-radius:16px;padding:18px;max-width:340px;width:100%;">' +
+      '<div class="field-label" style="margin-bottom:14px;">Настройки</div>' +
+      '<div id="pSettingsModeSlot"></div>' +
+      '<button class="back-btn" id="pSettingsClose" style="width:100%;margin-top:10px;">Закрыть</button>' +
+      '</div>';
+    document.body.appendChild(overlay);
+    const closeOverlay = () => { unlockBodyScroll(); overlay.remove(); };
+    overlay.querySelector('#pSettingsClose').onclick = closeOverlay;
+
+    const slot = overlay.querySelector('#pSettingsModeSlot');
+    const modeBtn = document.createElement('button');
+    modeBtn.className = 'save-btn';
+    modeBtn.style.cssText = 'width:100%;margin-top:0;';
+    modeBtn.textContent = hasStudentAccess ? '🎓 Режим ученика' : '🎓 Стать учеником';
+    modeBtn.onclick = () => {
+      if (studentAppUrl) window.location.href = withDirectParam(studentAppUrl);
+    };
+    slot.appendChild(modeBtn);
+  }
+
   function renderTeacherStudentChooser() {
     swapScreen((screen) => {
       const title = document.createElement('h2');
@@ -860,7 +886,7 @@
       studentBtn.className = 'submit-btn';
       studentBtn.style.cssText = 'background:var(--bg-soft);color:var(--text);border:2px solid var(--border);';
       studentBtn.textContent = '🎓 Я ученик';
-      studentBtn.onclick = () => { window.location.href = studentAppUrl; };
+      studentBtn.onclick = () => { window.location.href = withDirectParam(studentAppUrl); };
       screen.appendChild(studentBtn);
     });
   }
@@ -883,7 +909,8 @@
         // этот экран уже не показывают.
         if (!appBooted) {
           appBooted = true;
-          if (hasStudentAccess && studentAppUrl) {
+          const isDirect = new URLSearchParams(location.search).has('direct');
+          if (!isDirect && hasStudentAccess && studentAppUrl) {
             renderTeacherStudentChooser();
             return;
           }
@@ -4820,6 +4847,7 @@
   }
 
   // --- Переключатель темы: тот же принцип, что у ученика ---
+  document.getElementById('headerSettingsBtn').onclick = openPersonalSettings;
   (function initThemeToggle() {
     const btn = document.getElementById('themeToggle');
     const sunIcon = '<svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="4.5" stroke="currentColor" stroke-width="2"/><path d="M12 2.5V5M12 19V21.5M4.2 4.2L6 6M18 18L19.8 19.8M2.5 12H5M19 12H21.5M4.2 19.8L6 18M18 6L19.8 4.2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
