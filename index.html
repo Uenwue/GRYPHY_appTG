@@ -2858,13 +2858,12 @@
 
     try {
     if (current.level === 'profile_subjects') {
-      const [profileInfo, subStatus, subjects, events, notifSummary, roleInfo] = await Promise.all([
+      const [profileInfo, subStatus, subjects, events, notifSummary] = await Promise.all([
         apiGet('/api/me/profile-info').catch(() => ({})),
         apiGet('/api/me/subscription-status').catch(() => ({ subscriptions: [] })),
         apiGet('/api/subjects').catch(() => []),
         apiGet('/api/schedule').catch(() => []),
         apiGet('/api/me/notifications').catch(() => ({ unread_count: 0, items: [] })),
-        apiGet('/api/me/role').catch(() => ({})),
       ]);
       const now = new Date();
       if (calYear === undefined) {
@@ -2899,41 +2898,6 @@
           ${!fio ? `<div class="field-hint" style="margin-top:10px;color:var(--red-dark);">Укажите настоящие фамилию и имя в анкете — они видны в рейтинге.</div>` : ''}
         `;
         screen.appendChild(userCard);
-
-        // Переключение режима ученик ⇄ учитель. Человек может быть и тем, и
-        // другим одновременно — это просто два разных мини-аппа на одном
-        // аккаунте, переключение — обычный переход по ссылке.
-        const modeCard = document.createElement('div');
-        modeCard.style.cssText = 'margin-bottom:20px;';
-        if (roleInfo && roleInfo.is_teacher && roleInfo.teacher_app_url) {
-          const modeBtn = document.createElement('button');
-          modeBtn.className = 'submit-btn';
-          modeBtn.style.cssText = 'background:var(--bg-soft);color:var(--text);border:2px solid var(--border);';
-          modeBtn.textContent = '👩‍🏫 Режим репетитора';
-          modeBtn.onclick = () => { window.location.href = roleInfo.teacher_app_url; };
-          modeCard.appendChild(modeBtn);
-        } else if (roleInfo && roleInfo.teacher_app_url) {
-          const becomeBtn = document.createElement('button');
-          becomeBtn.className = 'submit-btn';
-          becomeBtn.style.cssText = 'background:var(--bg-soft);color:var(--text);border:2px solid var(--border);';
-          becomeBtn.textContent = '🎓 Стать репетитором';
-          becomeBtn.onclick = async () => {
-            const name = prompt('Как назвать ваш кабинет? Например «Английский с Ольгой».');
-            if (name === null) return;
-            becomeBtn.disabled = true;
-            becomeBtn.textContent = 'Открываю кабинет…';
-            try {
-              const res = await apiPost('/api/me/become-tutor', { name });
-              window.location.href = res.teacher_app_url;
-            } catch (err) {
-              becomeBtn.disabled = false;
-              becomeBtn.textContent = '🎓 Стать репетитором';
-              alert('Не получилось: ' + err.message);
-            }
-          };
-          modeCard.appendChild(becomeBtn);
-        }
-        if (modeCard.children.length) screen.appendChild(modeCard);
 
         const sub = subStatus.subscriptions && subStatus.subscriptions[0];
         if (sub) {
@@ -3372,7 +3336,10 @@
         screen.appendChild(list);
       }, isBack);
     } else if (current.level === 'app_settings') {
-      const prefs = await apiGet('/api/me/notification-preferences');
+      const [prefs, roleInfo] = await Promise.all([
+        apiGet('/api/me/notification-preferences'),
+        apiGet('/api/me/role').catch(() => ({})),
+      ]);
       const NOTIF_CATEGORIES = [
         { title: 'Учёба', keys: [
           { key: 'schedule_reminder', label: 'О предстоящих занятиях' },
@@ -3449,6 +3416,45 @@
             screen.appendChild(row);
           });
         });
+
+        // Переключение режима ученик ⇄ учитель — человек может быть и тем,
+        // и другим одновременно, это просто два разных мини-аппа на одном
+        // аккаунте. ?direct=1 говорит принимающему мини-аппу не показывать
+        // свой собственный выбор ролей заново — решение уже принято здесь.
+        const modeTitle = document.createElement('div');
+        modeTitle.className = 'field-hint';
+        modeTitle.style.cssText = 'margin:24px 0 8px;text-transform:uppercase;font-weight:800;letter-spacing:0.03em;';
+        modeTitle.textContent = 'Режим';
+        screen.appendChild(modeTitle);
+
+        if (roleInfo && roleInfo.is_teacher && roleInfo.teacher_app_url) {
+          const modeBtn = document.createElement('button');
+          modeBtn.className = 'submit-btn';
+          modeBtn.style.cssText = 'background:var(--bg-soft);color:var(--text);border:2px solid var(--border);';
+          modeBtn.textContent = '👩‍🏫 Режим репетитора';
+          modeBtn.onclick = () => { window.location.href = withDirectParam(roleInfo.teacher_app_url); };
+          screen.appendChild(modeBtn);
+        } else if (roleInfo && roleInfo.teacher_app_url) {
+          const becomeBtn = document.createElement('button');
+          becomeBtn.className = 'submit-btn';
+          becomeBtn.style.cssText = 'background:var(--bg-soft);color:var(--text);border:2px solid var(--border);';
+          becomeBtn.textContent = '🎓 Стать репетитором';
+          becomeBtn.onclick = async () => {
+            const name = prompt('Как назвать ваш кабинет? Например «Английский с Ольгой».');
+            if (name === null) return;
+            becomeBtn.disabled = true;
+            becomeBtn.textContent = 'Открываю кабинет…';
+            try {
+              const res = await apiPost('/api/me/become-tutor', { name });
+              window.location.href = withDirectParam(res.teacher_app_url);
+            } catch (err) {
+              becomeBtn.disabled = false;
+              becomeBtn.textContent = '🎓 Стать репетитором';
+              alert('Не получилось: ' + err.message);
+            }
+          };
+          screen.appendChild(becomeBtn);
+        }
       }, isBack);
     } else if (current.level === 'notifications_inbox') {
       const data = await apiGet('/api/me/notifications');
@@ -3817,6 +3823,11 @@
     render(false);
   }
 
+  function withDirectParam(url) {
+    if (!url) return url;
+    return url + (url.includes('?') ? '&' : '?') + 'direct=1';
+  }
+
   async function checkProfileSetupThenStart() {
     // Раньше это были три последовательных запроса подряд (анкета → подписка
     // → предметы), каждый ждал предыдущий — экран заметно дольше загружался.
@@ -3838,7 +3849,8 @@
     // человек), либо у человека УЖЕ есть обе роли одновременно (свой
     // кабинет репетитора И доступ как у ученика к чужому курсу). Если
     // роль одна — выбирать не из чего, сразу идём в неё.
-    const showChooser = roleInfo && (roleInfo.role === 'guest' || (roleInfo.is_teacher && roleInfo.has_student_access));
+    const showChooser = !new URLSearchParams(location.search).has('direct')
+      && roleInfo && (roleInfo.role === 'guest' || (roleInfo.is_teacher && roleInfo.has_student_access));
     if (showChooser) {
       renderRoleChooser(roleInfo, () => proceedAsStudent(info, status, subjects));
       return;
@@ -3891,7 +3903,7 @@
       teacherBtn.onclick = async () => {
         // Уже есть свой кабинет — просто переходим, без повторного создания.
         if (roleInfo.is_teacher && roleInfo.teacher_app_url) {
-          window.location.href = roleInfo.teacher_app_url;
+          window.location.href = withDirectParam(roleInfo.teacher_app_url);
           return;
         }
         const name = prompt('Как назвать ваш кабинет? Например «Английский с Ольгой».');
@@ -3900,7 +3912,7 @@
         teacherBtn.textContent = 'Открываю кабинет…';
         try {
           const res = await apiPost('/api/me/become-tutor', { name });
-          window.location.href = res.teacher_app_url || roleInfo.teacher_app_url;
+          window.location.href = withDirectParam(res.teacher_app_url || roleInfo.teacher_app_url);
         } catch (err) {
           teacherBtn.disabled = false;
           teacherBtn.textContent = '👩‍🏫 Я репетитор';
