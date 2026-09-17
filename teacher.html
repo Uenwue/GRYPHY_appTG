@@ -542,6 +542,20 @@
   let studentsGroupFilter = 'all';
   let studentsCourseTypeFilter = 'all';
   let currentUserRole = null;
+  let hasStudentAccess = false;
+  let studentAppUrl = null;
+  let studentInfoLoaded = false;
+  let appBooted = false;
+
+  async function ensureStudentModeInfo() {
+    if (studentInfoLoaded) return;
+    studentInfoLoaded = true;
+    try {
+      const info = await apiGet('/api/me/role');
+      hasStudentAccess = !!info.has_student_access;
+      studentAppUrl = info.student_app_url || null;
+    } catch (err) { /* не критично — просто не покажем переключатель режима */ }
+  }
 
   function applyRoleStyle(role) {
     if (role === currentUserRole) return;
@@ -594,6 +608,8 @@
       icon: '<circle cx="10" cy="10" r="2.5" stroke="currentColor" stroke-width="1.6"/><path d="M10 2V4M10 16V18M18 10H16M4 10H2M15.5 4.5L14 6M6 14L4.5 15.5M15.5 15.5L14 14M6 6L4.5 4.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>' },
     { level: 'admin_panel', title: 'Админ-панель', navLabel: 'Админка', adminOnly: true, standalone: true,
       icon: '<path d="M10 2L16 5V9C16 13 13.5 16.5 10 18C6.5 16.5 4 13 4 9V5L10 2Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>' },
+    { level: '__student_mode__', title: 'Стать учеником', navLabel: 'Ученик', standalone: true,
+      icon: '<path d="M10 2L2 6.5L10 11L18 6.5L10 2Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M5 8.7V13C5 14.7 7.4 16.3 10 16.3C12.6 16.3 15 14.7 15 13V8.7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>' },
   ];
 
   function renderSideNav() {
@@ -608,9 +624,11 @@
       btn.className = 'side-nav-item' + (item.primary ? '' : ' desktop-only');
       const isActive = rootLevel === item.level && (item.extra?.sectionsKind || undefined) === rootKind;
       if (isActive) btn.classList.add('active');
-      btn.title = item.title;
-      btn.innerHTML = `<svg viewBox="0 0 20 20" fill="none">${item.icon}</svg><span class="side-nav-label">${item.navLabel || item.title}</span>`;
+      const label = item.level === '__student_mode__' ? (hasStudentAccess ? 'Режим ученика' : 'Стать учеником') : item.title;
+      btn.title = label;
+      btn.innerHTML = `<svg viewBox="0 0 20 20" fill="none">${item.icon}</svg><span class="side-nav-label">${item.navLabel || label}</span>`;
       btn.onclick = () => {
+        if (item.level === '__student_mode__') { if (studentAppUrl) window.location.href = studentAppUrl; return; }
         if (item.level === 'students') studentsGroupFilter = 'all';
         stack = [Object.assign({ level: item.level, title: item.title }, item.extra || {})];
         render(false);
@@ -819,6 +837,34 @@
     });
   }
 
+  function renderTeacherStudentChooser() {
+    swapScreen((screen) => {
+      const title = document.createElement('h2');
+      title.style.cssText = 'font-family:"Jost",sans-serif;font-size:20px;font-weight:800;margin:0 0 6px;';
+      title.textContent = '👋 Добро пожаловать!';
+      screen.appendChild(title);
+      const subtitle = document.createElement('p');
+      subtitle.className = 'field-hint';
+      subtitle.style.cssText = 'margin:0 0 22px;font-size:13px;';
+      subtitle.textContent = 'Вы сейчас как учитель или как ученик?';
+      screen.appendChild(subtitle);
+
+      const teacherBtn = document.createElement('button');
+      teacherBtn.className = 'submit-btn';
+      teacherBtn.style.cssText = 'margin-bottom:12px;';
+      teacherBtn.textContent = '👩‍🏫 Я учитель';
+      teacherBtn.onclick = () => render(false);
+      screen.appendChild(teacherBtn);
+
+      const studentBtn = document.createElement('button');
+      studentBtn.className = 'submit-btn';
+      studentBtn.style.cssText = 'background:var(--bg-soft);color:var(--text);border:2px solid var(--border);';
+      studentBtn.textContent = '🎓 Я ученик';
+      studentBtn.onclick = () => { window.location.href = studentAppUrl; };
+      screen.appendChild(studentBtn);
+    });
+  }
+
   async function render(isBack) {
     renderCrumbs();
     renderSideNav();
@@ -829,6 +875,20 @@
       try {
         const { role, subjects } = await apiGet('/api/teacher/subjects');
         applyRoleStyle(role);
+        await ensureStudentModeInfo();
+
+        // Выбор «я учитель / я ученик» — только при самом первом открытии
+        // приложения за сессию, и только если обе роли реально есть (иначе
+        // выбирать не из чего). Повторные заходы в «Меню» внутри сессии
+        // этот экран уже не показывают.
+        if (!appBooted) {
+          appBooted = true;
+          if (hasStudentAccess && studentAppUrl) {
+            renderTeacherStudentChooser();
+            return;
+          }
+        }
+
         if (!subjects.length) {
           swapScreen((screen) => {
             const p = document.createElement('p');
