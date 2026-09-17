@@ -599,6 +599,8 @@
       icon: '<circle cx="10" cy="7" r="3" stroke="currentColor" stroke-width="1.6"/><path d="M4 17c0-3 2.7-5 6-5s6 2 6 5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>' },
     { level: 'groups', title: 'Группы',
       icon: '<circle cx="7" cy="7" r="2.5" stroke="currentColor" stroke-width="1.6"/><circle cx="14" cy="8.5" r="2" stroke="currentColor" stroke-width="1.6"/><path d="M2.5 16c0-2.5 2-4.2 4.5-4.2s4.5 1.7 4.5 4.2M12 12.5c2 0 4 1.2 4 3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>' },
+    { level: 'payments', title: 'Оплаты', standalone: true,
+      icon: '<rect x="2" y="5" width="16" height="11" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M2 9H18" stroke="currentColor" stroke-width="1.6"/><path d="M5 13H8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>' },
     { level: 'schedule', title: 'Расписание',
       icon: '<rect x="3" y="4" width="14" height="13" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M3 8H17M7 2V5M13 2V5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>' },
     { level: 'error_reports', title: 'Сообщения об ошибках', navLabel: 'Ошибки', badge: true,
@@ -1216,6 +1218,8 @@
       renderStudents(isBack);
     } else if (current.level === 'groups') {
       renderGroups(isBack);
+    } else if (current.level === 'payments') {
+      renderPayments(isBack);
     } else if (current.level === 'group_homework') {
       renderGroupHomeworkProgress(current.groupId, isBack);
     } else if (current.level === 'admin_panel') {
@@ -2419,6 +2423,206 @@
       } catch (err) {
         sendBtn.disabled = false;
         sendBtn.textContent = 'Отправить';
+        errBox.textContent = 'Не получилось: ' + err.message;
+        errBox.style.display = 'block';
+      }
+    };
+  }
+
+  async function renderPayments(isBack) {
+    showLoadingMenu();
+    try {
+      const payments = await apiGet('/api/teacher/payments');
+      swapScreen((screen) => {
+        const hint = document.createElement('p');
+        hint.className = 'field-hint';
+        hint.style.marginBottom = '14px';
+        hint.textContent = 'Учёт того, кто должен и кто оплатил — отмечается вручную.';
+        screen.appendChild(hint);
+
+        const addBtn = document.createElement('button');
+        addBtn.className = 'add-row-btn';
+        addBtn.style.width = '100%';
+        addBtn.style.marginBottom = '14px';
+        addBtn.textContent = '➕ Добавить оплату';
+        addBtn.onclick = () => promptAddPayment(() => render(false));
+        screen.appendChild(addBtn);
+
+        if (!payments.length) {
+          const p = document.createElement('p');
+          p.className = 'state-msg';
+          p.textContent = 'Пока нет ни одной записи.';
+          screen.appendChild(p);
+          return;
+        }
+
+        const groups = [
+          { title: '⏰ Просрочено', filter: (p) => p.is_overdue },
+          { title: '💰 Должны', filter: (p) => p.status === 'owed' && !p.is_overdue },
+          { title: '✅ Оплачено', filter: (p) => p.status === 'paid' },
+          { title: '🚫 Отменено', filter: (p) => p.status === 'cancelled' },
+        ];
+        groups.forEach((g) => {
+          const rows = payments.filter(g.filter);
+          if (!rows.length) return;
+          const title = document.createElement('div');
+          title.className = 'field-hint';
+          title.style.cssText = 'margin:14px 0 8px;text-transform:uppercase;font-weight:800;letter-spacing:0.03em;font-size:11px;';
+          title.textContent = g.title;
+          screen.appendChild(title);
+          rows.forEach((p) => screen.appendChild(buildPaymentRow(p)));
+        });
+      }, isBack);
+    } catch (err) { showErrorMsg(err, isBack); }
+  }
+
+  function buildPaymentRow(p) {
+    const row = document.createElement('div');
+    row.className = 'row-card';
+    row.style.cssText = 'align-items:center;cursor:pointer;';
+    const name = p.first_name || (p.username ? '@' + p.username : 'id' + p.telegram_id);
+    const [y, m, d] = (p.due_date || '').split('-');
+    const dueText = (y && m && d) ? `${d}.${m}.${y}` : '—';
+    const info = document.createElement('div');
+    info.style.cssText = 'flex:1;min-width:0;';
+    info.innerHTML = `<div class="row-title">${escapeHtml(name)} — ${p.amount} ${escapeHtml(p.currency)}</div>` +
+      `<div class="field-hint" style="margin-top:2px;">До ${dueText}${p.period_label ? ' · ' + escapeHtml(p.period_label) : ''}${p.subject_title ? ' · ' + escapeHtml(p.subject_title) : ''}</div>`;
+    row.appendChild(info);
+    const badgeStyles = {
+      owed: 'background:#FFF3D6;color:#B7791F;',
+      paid: 'background:#E3F9E5;color:var(--green-dark);',
+      cancelled: 'background:var(--bg-soft);color:var(--text-soft);',
+    };
+    const label = p.status === 'owed' ? (p.is_overdue ? 'Просрочено' : 'Должен') : (p.status === 'paid' ? 'Оплачено' : 'Отменено');
+    const badge = document.createElement('span');
+    badge.style.cssText = 'padding:4px 9px;border-radius:8px;font-size:11px;font-weight:800;flex-shrink:0;' + (badgeStyles[p.status] || '');
+    badge.textContent = label;
+    row.appendChild(badge);
+    row.onclick = () => promptPaymentActions(p);
+    return row;
+  }
+
+  function promptPaymentActions(p) {
+    lockBodyScroll();
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center;z-index:30;padding:20px;';
+    const name = p.first_name || (p.username ? '@' + p.username : 'id' + p.telegram_id);
+    overlay.innerHTML = '<div style="background:var(--bg);border-radius:16px;padding:18px;max-width:340px;width:100%;">' +
+      `<div style="font-weight:700;margin-bottom:14px;">${escapeHtml(name)} — ${p.amount} ${escapeHtml(p.currency)}</div>` +
+      '<div style="display:flex;flex-direction:column;gap:8px;">' +
+      (p.status === 'owed' ? '<button class="save-btn" id="pMarkPaid" style="margin-top:0;">✅ Отметить оплаченным</button>' : '') +
+      (p.status === 'owed' ? '<button class="back-btn" id="pCancelPay">🚫 Отменить запись</button>' : '') +
+      '<button class="back-btn" id="pDeletePay" style="color:var(--red-dark);">🗑 Удалить запись</button>' +
+      '<button class="back-btn" id="pClosePay">Закрыть</button>' +
+      '</div></div>';
+    document.body.appendChild(overlay);
+    const closeOverlay = () => { unlockBodyScroll(); overlay.remove(); };
+    overlay.querySelector('#pClosePay').onclick = closeOverlay;
+    const markBtn = overlay.querySelector('#pMarkPaid');
+    if (markBtn) markBtn.onclick = async () => {
+      await apiSend('POST', `/api/teacher/payments/${p.payment_id}/mark-paid`, {});
+      closeOverlay();
+      render(false);
+    };
+    const cancelBtn = overlay.querySelector('#pCancelPay');
+    if (cancelBtn) cancelBtn.onclick = async () => {
+      await apiSend('POST', `/api/teacher/payments/${p.payment_id}/cancel`, {});
+      closeOverlay();
+      render(false);
+    };
+    overlay.querySelector('#pDeletePay').onclick = () => {
+      closeOverlay();
+      confirmDelete('Удалить запись об оплате безвозвратно?', async () => {
+        await apiSend('DELETE', `/api/teacher/payments/${p.payment_id}`);
+        render(false);
+      });
+    };
+  }
+
+  function promptAddPayment(onDone) {
+    lockBodyScroll();
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center;z-index:30;padding:20px;';
+    overlay.innerHTML = '<div style="background:var(--bg);border-radius:16px;padding:18px;max-width:340px;width:100%;max-height:90vh;overflow-y:auto;">' +
+      '<div class="field-label">Ученик</div>' +
+      '<div class="field-hint" style="margin-bottom:8px;">Telegram id, @юзернейм или номер телефона.</div>' +
+      '<input class="field-input" id="payStudent" type="text" placeholder="id, @ник или телефон" style="margin-bottom:10px;">' +
+      '<div id="payWho" style="font-size:13px;font-weight:700;margin-bottom:10px;display:none;"></div>' +
+      '<div class="field-label">Сумма</div>' +
+      '<input class="field-input" id="payAmount" type="number" min="0" step="0.01" style="margin-bottom:10px;">' +
+      '<div class="field-label">Срок оплаты</div>' +
+      '<input class="field-input" id="payDue" type="date" style="margin-bottom:10px;">' +
+      '<div class="field-label">За что (необязательно)</div>' +
+      '<input class="field-input" id="payLabel" type="text" placeholder="Например «Октябрь» или «4 занятия»" style="margin-bottom:14px;">' +
+      '<div id="payErr" style="color:var(--red-dark);font-size:12.5px;font-weight:700;margin-bottom:8px;display:none;"></div>' +
+      '<div style="display:flex;gap:8px;">' +
+      '<button class="back-btn" id="payCancel" style="flex:1;">Отмена</button>' +
+      '<button class="save-btn" id="paySave" style="flex:1;margin-top:0;">Добавить</button>' +
+      '</div></div>';
+    document.body.appendChild(overlay);
+    const studentInput = overlay.querySelector('#payStudent');
+    const whoBox = overlay.querySelector('#payWho');
+    const amountInput = overlay.querySelector('#payAmount');
+    const dueInput = overlay.querySelector('#payDue');
+    const labelInput = overlay.querySelector('#payLabel');
+    const errBox = overlay.querySelector('#payErr');
+    const saveBtn = overlay.querySelector('#paySave');
+
+    let resolvedTelegramId = null;
+    let lookupTimer = null;
+    studentInput.oninput = () => {
+      clearTimeout(lookupTimer);
+      whoBox.style.display = 'none';
+      resolvedTelegramId = null;
+      const val = studentInput.value.trim();
+      if (!val) return;
+      lookupTimer = setTimeout(async () => {
+        try {
+          const info = await apiGet(`/api/teacher/lookup-student?query=${encodeURIComponent(val)}`);
+          resolvedTelegramId = info.telegram_id;
+          whoBox.textContent = '✅ ' + (info.first_name || '') + (info.username ? ' (@' + info.username + ')' : '') + ' · id' + info.telegram_id;
+          whoBox.style.color = 'var(--green-dark)';
+          whoBox.style.display = 'block';
+        } catch (err) {
+          resolvedTelegramId = null;
+          whoBox.textContent = '❌ Пользователь не найден — он ещё ни разу не писал боту.';
+          whoBox.style.color = 'var(--red-dark)';
+          whoBox.style.display = 'block';
+        }
+      }, 400);
+    };
+
+    function closeOverlay() { unlockBodyScroll(); overlay.remove(); }
+    overlay.querySelector('#payCancel').onclick = closeOverlay;
+    saveBtn.onclick = async () => {
+      if (!resolvedTelegramId) {
+        errBox.textContent = 'Сначала дождитесь, пока ученик найдётся.';
+        errBox.style.display = 'block';
+        return;
+      }
+      const amount = parseFloat(amountInput.value);
+      if (!amount || amount <= 0) {
+        errBox.textContent = 'Укажите сумму.';
+        errBox.style.display = 'block';
+        return;
+      }
+      if (!dueInput.value) {
+        errBox.textContent = 'Укажите срок оплаты.';
+        errBox.style.display = 'block';
+        return;
+      }
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Добавляю…';
+      try {
+        await apiSend('POST', '/api/teacher/payments', {
+          telegram_id: resolvedTelegramId, amount, due_date: dueInput.value,
+          period_label: labelInput.value.trim(),
+        });
+        closeOverlay();
+        onDone();
+      } catch (err) {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Добавить';
         errBox.textContent = 'Не получилось: ' + err.message;
         errBox.style.display = 'block';
       }
