@@ -2987,9 +2987,9 @@
     const overlay = document.createElement('div');
     overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center;z-index:30;padding:20px;';
     overlay.innerHTML = '<div style="background:var(--bg);border-radius:16px;padding:18px;max-width:340px;width:100%;max-height:90vh;overflow-y:auto;">' +
-      '<div class="field-label">Telegram id ученика</div>' +
-      '<div class="field-hint" style="margin-bottom:8px;">Ученик может узнать свой id через бота @userinfobot.</div>' +
-      '<input class="field-input" id="grantId" type="number" style="margin-bottom:10px;">' +
+      '<div class="field-label">Ученик</div>' +
+      '<div class="field-hint" style="margin-bottom:8px;">Telegram id, @юзернейм или номер телефона — подходит только тот, кто уже хоть раз писал боту (а по телефону — ещё и поделился номером через /phone).</div>' +
+      '<input class="field-input" id="grantId" type="text" placeholder="id, @ник или телефон" style="margin-bottom:10px;">' +
       '<div id="grantWho" style="font-size:13px;font-weight:700;margin-bottom:10px;display:none;"></div>' +
       '<div class="field-label">Тип курса</div>' +
       '<div id="grantCourseType" style="display:flex;gap:6px;margin-bottom:14px;"></div>' +
@@ -3105,19 +3105,23 @@
     renderCourseTypeButtons();
 
     let lookupTimer = null;
+    let resolvedTelegramId = null;
     idInput.oninput = () => {
       clearTimeout(lookupTimer);
       whoBox.style.display = 'none';
+      resolvedTelegramId = null;
       const val = idInput.value.trim();
       if (!val) return;
       lookupTimer = setTimeout(async () => {
         try {
-          const info = await apiGet(`/api/teacher/lookup-student?telegram_id=${val}`);
-          whoBox.textContent = '✅ ' + (info.first_name || '') + (info.username ? ' (@' + info.username + ')' : '');
+          const info = await apiGet(`/api/teacher/lookup-student?query=${encodeURIComponent(val)}`);
+          resolvedTelegramId = info.telegram_id;
+          whoBox.textContent = '✅ ' + (info.first_name || '') + (info.username ? ' (@' + info.username + ')' : '') + ' · id' + info.telegram_id;
           whoBox.style.color = 'var(--green-dark)';
           whoBox.style.display = 'block';
         } catch (err) {
-          whoBox.textContent = '❌ Пользователь не найден — он ещё ни разу не писал боту.';
+          resolvedTelegramId = null;
+          whoBox.textContent = '❌ Пользователь не найден — он ещё ни разу не писал боту (для поиска по телефону — не делился номером через /phone).';
           whoBox.style.color = 'var(--red-dark)';
           whoBox.style.display = 'block';
         }
@@ -3128,12 +3132,17 @@
     function closeOverlay() { unlockBodyScroll(); overlay.remove(); }
     overlay.querySelector('#grantCancel').onclick = closeOverlay;
     saveBtn.onclick = async () => {
-      const telegram_id = idInput.value.trim();
-      if (!telegram_id) {
-        errBox.textContent = 'Укажите id ученика.';
+      if (!idInput.value.trim()) {
+        errBox.textContent = 'Укажите id, юзернейм или телефон ученика.';
         errBox.style.display = 'block';
         return;
       }
+      if (!resolvedTelegramId) {
+        errBox.textContent = 'Сначала дождитесь, пока ученик найдётся (см. подсказку выше поля).';
+        errBox.style.display = 'block';
+        return;
+      }
+      const telegram_id = resolvedTelegramId;
       const payload = { telegram_id, course_type: selectedCourseType };
       if (mode === 'days') {
         const days = parseInt(daysInput.value, 10);
