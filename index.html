@@ -2687,6 +2687,236 @@
   document.getElementById('headerNotifBtn').onclick = () => openHeaderScreen('notifications_inbox', 'Уведомления');
   document.getElementById('headerSettingsBtn').onclick = () => openHeaderScreen('app_settings', 'Настройки');
 
+  function openBookingScreen(subjectId) {
+    activeTab = 'profile';
+    ['tabStudy', 'tabChallenges', 'tabRating', 'tabStats', 'tabProfile'].forEach((id) => {
+      document.getElementById(id).classList.toggle('active', id === 'tabProfile');
+    });
+    profileStack = [{ level: 'booking', title: 'Запись на урок', subjectId }];
+    renderProfileCrumbs();
+    renderProfile(false);
+  }
+
+  function openHomeworkScreen(subjectId) {
+    activeTab = 'profile';
+    ['tabStudy', 'tabChallenges', 'tabRating', 'tabStats', 'tabProfile'].forEach((id) => {
+      document.getElementById(id).classList.toggle('active', id === 'tabProfile');
+    });
+    profileStack = [{ level: 'homework_diary', title: 'Домашнее задание', subjectId }];
+    renderProfileCrumbs();
+    renderProfile(false);
+  }
+
+  async function _uploadFileForHomeworkStudent(file, statusEl) {
+    statusEl.textContent = 'Загружаю файл…';
+    const formData = new FormData();
+    formData.append('file', file);
+    const res = await fetch(API_BASE_URL + '/api/upload-file', {
+      method: 'POST',
+      headers: { 'X-Telegram-Init-Data': tg?.initData || '' },
+      body: formData,
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || data.error || 'Не удалось загрузить файл');
+    statusEl.textContent = '📎 ' + data.file_name;
+    return data;
+  }
+
+  async function renderHomeworkDiaryScreen(subjectId, isBack) {
+    const entries = await apiGet(`/api/me/homework?subject_id=${subjectId}`).catch(() => []);
+    swapScreen((screen) => {
+      if (!entries.length) {
+        const p = document.createElement('p');
+        p.className = 'state-msg';
+        p.textContent = 'Пока нет ни одного задания в дневнике.';
+        screen.appendChild(p);
+        return;
+      }
+      const statusMeta = {
+        assigned: ['Задано', '#FFF3D6', '#B7791F'],
+        awaiting_review: ['Ждёт проверки', '#E4ECFB', '#3B5BA9'],
+        accepted: ['Принято', '#E3F9E5', 'var(--green-dark)'],
+      };
+      entries.forEach((e) => {
+        const [y, m, d] = e.entry_date.split('-');
+        const [label, bg, color] = statusMeta[e.status] || [e.status, 'var(--bg-soft)', 'var(--text-soft)'];
+        const card = document.createElement('div');
+        card.style.cssText = 'background:var(--bg-soft);border-radius:14px;padding:14px 16px;margin-bottom:12px;';
+        card.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">` +
+          `<span style="font-weight:800;">${d}.${m}.${y}</span>` +
+          `<span style="padding:4px 9px;border-radius:8px;font-size:11px;font-weight:800;background:${bg};color:${color};">${label}</span></div>` +
+          `<div style="white-space:pre-wrap;margin-bottom:8px;">${escapeHtml(e.text)}</div>` +
+          (e.file_id ? `<a href="${API_BASE_URL}/api/image/${e.file_id}" target="_blank" style="display:block;margin-bottom:8px;color:var(--accent);font-weight:700;">📎 ${escapeHtml(e.file_name || 'Файл от репетитора')}</a>` : '');
+        if (e.student_note || e.student_file_id) {
+          const doneBox = document.createElement('div');
+          doneBox.style.cssText = 'border-top:1px solid var(--border);padding-top:8px;margin-top:4px;';
+          doneBox.innerHTML = `<div class="field-hint" style="margin-bottom:4px;">Ваш ответ</div>` +
+            (e.student_note ? `<div style="white-space:pre-wrap;margin-bottom:6px;">${escapeHtml(e.student_note)}</div>` : '') +
+            (e.student_file_id ? `<a href="${API_BASE_URL}/api/image/${e.student_file_id}" target="_blank" style="color:var(--accent);font-weight:700;">📎 ${escapeHtml(e.student_file_name || 'Ваш файл')}</a>` : '');
+          card.appendChild(doneBox);
+        } else if (e.status === 'assigned') {
+          const submitBtn = document.createElement('button');
+          submitBtn.className = 'submit-btn';
+          submitBtn.style.cssText = 'margin-top:6px;padding:9px;font-size:13px;';
+          submitBtn.textContent = 'Отправить выполненное';
+          submitBtn.onclick = () => promptSubmitHomework(e, () => renderHomeworkDiaryScreen(subjectId, false));
+          card.appendChild(submitBtn);
+        }
+        screen.appendChild(card);
+      });
+    }, isBack);
+  }
+
+  function promptSubmitHomework(entry, onDone) {
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center;z-index:30;padding:20px;';
+    const box = document.createElement('div');
+    box.style.cssText = 'background:var(--bg);border-radius:16px;padding:18px;max-width:340px;width:100%;max-height:85vh;overflow-y:auto;';
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+    box.innerHTML =
+      '<div class="field-label">Комментарий (необязательно)</div>' +
+      '<textarea class="field-input" id="subNote" rows="3" placeholder="Например: сделал, но не уверен во втором пункте" style="margin-bottom:10px;resize:vertical;"></textarea>' +
+      '<input type="file" id="subFile" style="margin-bottom:6px;">' +
+      '<div id="subFileStatus" class="field-hint" style="margin-bottom:10px;"></div>' +
+      '<div id="subErr" style="color:var(--red-dark);font-size:12.5px;font-weight:700;margin-bottom:8px;display:none;"></div>' +
+      '<div style="display:flex;gap:8px;">' +
+      '<button class="back-btn" id="subCancel" style="flex:1;">Отмена</button>' +
+      '<button class="save-btn" id="subSave" style="flex:1;margin-top:0;">Отправить</button>' +
+      '</div>';
+
+    let uploadedFile = null;
+    const fileInput = overlay.querySelector('#subFile');
+    const fileStatus = overlay.querySelector('#subFileStatus');
+    fileInput.onchange = async () => {
+      const file = fileInput.files[0];
+      if (!file) return;
+      try {
+        uploadedFile = await _uploadFileForHomeworkStudent(file, fileStatus);
+      } catch (err) {
+        fileStatus.textContent = 'Ошибка загрузки: ' + err.message;
+        uploadedFile = null;
+      }
+    };
+    const closeOverlay = () => { overlay.remove(); };
+    overlay.querySelector('#subCancel').onclick = closeOverlay;
+    const noteInput = overlay.querySelector('#subNote');
+    const errBox = overlay.querySelector('#subErr');
+    const saveBtn = overlay.querySelector('#subSave');
+    saveBtn.onclick = async () => {
+      if (!noteInput.value.trim() && !uploadedFile) {
+        errBox.textContent = 'Напишите комментарий или прикрепите файл.';
+        errBox.style.display = 'block';
+        return;
+      }
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Отправляю…';
+      try {
+        await apiPost(`/api/homework/${entry.id}/submit`, {
+          note: noteInput.value.trim(),
+          file_id: uploadedFile?.file_id || null,
+          file_name: uploadedFile?.file_name || null,
+        });
+        closeOverlay();
+        onDone();
+      } catch (err) {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Отправить';
+        errBox.textContent = 'Не получилось: ' + err.message;
+        errBox.style.display = 'block';
+      }
+    };
+  }
+
+  async function renderBookingScreen(subjectId, isBack) {
+    const myRequests = await apiGet(`/api/subjects/${subjectId}/booking/my-requests`).catch(() => []);
+    swapScreen((screen) => {
+      const hint = document.createElement('p');
+      hint.className = 'field-hint';
+      hint.style.marginBottom = '14px';
+      hint.textContent = 'Выберите дату и свободное время. Заявка уйдёт репетитору на подтверждение.';
+      screen.appendChild(hint);
+
+      const dateRow = document.createElement('div');
+      dateRow.style.cssText = 'display:flex;gap:6px;overflow-x:auto;padding-bottom:6px;margin-bottom:14px;';
+      screen.appendChild(dateRow);
+
+      const slotsBox = document.createElement('div');
+      slotsBox.style.cssText = 'display:flex;flex-wrap:wrap;gap:8px;margin-bottom:20px;';
+      screen.appendChild(slotsBox);
+
+      const today = new Date();
+      let selectedDateStr = null;
+      const dateButtons = [];
+
+      async function selectDate(dateStr, btn) {
+        selectedDateStr = dateStr;
+        dateButtons.forEach((b) => { b.style.borderColor = 'var(--border)'; b.style.background = 'var(--bg)'; });
+        btn.style.borderColor = 'var(--accent)';
+        btn.style.background = 'var(--blue-tint)';
+        slotsBox.innerHTML = '<span class="field-hint">Загрузка…</span>';
+        try {
+          const slots = await apiGet(`/api/subjects/${subjectId}/booking/free-slots?date=${dateStr}`);
+          slotsBox.innerHTML = '';
+          if (!slots.length) {
+            slotsBox.innerHTML = '<span class="field-hint">На эту дату свободного времени нет.</span>';
+            return;
+          }
+          slots.forEach((s) => {
+            const timeBtn = document.createElement('button');
+            timeBtn.textContent = s.time;
+            timeBtn.style.cssText = 'padding:10px 14px;border-radius:12px;border:2px solid var(--border);background:var(--bg);color:var(--text);font-weight:700;font-size:13px;cursor:pointer;';
+            timeBtn.onclick = async () => {
+              timeBtn.disabled = true;
+              timeBtn.textContent = '…';
+              try {
+                await apiPost(`/api/subjects/${subjectId}/booking/request`, { date: dateStr, time: s.time });
+                renderBookingScreen(subjectId, false);
+              } catch (err) {
+                alert('Не получилось: ' + err.message);
+                timeBtn.disabled = false;
+                timeBtn.textContent = s.time;
+              }
+            };
+            slotsBox.appendChild(timeBtn);
+          });
+        } catch (err) {
+          slotsBox.innerHTML = '<span class="field-hint">Не удалось загрузить свободное время.</span>';
+        }
+      }
+
+      let firstDateStr = null;
+      for (let i = 0; i < 14; i++) {
+        const d = new Date(today.getFullYear(), today.getMonth(), today.getDate() + i);
+        const dateStr = d.toISOString().slice(0, 10);
+        if (i === 0) firstDateStr = dateStr;
+        const btn = document.createElement('button');
+        btn.style.cssText = 'flex-shrink:0;min-width:52px;padding:8px 6px;border-radius:12px;border:2px solid var(--border);background:var(--bg);color:var(--text);font-weight:700;cursor:pointer;text-align:center;';
+        btn.innerHTML = `<div style="font-size:10px;color:var(--text-soft);">${d.toLocaleDateString('ru-RU', { weekday: 'short' })}</div><div style="font-size:15px;">${d.getDate()}</div>`;
+        btn.onclick = () => selectDate(dateStr, btn);
+        dateRow.appendChild(btn);
+        dateButtons.push(btn);
+      }
+      if (dateButtons.length) selectDate(firstDateStr, dateButtons[0]);
+
+      if (myRequests.length) {
+        const title = document.createElement('div');
+        title.className = 'field-hint';
+        title.style.cssText = 'margin:0 0 8px;text-transform:uppercase;font-weight:800;letter-spacing:0.03em;';
+        title.textContent = 'Мои заявки';
+        screen.appendChild(title);
+        const labels = { pending: ['Ожидает подтверждения', 'var(--text-soft)'], approved: ['Подтверждено', 'var(--green-dark)'], declined: ['Отклонено', 'var(--red-dark)'] };
+        myRequests.forEach((r) => {
+          const [label, color] = labels[r.status] || [r.status, 'var(--text-soft)'];
+          const row = document.createElement('div');
+          row.style.cssText = 'display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;';
+          row.innerHTML = `<span>${r.requested_at.slice(0, 16).replace('T', ' ')}</span><span style="color:${color};font-weight:700;">${label}</span>`;
+          screen.appendChild(row);
+        });
+      }
+    }, isBack);
+  }
+
   function switchTab(tab) {
     activeTab = tab;
     document.getElementById('tabStudy').classList.toggle('active', tab === 'study');
@@ -2926,6 +3156,20 @@
             </div>
           `;
           screen.appendChild(courseCard);
+
+          const bookBtn = document.createElement('button');
+          bookBtn.className = 'submit-btn';
+          bookBtn.style.cssText = 'margin-bottom:10px;background:var(--bg-soft);color:var(--text);border:2px solid var(--border);';
+          bookBtn.textContent = '🗓 Записаться на урок';
+          bookBtn.onclick = () => openBookingScreen(sub.subject_id);
+          screen.appendChild(bookBtn);
+
+          const hwBtn = document.createElement('button');
+          hwBtn.className = 'submit-btn';
+          hwBtn.style.cssText = 'margin-bottom:20px;background:var(--bg-soft);color:var(--text);border:2px solid var(--border);';
+          hwBtn.textContent = '📓 Домашнее задание';
+          hwBtn.onclick = () => openHomeworkScreen(sub.subject_id);
+          screen.appendChild(hwBtn);
         }
         updateHeaderNotifDot(notifSummary.unread_count || 0);
 
@@ -3335,6 +3579,10 @@
         });
         screen.appendChild(list);
       }, isBack);
+    } else if (current.level === 'booking') {
+      await renderBookingScreen(current.subjectId, isBack);
+    } else if (current.level === 'homework_diary') {
+      await renderHomeworkDiaryScreen(current.subjectId, isBack);
     } else if (current.level === 'app_settings') {
       const [prefs, roleInfo] = await Promise.all([
         apiGet('/api/me/notification-preferences'),
