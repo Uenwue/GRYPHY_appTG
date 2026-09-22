@@ -738,6 +738,12 @@
   let trainerInitialized = false;
   let currentTasks = [];
 
+  // Курс, выбранный на экране «Мои курсы» — общий для всех 4 вкладок, а не
+  // каждая вкладка сама по себе выбирает какой-то предмет по умолчанию.
+  let currentCourseId = null;
+  let currentCourseTitle = '';
+  let hwBuiltForCourse = null;
+
   async function buildHomeworkEntry(subjectId) {
     try {
       const hwSections = await apiGet(`/api/subjects/${subjectId}/sections?kind=homework`);
@@ -2656,6 +2662,10 @@
   async function getDefaultSubject() {
     const subjects = await apiGet('/api/subjects');
     if (!subjects.length) return null;
+    if (currentCourseId) {
+      const match = subjects.find((s) => s.id === currentCourseId);
+      if (match) return match;
+    }
     return subjects[0];
   }
 
@@ -3023,9 +3033,25 @@
     const tabTitles = { study: 'Домашнее задание', challenges: 'Тренажёр', rating: 'Рейтинг', stats: 'Статистика', profile: 'Профиль' };
     document.getElementById('headerTitle').textContent = tabTitles[tab] || 'Домашнее задание';
     if (tab === 'study') {
-      stack = hwStack;
-      renderCrumbs();
-      render(false);
+      if (currentCourseId && hwBuiltForCourse !== currentCourseId) {
+        showLoading('Загружаем', false);
+        buildHomeworkEntry(currentCourseId).then((entry) => {
+          hwBuiltForCourse = currentCourseId;
+          hwStack = entry;
+          stack = hwStack;
+          renderCrumbs();
+          render(false);
+        }).catch((err) => {
+          showState('Не получилось загрузить. ' + err.message, true, true, false, () => {
+            activeTab = null;
+            switchTab('study');
+          });
+        });
+      } else {
+        stack = hwStack;
+        renderCrumbs();
+        render(false);
+      }
     } else if (tab === 'profile') {
       profileStack = [{ level: 'profile_subjects', title: '' }];
       renderProfileCrumbs();
@@ -3224,6 +3250,15 @@
           ${!fio ? `<div class="field-hint" style="margin-top:10px;color:var(--red-dark);">Укажите настоящие фамилию и имя в анкете — они видны в рейтинге.</div>` : ''}
         `;
         screen.appendChild(userCard);
+
+        if (subjects.length > 1) {
+          const switchBtn = document.createElement('button');
+          switchBtn.className = 'submit-btn';
+          switchBtn.style.cssText = 'margin-bottom:20px;background:var(--bg-soft);color:var(--text);border:2px solid var(--border);';
+          switchBtn.textContent = '📚 Сменить курс' + (currentCourseTitle ? ` (сейчас: ${currentCourseTitle})` : '');
+          switchBtn.onclick = () => openCourseSwitcher();
+          screen.appendChild(switchBtn);
+        }
 
         const sub = subStatus.subscriptions && subStatus.subscriptions[0];
         if (sub) {
@@ -3786,12 +3821,10 @@
           becomeBtn.style.cssText = 'background:var(--bg-soft);color:var(--text);border:2px solid var(--border);';
           becomeBtn.textContent = '🎓 Стать репетитором';
           becomeBtn.onclick = async () => {
-            const name = prompt('Как назвать ваш кабинет? Например «Английский с Ольгой».');
-            if (name === null) return;
             becomeBtn.disabled = true;
             becomeBtn.textContent = 'Открываю кабинет…';
             try {
-              const res = await apiPost('/api/me/become-tutor', { name });
+              const res = await apiPost('/api/me/become-tutor', {});
               window.location.href = withDirectParam(res.teacher_app_url);
             } catch (err) {
               becomeBtn.disabled = false;
@@ -4190,7 +4223,25 @@
     if (crumbs) crumbs.style.display = visible ? '' : 'none';
   }
 
+  function removeBootLoader() {
+    const loader = document.getElementById('bootLoader');
+    if (loader) loader.remove();
+  }
+
   async function checkProfileSetupThenStart() {
+    // Скрываем всю обычную оболочку (шапку/вкладки/контент) сразу, ДО
+    // всех запросов — иначе на секунду видна обычная разметка приложения
+    // (и её placeholder-заглушка), а только потом решается, показывать ли
+    // экран выбора роли. Простая полноэкранная заглушка вместо этого,
+    // поверх всего (включая screenHost) — её снимает removeBootLoader,
+    // как только принято решение, что показывать дальше.
+    setAppChromeVisible(false);
+    const bootLoader = document.createElement('div');
+    bootLoader.id = 'bootLoader';
+    bootLoader.style.cssText = 'position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;background:var(--bg);';
+    bootLoader.innerHTML = '<span class="pencil-dots"><span></span><span></span><span></span></span>';
+    document.body.appendChild(bootLoader);
+
     // Раньше это были три последовательных запроса подряд (анкета → подписка
     // → предметы), каждый ждал предыдущий — экран заметно дольше загружался.
     // Они друг от друга не зависят, поэтому просто запускаем все сразу и
@@ -4214,14 +4265,16 @@
     const showChooser = !new URLSearchParams(location.search).has('direct')
       && roleInfo && (roleInfo.role === 'guest' || (roleInfo.is_teacher && roleInfo.has_student_access));
     if (showChooser) {
-      setAppChromeVisible(false);
+      removeBootLoader();
       renderRoleChooser(roleInfo, () => { setAppChromeVisible(true); proceedAsStudent(info, status, subjects); });
       return;
     }
+    setAppChromeVisible(true);
     proceedAsStudent(info, status, subjects);
   }
 
   async function proceedAsStudent(info, status, subjects) {
+    removeBootLoader();
     if (info && !info.filled) {
       renderProfileSetupForm();
       return;
@@ -4230,11 +4283,48 @@
       renderSubscriptionRequiredScreen();
       return;
     }
-    // Раньше тут автоматически открывался первый предмет из списка — это
-    // прятало остальные курсы, если ученик учится сразу у нескольких
-    // репетиторов. Теперь всегда показываем обычный экран со списком
-    // предметов, а внутрь конкретного курса ученик заходит сам.
-    render(false);
+    renderMyCoursesScreen(subjects);
+  }
+
+  function renderMyCoursesScreen(subjects) {
+    setAppChromeVisible(false);
+    swapScreen((screen) => {
+      const title = document.createElement('h2');
+      title.style.cssText = 'font-family:"Jost",sans-serif;font-size:20px;font-weight:800;margin:0 0 16px;';
+      title.textContent = 'Мои курсы';
+      screen.appendChild(title);
+      if (!subjects.length) {
+        const p = document.createElement('p');
+        p.className = 'state-msg';
+        p.textContent = 'У вас пока нет ни одного курса.';
+        screen.appendChild(p);
+        return;
+      }
+      subjects.forEach((s) => {
+        const card = document.createElement('button');
+        card.className = 'submit-btn';
+        card.style.cssText = 'margin-bottom:10px;text-align:left;background:var(--bg-soft);color:var(--text);border:2px solid var(--border);';
+        card.textContent = s.title;
+        card.onclick = () => enterCourse(s);
+        screen.appendChild(card);
+      });
+    });
+  }
+
+  function enterCourse(subject) {
+    currentCourseId = subject.id;
+    currentCourseTitle = subject.title;
+    trainerInitialized = false;
+    hwBuiltForCourse = null;
+    setAppChromeVisible(true);
+    activeTab = null;
+    switchTab('study');
+  }
+
+  function openCourseSwitcher() {
+    apiGet('/api/subjects').then((subjects) => {
+      renderMyCoursesScreen(subjects);
+    }).catch((err) => alert('Не получилось загрузить список курсов: ' + err.message));
   }
 
   function renderRoleChooser(roleInfo, onChooseStudent) {
@@ -4272,12 +4362,13 @@
           window.location.href = withDirectParam(roleInfo.teacher_app_url);
           return;
         }
-        const name = prompt('Как назвать ваш кабинет? Например «Английский с Ольгой».');
-        if (name === null) return;
+        // Никакого ввода — кабинет создаётся сразу с именем по умолчанию
+        // (бэкенд сам подставит «Кабинет <имя>»), переименовать можно
+        // позже в настройках учительского мини-аппа.
         teacherBtn.disabled = true;
         teacherBtn.textContent = 'Открываю кабинет…';
         try {
-          const res = await apiPost('/api/me/become-tutor', { name });
+          const res = await apiPost('/api/me/become-tutor', {});
           window.location.href = withDirectParam(res.teacher_app_url || roleInfo.teacher_app_url);
         } catch (err) {
           teacherBtn.disabled = false;
