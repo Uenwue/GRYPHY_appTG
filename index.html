@@ -4076,6 +4076,15 @@
     return url + (url.includes('?') ? '&' : '?') + 'direct=1';
   }
 
+  function setAppChromeVisible(visible) {
+    const header = document.querySelector('header');
+    const tabBar = document.querySelector('.tab-bar');
+    const crumbs = document.getElementById('crumbs');
+    if (header) header.style.display = visible ? '' : 'none';
+    if (tabBar) tabBar.style.display = visible ? '' : 'none';
+    if (crumbs) crumbs.style.display = visible ? '' : 'none';
+  }
+
   async function checkProfileSetupThenStart() {
     // Раньше это были три последовательных запроса подряд (анкета → подписка
     // → предметы), каждый ждал предыдущий — экран заметно дольше загружался.
@@ -4100,7 +4109,8 @@
     const showChooser = !new URLSearchParams(location.search).has('direct')
       && roleInfo && (roleInfo.role === 'guest' || (roleInfo.is_teacher && roleInfo.has_student_access));
     if (showChooser) {
-      renderRoleChooser(roleInfo, () => proceedAsStudent(info, status, subjects));
+      setAppChromeVisible(false);
+      renderRoleChooser(roleInfo, () => { setAppChromeVisible(true); proceedAsStudent(info, status, subjects); });
       return;
     }
     proceedAsStudent(info, status, subjects);
