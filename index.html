@@ -2707,6 +2707,102 @@
     renderProfile(false);
   }
 
+  function openCatalogScreen() {
+    profileStack.push({ level: 'catalog', title: 'Найти репетитора' });
+    renderProfileCrumbs();
+    renderProfile(false);
+  }
+
+  async function renderCatalogScreen(isBack) {
+    const [catalog, myRequests] = await Promise.all([
+      apiGet('/api/catalog').catch(() => []),
+      apiGet('/api/me/access-requests').catch(() => []),
+    ]);
+    swapScreen((screen) => {
+      const searchInput = document.createElement('input');
+      searchInput.className = 'field-input';
+      searchInput.type = 'text';
+      searchInput.placeholder = 'Поиск по предмету или имени репетитора';
+      searchInput.style.marginBottom = '14px';
+      screen.appendChild(searchInput);
+
+      const resultsBox = document.createElement('div');
+      screen.appendChild(resultsBox);
+
+      function renderResults(list) {
+        resultsBox.innerHTML = '';
+        if (!list.length) {
+          const p = document.createElement('p');
+          p.className = 'state-msg';
+          p.textContent = 'Ничего не найдено.';
+          resultsBox.appendChild(p);
+          return;
+        }
+        list.forEach((t) => {
+          const card = document.createElement('div');
+          card.style.cssText = 'background:var(--bg-soft);border-radius:14px;padding:14px 16px;margin-bottom:12px;';
+          card.innerHTML = `<div style="font-weight:800;margin-bottom:4px;">${escapeHtml(t.name)}</div>` +
+            (t.bio ? `<div class="field-hint" style="margin-bottom:8px;">${escapeHtml(t.bio)}</div>` : '');
+          t.subjects.forEach((s) => {
+            const row = document.createElement('div');
+            row.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-top:1px solid var(--border);';
+            const label = document.createElement('span');
+            label.textContent = s.title;
+            row.appendChild(label);
+            const btn = document.createElement('button');
+            btn.textContent = 'Отправить заявку';
+            btn.style.cssText = 'padding:7px 12px;border-radius:10px;border:none;background:var(--accent);color:#fff;font-weight:700;font-size:12.5px;cursor:pointer;';
+            btn.onclick = async () => {
+              const message = prompt('Коротко, что вам нужно (необязательно):') || '';
+              btn.disabled = true;
+              btn.textContent = '…';
+              try {
+                await apiPost('/api/catalog/access-request', { tutor_id: t.tutor_id, subject_id: s.subject_id, message });
+                btn.textContent = 'Отправлено ✓';
+              } catch (err) {
+                btn.disabled = false;
+                btn.textContent = 'Отправить заявку';
+                alert('Не получилось: ' + err.message);
+              }
+            };
+            row.appendChild(btn);
+            card.appendChild(row);
+          });
+          resultsBox.appendChild(card);
+        });
+      }
+      renderResults(catalog);
+
+      let searchTimer = null;
+      searchInput.oninput = () => {
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(async () => {
+          const q = searchInput.value.trim();
+          try {
+            const filtered = await apiGet(`/api/catalog?query=${encodeURIComponent(q)}`);
+            renderResults(filtered);
+          } catch (err) { /* оставляем прошлые результаты */ }
+        }, 350);
+      };
+
+      if (myRequests.length) {
+        const title = document.createElement('div');
+        title.className = 'field-hint';
+        title.style.cssText = 'margin:20px 0 8px;text-transform:uppercase;font-weight:800;letter-spacing:0.03em;';
+        title.textContent = 'Мои заявки';
+        screen.appendChild(title);
+        const labels = { pending: ['Ожидает ответа', 'var(--text-soft)'], approved: ['Одобрено', 'var(--green-dark)'], declined: ['Отклонено', 'var(--red-dark)'] };
+        myRequests.forEach((r) => {
+          const [label, color] = labels[r.status] || [r.status, 'var(--text-soft)'];
+          const row = document.createElement('div');
+          row.style.cssText = 'display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;';
+          row.innerHTML = `<span>${escapeHtml(r.tutor_name || '')} \u00b7 ${escapeHtml(r.subject_title || '')}</span><span style="color:${color};font-weight:700;">${label}</span>`;
+          screen.appendChild(row);
+        });
+      }
+    }, isBack);
+  }
+
   async function _uploadFileForHomeworkStudent(file, statusEl) {
     statusEl.textContent = 'Загружаю файл…';
     const formData = new FormData();
@@ -3583,6 +3679,8 @@
       await renderBookingScreen(current.subjectId, isBack);
     } else if (current.level === 'homework_diary') {
       await renderHomeworkDiaryScreen(current.subjectId, isBack);
+    } else if (current.level === 'catalog') {
+      await renderCatalogScreen(isBack);
     } else if (current.level === 'app_settings') {
       const [prefs, roleInfo] = await Promise.all([
         apiGet('/api/me/notification-preferences'),
@@ -3703,6 +3801,13 @@
           };
           screen.appendChild(becomeBtn);
         }
+
+        const catalogBtn = document.createElement('button');
+        catalogBtn.className = 'submit-btn';
+        catalogBtn.style.cssText = 'margin-top:10px;background:var(--bg-soft);color:var(--text);border:2px solid var(--border);';
+        catalogBtn.textContent = '🔍 Найти репетитора';
+        catalogBtn.onclick = () => openCatalogScreen();
+        screen.appendChild(catalogBtn);
       }, isBack);
     } else if (current.level === 'notifications_inbox') {
       const data = await apiGet('/api/me/notifications');
@@ -4125,13 +4230,10 @@
       renderSubscriptionRequiredScreen();
       return;
     }
-    try {
-      if (subjects.length) {
-        const chosen = subjects[0];
-        hwStack = await buildHomeworkEntry(chosen.id);
-        stack = hwStack;
-      }
-    } catch (err) { /* остаёмся на обычном экране выбора предмета */ }
+    // Раньше тут автоматически открывался первый предмет из списка — это
+    // прятало остальные курсы, если ученик учится сразу у нескольких
+    // репетиторов. Теперь всегда показываем обычный экран со списком
+    // предметов, а внутрь конкретного курса ученик заходит сам.
     render(false);
   }
 
@@ -4159,8 +4261,14 @@
       teacherBtn.style.cssText = 'background:var(--bg-soft);color:var(--text);border:2px solid var(--border);';
       teacherBtn.textContent = '👩‍🏫 Я репетитор';
       teacherBtn.onclick = async () => {
-        // Уже есть свой кабинет — просто переходим, без повторного создания.
-        if (roleInfo.is_teacher && roleInfo.teacher_app_url) {
+        // Уже учитель — переходим в существующий кабинет и никогда не
+        // предлагаем завести новый, даже если по какой-то причине не
+        // пришла ссылка (тогда просто сообщаем об ошибке).
+        if (roleInfo.is_teacher) {
+          if (!roleInfo.teacher_app_url) {
+            alert('Не удалось определить адрес учительского мини-аппа. Обратитесь к владельцу платформы.');
+            return;
+          }
           window.location.href = withDirectParam(roleInfo.teacher_app_url);
           return;
         }
