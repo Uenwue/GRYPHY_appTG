@@ -856,14 +856,19 @@
     if (crumbs) crumbs.style.display = visible ? '' : 'none';
   }
 
-  function openPersonalSettings() {
+  async function openPersonalSettings() {
     lockBodyScroll();
     const overlay = document.createElement('div');
     overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center;z-index:30;padding:20px;';
-    overlay.innerHTML = '<div style="background:var(--bg);border-radius:16px;padding:18px;max-width:340px;width:100%;">' +
+    overlay.innerHTML = '<div style="background:var(--bg);border-radius:16px;padding:18px;max-width:340px;width:100%;max-height:85vh;overflow-y:auto;">' +
       '<div class="field-label" style="margin-bottom:14px;">Настройки</div>' +
-      '<div id="pSettingsModeSlot"></div>' +
-      '<button class="back-btn" id="pSettingsClose" style="width:100%;margin-top:10px;">Закрыть</button>' +
+      '<div id="pSettingsModeSlot" style="margin-bottom:18px;"></div>' +
+      '<div class="field-label" style="margin-bottom:8px;">Каталог репетиторов</div>' +
+      '<label style="display:flex;align-items:center;gap:8px;margin-bottom:10px;font-size:13px;">' +
+      '<input type="checkbox" id="pCatalogPublic"> Показываться в каталоге ученикам платформы</label>' +
+      '<textarea class="field-input" id="pCatalogBio" rows="3" placeholder="Коротко о себе для карточки в каталоге" style="margin-bottom:14px;resize:vertical;"></textarea>' +
+      '<button class="save-btn" id="pCatalogSave" style="margin-top:0;margin-bottom:14px;">Сохранить</button>' +
+      '<button class="back-btn" id="pSettingsClose" style="width:100%;">Закрыть</button>' +
       '</div>';
     document.body.appendChild(overlay);
     const closeOverlay = () => { unlockBodyScroll(); overlay.remove(); };
@@ -878,6 +883,23 @@
       if (studentAppUrl) window.location.href = withDirectParam(studentAppUrl);
     };
     slot.appendChild(modeBtn);
+
+    const publicCheckbox = overlay.querySelector('#pCatalogPublic');
+    const bioInput = overlay.querySelector('#pCatalogBio');
+    try {
+      const profile = await apiGet('/api/teacher/public-profile');
+      publicCheckbox.checked = !!profile.is_public;
+      bioInput.value = profile.bio || '';
+    } catch (err) { /* оставляем пустым */ }
+
+    overlay.querySelector('#pCatalogSave').onclick = async () => {
+      try {
+        await apiSend('POST', '/api/teacher/public-profile', {
+          is_public: publicCheckbox.checked, bio: bioInput.value.trim(),
+        });
+        showToast('Сохранено');
+      } catch (err) { showToast('Не получилось: ' + err.message); }
+    };
   }
 
   function renderTeacherStudentChooser() {
@@ -2839,9 +2861,10 @@
   async function renderLessons(isBack) {
     showLoadingMenu();
     try {
-      const [lessons, requests] = await Promise.all([
+      const [lessons, requests, accessRequests] = await Promise.all([
         apiGet('/api/teacher/lessons'),
         apiGet('/api/teacher/booking-requests').catch(() => []),
+        apiGet('/api/teacher/access-requests').catch(() => []),
       ]);
       swapScreen((screen) => {
         const hint = document.createElement('p');
@@ -2883,6 +2906,15 @@
           requests.forEach((r) => screen.appendChild(buildBookingRequestRow(r)));
         }
 
+        if (accessRequests.length) {
+          const accTitle = document.createElement('div');
+          accTitle.className = 'field-hint';
+          accTitle.style.cssText = 'margin:14px 0 8px;text-transform:uppercase;font-weight:800;letter-spacing:0.03em;font-size:11px;color:var(--accent);';
+          accTitle.textContent = `🔍 Заявки на доступ из каталога (${accessRequests.length})`;
+          screen.appendChild(accTitle);
+          accessRequests.forEach((r) => screen.appendChild(buildAccessRequestRow(r)));
+        }
+
         if (!lessons.length) {
           const p = document.createElement('p');
           p.className = 'state-msg';
@@ -2908,6 +2940,39 @@
         });
       }, isBack);
     } catch (err) { showErrorMsg(err, isBack); }
+  }
+
+  function buildAccessRequestRow(r) {
+    const row = document.createElement('div');
+    row.className = 'row-card';
+    row.style.cssText = 'align-items:center;';
+    const info = document.createElement('div');
+    info.style.cssText = 'flex:1;min-width:0;';
+    info.innerHTML = `<div class="row-title">${escapeHtml(r.student_name)} \u00b7 ${escapeHtml(r.subject_title || '')}</div>` +
+      (r.message ? `<div class="field-hint" style="margin-top:2px;">${escapeHtml(r.message)}</div>` : '');
+    row.appendChild(info);
+    const actions = document.createElement('div');
+    actions.style.cssText = 'display:flex;gap:6px;flex-shrink:0;';
+    const approveBtn = document.createElement('button');
+    approveBtn.textContent = '✅';
+    approveBtn.title = 'Одобрить (подписку выдать отдельно на экране ученика)';
+    approveBtn.style.cssText = 'width:34px;height:34px;border-radius:10px;border:none;background:#E3F9E5;cursor:pointer;font-size:15px;';
+    approveBtn.onclick = async () => {
+      await apiSend('POST', `/api/teacher/access-requests/${r.id}/approve`, {});
+      render(false);
+    };
+    const declineBtn = document.createElement('button');
+    declineBtn.textContent = '🚫';
+    declineBtn.title = 'Отклонить';
+    declineBtn.style.cssText = 'width:34px;height:34px;border-radius:10px;border:none;background:var(--bg-soft);cursor:pointer;font-size:15px;';
+    declineBtn.onclick = async () => {
+      await apiSend('POST', `/api/teacher/access-requests/${r.id}/decline`, {});
+      render(false);
+    };
+    actions.appendChild(approveBtn);
+    actions.appendChild(declineBtn);
+    row.appendChild(actions);
+    return row;
   }
 
   function buildBookingRequestRow(r) {
