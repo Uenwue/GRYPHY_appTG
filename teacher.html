@@ -601,6 +601,8 @@
       icon: '<circle cx="7" cy="7" r="2.5" stroke="currentColor" stroke-width="1.6"/><circle cx="14" cy="8.5" r="2" stroke="currentColor" stroke-width="1.6"/><path d="M2.5 16c0-2.5 2-4.2 4.5-4.2s4.5 1.7 4.5 4.2M12 12.5c2 0 4 1.2 4 3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>' },
     { level: 'payments', title: 'Оплаты', standalone: true,
       icon: '<rect x="2" y="5" width="16" height="11" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M2 9H18" stroke="currentColor" stroke-width="1.6"/><path d="M5 13H8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>' },
+    { level: 'dashboard', title: 'Дашборд', standalone: true,
+      icon: '<rect x="2" y="2" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.6"/><rect x="11" y="2" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.6"/><rect x="2" y="11" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.6"/><rect x="11" y="11" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.6"/>' },
     { level: 'lessons', title: 'Мои уроки', standalone: true,
       icon: '<rect x="3" y="4" width="14" height="13" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M3 8H17" stroke="currentColor" stroke-width="1.6"/><path d="M7 2V5M13 2V5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>' },
     { level: 'packages', title: 'Абонементы', standalone: true,
@@ -845,6 +847,15 @@
     return url + (url.includes('?') ? '&' : '?') + 'direct=1';
   }
 
+  function setAppChromeVisible(visible) {
+    const header = document.querySelector('header');
+    const sideNav = document.getElementById('sideNav');
+    const crumbs = document.getElementById('crumbs');
+    if (header) header.style.display = visible ? '' : 'none';
+    if (sideNav) sideNav.style.display = visible ? '' : 'none';
+    if (crumbs) crumbs.style.display = visible ? '' : 'none';
+  }
+
   function openPersonalSettings() {
     lockBodyScroll();
     const overlay = document.createElement('div');
@@ -885,7 +896,7 @@
       teacherBtn.className = 'submit-btn';
       teacherBtn.style.cssText = 'margin-bottom:12px;';
       teacherBtn.textContent = '👩‍🏫 Я учитель';
-      teacherBtn.onclick = () => render(false);
+      teacherBtn.onclick = () => { setAppChromeVisible(true); render(false); };
       screen.appendChild(teacherBtn);
 
       const studentBtn = document.createElement('button');
@@ -917,6 +928,7 @@
           appBooted = true;
           const isDirect = new URLSearchParams(location.search).has('direct');
           if (!isDirect && hasStudentAccess && studentAppUrl) {
+            setAppChromeVisible(false);
             renderTeacherStudentChooser();
             return;
           }
@@ -1224,6 +1236,8 @@
       renderGroups(isBack);
     } else if (current.level === 'payments') {
       renderPayments(isBack);
+    } else if (current.level === 'dashboard') {
+      renderDashboard(isBack);
     } else if (current.level === 'lessons') {
       renderLessons(isBack);
     } else if (current.level === 'packages') {
@@ -2697,6 +2711,130 @@
 
   const WEEKDAY_NAMES = ['Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота', 'Воскресенье'];
   const WEEKDAY_SHORT = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
+
+  async function renderDashboard(isBack) {
+    showLoadingMenu();
+    try {
+      const s = await apiGet('/api/teacher/dashboard');
+      swapScreen((screen) => {
+        // --- Сегодня ---
+        const todayCard = document.createElement('div');
+        todayCard.style.cssText = 'background:var(--bg-soft);border-radius:16px;padding:16px;margin-bottom:14px;';
+        const todayTitle = document.createElement('div');
+        todayTitle.style.cssText = 'display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px;';
+        todayTitle.innerHTML = `<span style="font-family:'Jost',sans-serif;font-weight:800;font-size:20px;">${s.today_lessons.length} ${s.today_lessons.length === 1 ? 'урок' : 'урока'}</span><span class="field-hint">сегодня</span>`;
+        todayCard.appendChild(todayTitle);
+        if (!s.today_lessons.length) {
+          const p = document.createElement('div');
+          p.className = 'field-hint';
+          p.textContent = 'На сегодня уроков не запланировано.';
+          todayCard.appendChild(p);
+        } else {
+          s.today_lessons.forEach((l) => {
+            const row = document.createElement('div');
+            row.style.cssText = 'display:flex;justify-content:space-between;padding:6px 0;border-top:1px solid var(--border);font-size:13.5px;';
+            row.innerHTML = `<span>${l.scheduled_at.slice(11, 16)} \u00b7 ${escapeHtml(l.student_name)}</span><span class="field-hint">${l.duration_minutes} мин</span>`;
+            todayCard.appendChild(row);
+          });
+        }
+        screen.appendChild(todayCard);
+
+        // --- Доход ---
+        const incomeCard = document.createElement('div');
+        incomeCard.style.cssText = 'background:var(--accent-dark, var(--accent));color:#fff;border-radius:16px;padding:16px;margin-bottom:14px;';
+        const diff = s.income_this_month - s.income_last_month;
+        const diffPct = s.income_last_month > 0 ? Math.round((diff / s.income_last_month) * 100) : null;
+        incomeCard.innerHTML = `<div style="font-size:11px;opacity:0.8;text-transform:uppercase;letter-spacing:0.03em;margin-bottom:4px;">Доход за месяц</div>` +
+          `<div style="font-family:'Jost',sans-serif;font-weight:800;font-size:28px;margin-bottom:8px;">${s.income_this_month} ₽</div>` +
+          (diffPct !== null ? `<div style="font-size:12.5px;opacity:0.9;">${diff >= 0 ? '↗' : '↘'} ${diff >= 0 ? '+' : ''}${diffPct}% к прошлому месяцу (${s.income_last_month} ₽)</div>` : '');
+        screen.appendChild(incomeCard);
+
+        // --- Долги ---
+        if (s.debts_count > 0) {
+          const debtsCard = document.createElement('div');
+          debtsCard.style.cssText = 'background:var(--bg-soft);border-radius:16px;padding:16px;margin-bottom:14px;';
+          debtsCard.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;">` +
+            `<span class="field-hint" style="text-transform:uppercase;font-weight:800;">Долги по оплате</span><span style="font-family:'Jost',sans-serif;font-weight:800;font-size:16px;">${s.debts_count}</span></div>` +
+            `<div style="font-family:'Jost',sans-serif;font-weight:800;font-size:20px;margin-bottom:8px;">${s.debts_total} ₽</div>`;
+          s.debts.forEach((d) => {
+            const row = document.createElement('div');
+            row.style.cssText = 'display:flex;justify-content:space-between;padding:4px 0;font-size:13.5px;';
+            row.innerHTML = `<span>${escapeHtml(d.student_name)}</span><span>${d.amount} ${escapeHtml(d.currency)}</span>`;
+            debtsCard.appendChild(row);
+          });
+          debtsCard.style.cursor = 'pointer';
+          debtsCard.onclick = () => { stack = [{ level: 'payments', title: 'Оплаты' }]; render(false); };
+          screen.appendChild(debtsCard);
+        }
+
+        // --- Абонементы на исходе ---
+        if (s.renewals.length) {
+          const renewalsCard = document.createElement('div');
+          renewalsCard.style.cssText = 'background:var(--bg-soft);border-radius:16px;padding:16px;margin-bottom:14px;cursor:pointer;';
+          renewalsCard.innerHTML = `<div class="field-hint" style="text-transform:uppercase;font-weight:800;margin-bottom:8px;">🔔 Абонементы на исходе</div>`;
+          s.renewals.forEach((r) => {
+            const row = document.createElement('div');
+            row.style.cssText = 'display:flex;justify-content:space-between;padding:4px 0;font-size:13.5px;';
+            row.innerHTML = `<span>${escapeHtml(r.student_name)}</span><span>${r.remaining} из ${r.total}</span>`;
+            renewalsCard.appendChild(row);
+          });
+          renewalsCard.onclick = () => { stack = [{ level: 'packages', title: 'Абонементы' }]; render(false); };
+          screen.appendChild(renewalsCard);
+        }
+
+        // --- Заявки на запись ---
+        if (s.pending_requests_count > 0) {
+          const reqCard = document.createElement('div');
+          reqCard.style.cssText = 'background:var(--blue-tint);border-radius:16px;padding:14px 16px;margin-bottom:14px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;';
+          reqCard.innerHTML = `<span style="font-weight:700;">📩 Заявки на запись</span><span style="font-family:'Jost',sans-serif;font-weight:800;font-size:18px;">${s.pending_requests_count}</span>`;
+          reqCard.onclick = () => { stack = [{ level: 'lessons', title: 'Мои уроки' }]; render(false); };
+          screen.appendChild(reqCard);
+        }
+
+        // --- Нагрузка на неделю ---
+        const loadCard = document.createElement('div');
+        loadCard.style.cssText = 'background:var(--bg-soft);border-radius:16px;padding:16px;margin-bottom:14px;';
+        loadCard.innerHTML = `<div class="field-hint" style="text-transform:uppercase;font-weight:800;margin-bottom:10px;">Нагрузка на неделю</div>`;
+        const loadRow = document.createElement('div');
+        loadRow.style.cssText = 'display:flex;justify-content:space-between;';
+        const maxLoad = Math.max(1, ...s.week_load);
+        s.week_load.forEach((count, i) => {
+          const col = document.createElement('div');
+          col.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;';
+          const bar = document.createElement('div');
+          const h = 6 + Math.round((count / maxLoad) * 34);
+          bar.style.cssText = `width:16px;height:${h}px;border-radius:6px;background:${count > 0 ? 'var(--accent)' : 'var(--border)'};`;
+          col.appendChild(bar);
+          const lbl = document.createElement('div');
+          lbl.style.cssText = 'font-size:10px;color:var(--text-soft);font-weight:700;';
+          lbl.textContent = WEEKDAY_SHORT[i];
+          col.appendChild(lbl);
+          const num = document.createElement('div');
+          num.style.cssText = 'font-size:11px;font-weight:800;';
+          num.textContent = count;
+          col.appendChild(num);
+          loadRow.appendChild(col);
+        });
+        loadCard.appendChild(loadRow);
+        screen.appendChild(loadCard);
+
+        // --- Дни рождения ---
+        if (s.birthdays.length) {
+          const bdayCard = document.createElement('div');
+          bdayCard.style.cssText = 'background:var(--bg-soft);border-radius:16px;padding:16px;';
+          bdayCard.innerHTML = `<div class="field-hint" style="text-transform:uppercase;font-weight:800;margin-bottom:8px;">🎂 Дни рождения</div>`;
+          s.birthdays.forEach((b) => {
+            const row = document.createElement('div');
+            row.style.cssText = 'display:flex;justify-content:space-between;padding:4px 0;font-size:13.5px;';
+            const name = b.first_name || (b.username ? '@' + b.username : 'id' + b.telegram_id);
+            row.innerHTML = `<span>${escapeHtml(name)}</span><span class="field-hint">${b.date}${b.days_left === 0 ? ' · сегодня!' : ''}</span>`;
+            bdayCard.appendChild(row);
+          });
+          screen.appendChild(bdayCard);
+        }
+      }, isBack);
+    } catch (err) { showErrorMsg(err, isBack); }
+  }
 
   async function renderLessons(isBack) {
     showLoadingMenu();
@@ -4225,15 +4363,61 @@
   async function renderStudentSubscriptions(studentId, displayName, groupTitle) {
     showLoadingMenu();
     try {
-      const [subs, groups] = await Promise.all([
+      const [subs, groups, info] = await Promise.all([
         apiGet(`/api/teacher/subjects/${currentSubjectId}/student-subscriptions/${studentId}`),
         apiGet(`/api/teacher/subjects/${currentSubjectId}/groups`),
+        apiGet(`/api/teacher/students/${studentId}/info`).catch(() => ({})),
       ]);
       swapScreen((screen) => {
         const title = document.createElement('div');
         title.style.cssText = "font-family:'Jost',sans-serif;font-weight:800;font-size:17px;margin-bottom:14px;";
         title.textContent = 'Подписки: ' + displayName;
         screen.appendChild(title);
+
+        const infoCard = document.createElement('div');
+        infoCard.style.cssText = 'background:var(--bg-soft);border-radius:14px;padding:14px 16px;margin-bottom:14px;';
+        function refreshInfoCard() {
+          infoCard.innerHTML = '';
+          const levelRow = document.createElement('div');
+          levelRow.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:4px 0;cursor:pointer;';
+          levelRow.innerHTML = `<span>Уровень</span><span style="font-weight:700;">${info.level ? escapeHtml(info.level) : '+ добавить'}</span>`;
+          levelRow.onclick = () => {
+            const val = prompt('Уровень (например A1+, Beginner):', info.level || '');
+            if (val === null) return;
+            apiSend('POST', `/api/teacher/students/${studentId}/info`, { level: val.trim() })
+              .then(() => { info.level = val.trim(); refreshInfoCard(); })
+              .catch((err) => showToast('Не получилось: ' + err.message));
+          };
+          infoCard.appendChild(levelRow);
+
+          const priceRow = document.createElement('div');
+          priceRow.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-top:1px solid var(--border);cursor:pointer;';
+          priceRow.innerHTML = `<span>Цена за занятие</span><span style="font-weight:700;">${info.price_per_lesson ? info.price_per_lesson + ' ₽' : '+ добавить'}</span>`;
+          priceRow.onclick = () => {
+            const val = prompt('Цена за одно занятие:', info.price_per_lesson || '');
+            if (val === null) return;
+            const num = parseFloat(val);
+            if (isNaN(num)) { showToast('Введите число'); return; }
+            apiSend('POST', `/api/teacher/students/${studentId}/info`, { price_per_lesson: num })
+              .then(() => { info.price_per_lesson = num; refreshInfoCard(); })
+              .catch((err) => showToast('Не получилось: ' + err.message));
+          };
+          infoCard.appendChild(priceRow);
+
+          const noteRow = document.createElement('div');
+          noteRow.style.cssText = 'padding:4px 0;border-top:1px solid var(--border);cursor:pointer;';
+          noteRow.innerHTML = `<div class="field-hint" style="margin-bottom:2px;">Заметка для себя</div><div>${info.note ? escapeHtml(info.note) : '+ добавить заметку'}</div>`;
+          noteRow.onclick = () => {
+            const val = prompt('Заметка для себя (видна только вам):', info.note || '');
+            if (val === null) return;
+            apiSend('POST', `/api/teacher/students/${studentId}/info`, { note: val.trim() })
+              .then(() => { info.note = val.trim(); refreshInfoCard(); })
+              .catch((err) => showToast('Не получилось: ' + err.message));
+          };
+          infoCard.appendChild(noteRow);
+        }
+        refreshInfoCard();
+        screen.appendChild(infoCard);
 
         if (groups.length) {
           const groupLabel = document.createElement('div');
@@ -4271,6 +4455,22 @@
         hwBtn.textContent = '📓 Дневник ДЗ';
         hwBtn.onclick = () => renderHomeworkDiary(studentId, displayName);
         screen.appendChild(hwBtn);
+
+        const bdayBtn = document.createElement('button');
+        bdayBtn.className = 'add-row-btn';
+        bdayBtn.style.marginBottom = '14px';
+        bdayBtn.textContent = '🎂 Указать день рождения';
+        bdayBtn.onclick = () => {
+          const input = prompt('Дата рождения в формате ДД.ММ (год не нужен), например 23.09:');
+          if (input === null) return;
+          const match = input.trim().match(/^(\d{1,2})\.(\d{1,2})$/);
+          if (!match) { showToast('Неверный формат — нужно ДД.ММ'); return; }
+          const mmdd = `${match[2].padStart(2, '0')}-${match[1].padStart(2, '0')}`;
+          apiSend('POST', `/api/teacher/students/${studentId}/birthday`, { birthday: mmdd })
+            .then(() => showToast('Сохранено'))
+            .catch((err) => showToast('Не получилось: ' + err.message));
+        };
+        screen.appendChild(bdayBtn);
 
         if (!subs.length) {
           const p = document.createElement('p');
