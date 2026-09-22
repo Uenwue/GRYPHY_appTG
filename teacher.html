@@ -1357,9 +1357,10 @@
   async function renderSubjectBlocks(isBack) {
     showLoadingMenu();
     try {
-      const [blocks, seqUnlock] = await Promise.all([
+      const [blocks, seqUnlock, ratingSetting] = await Promise.all([
         apiGet(`/api/teacher/subjects/${currentSubjectId}/blocks`),
         apiGet(`/api/teacher/subjects/${currentSubjectId}/sequential-unlock`),
+        apiGet(`/api/teacher/subjects/${currentSubjectId}/rating`).catch(() => ({ enabled: false })),
       ]);
       swapScreen((screen) => {
         const card = document.createElement('div');
@@ -1484,6 +1485,40 @@
         seqCard.appendChild(seqSaveBtn);
 
         screen.appendChild(seqCard);
+
+        const ratingCard = document.createElement('div');
+        ratingCard.className = 'form-card';
+        ratingCard.style.marginTop = '16px';
+        ratingCard.innerHTML = '<div class="field-label" style="margin-bottom:4px;">Рейтинг между учениками</div><div class="field-hint" style="margin-bottom:16px;">По умолчанию выключен — подходит не для любого формата (например, не для индивидуальных занятий 1-на-1). Если включить, ученики этого предмета увидят вкладку «Рейтинг» и таблицу лидеров.</div>';
+        const ratingRow = document.createElement('div');
+        ratingRow.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 0;';
+        const ratingLbl = document.createElement('span');
+        ratingLbl.style.cssText = "font-family:'Jost',sans-serif;font-weight:700;font-size:15px;";
+        ratingLbl.textContent = '🏆 Включить';
+        ratingRow.appendChild(ratingLbl);
+        const ratingToggle = document.createElement('button');
+        ratingToggle.type = 'button';
+        let ratingEnabled = ratingSetting.enabled;
+        function renderRatingToggle() {
+          ratingToggle.className = 'correct-toggle' + (ratingEnabled ? ' on' : '');
+          ratingToggle.innerHTML = ICONS.check;
+        }
+        renderRatingToggle();
+        ratingToggle.onclick = async () => {
+          ratingEnabled = !ratingEnabled;
+          renderRatingToggle();
+          try {
+            await apiSend('PATCH', `/api/teacher/subjects/${currentSubjectId}/rating`, { enabled: ratingEnabled });
+            showToast('Настройки сохранены');
+          } catch (err) {
+            ratingEnabled = !ratingEnabled;
+            renderRatingToggle();
+            showToast('Не получилось сохранить: ' + err.message);
+          }
+        };
+        ratingRow.appendChild(ratingToggle);
+        ratingCard.appendChild(ratingRow);
+        screen.appendChild(ratingCard);
       }, isBack);
     } catch (err) { showErrorMsg(err, isBack); }
   }
@@ -4193,6 +4228,8 @@
       '<div class="field-label">Код учителя (необязательно)</div>' +
       '<div class="field-hint" style="margin-bottom:8px;">Оставьте пустым — сгенерируем автоматически.</div>' +
       '<input class="field-input" id="newSubjCode" placeholder="Например, ENG2026" style="margin-bottom:14px;">' +
+      '<label style="display:flex;align-items:center;gap:8px;margin-bottom:14px;font-size:13px;color:var(--text-soft);">' +
+      '<input type="checkbox" id="newSubjRating"> Включить рейтинг между учениками (обычно не нужен, подходит не для любого формата)</label>' +
       '<div id="newSubjErr" style="color:var(--red-dark);font-size:12.5px;font-weight:700;margin-bottom:8px;display:none;"></div>' +
       '<div style="display:flex;gap:8px;">' +
       '<button class="back-btn" id="newSubjCancel" style="flex:1;">Отмена</button>' +
@@ -4201,6 +4238,7 @@
     document.body.appendChild(overlay);
     const titleInput = overlay.querySelector('#newSubjTitle');
     const codeInput = overlay.querySelector('#newSubjCode');
+    const ratingCheckbox = overlay.querySelector('#newSubjRating');
     const errBox = overlay.querySelector('#newSubjErr');
     const saveBtn = overlay.querySelector('#newSubjSave');
     function closeOverlay() { unlockBodyScroll(); overlay.remove(); }
@@ -4215,7 +4253,9 @@
       saveBtn.disabled = true;
       saveBtn.textContent = 'Создаю…';
       try {
-        const result = await apiSend('POST', '/api/admin/subjects', { title, teacher_code: codeInput.value.trim() });
+        const result = await apiSend('POST', '/api/admin/subjects', {
+          title, teacher_code: codeInput.value.trim(), rating_enabled: ratingCheckbox.checked,
+        });
         closeOverlay();
         if (tg?.showAlert) tg.showAlert(`Предмет создан. Код учителя: ${result.teacher_code}`);
         render(false);
