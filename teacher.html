@@ -549,6 +549,7 @@
   let studentInfoLoaded = false;
   let appBooted = false;
   let currentMode = 'subject'; // 'subject' | 'finance' — переключается кнопкой в шапке
+  let scheduleGridWeekStart = null;
 
   async function ensureStudentModeInfo() {
     if (studentInfoLoaded) return;
@@ -601,13 +602,13 @@
       icon: '<circle cx="10" cy="7" r="3" stroke="currentColor" stroke-width="1.6"/><path d="M4 17c0-3 2.7-5 6-5s6 2 6 5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>' },
     { level: 'groups', title: 'Группы',
       icon: '<circle cx="7" cy="7" r="2.5" stroke="currentColor" stroke-width="1.6"/><circle cx="14" cy="8.5" r="2" stroke="currentColor" stroke-width="1.6"/><path d="M2.5 16c0-2.5 2-4.2 4.5-4.2s4.5 1.7 4.5 4.2M12 12.5c2 0 4 1.2 4 3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>' },
-    { level: 'payments', title: 'Оплаты', standalone: true, finance: true,
+    { level: 'payments', title: 'Оплаты', standalone: true,
       icon: '<rect x="2" y="5" width="16" height="11" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M2 9H18" stroke="currentColor" stroke-width="1.6"/><path d="M5 13H8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>' },
-    { level: 'dashboard', title: 'Дашборд', standalone: true, finance: true,
+    { level: 'dashboard', title: 'Дашборд', standalone: true,
       icon: '<rect x="2" y="2" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.6"/><rect x="11" y="2" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.6"/><rect x="2" y="11" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.6"/><rect x="11" y="11" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.6"/>' },
-    { level: 'lessons', title: 'Мои уроки', standalone: true, finance: true,
+    { level: 'lessons', title: 'Мои уроки', standalone: true,
       icon: '<rect x="3" y="4" width="14" height="13" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M3 8H17" stroke="currentColor" stroke-width="1.6"/><path d="M7 2V5M13 2V5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>' },
-    { level: 'packages', title: 'Абонементы', standalone: true, finance: true,
+    { level: 'packages', title: 'Абонементы', standalone: true,
       icon: '<rect x="2" y="4" width="16" height="12" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M6 4V2M14 4V2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M6 10H10" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>' },
     { level: 'schedule', title: 'Расписание',
       icon: '<rect x="3" y="4" width="14" height="13" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M3 8H17M7 2V5M13 2V5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>' },
@@ -619,6 +620,20 @@
       icon: '<circle cx="10" cy="10" r="2.5" stroke="currentColor" stroke-width="1.6"/><path d="M10 2V4M10 16V18M18 10H16M4 10H2M15.5 4.5L14 6M6 14L4.5 15.5M15.5 15.5L14 14M6 6L4.5 4.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>' },
     { level: 'admin_panel', title: 'Админ-панель', navLabel: 'Админка', adminOnly: true, standalone: true,
       icon: '<path d="M10 2L16 5V9C16 13 13.5 16.5 10 18C6.5 16.5 4 13 4 9V5L10 2Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>' },
+  ];
+
+  // Отдельный, простой сайдбар для режима «Финансы» — 4 раздела, как в
+  // референсе (Дашборд/Ученики/Расписание/Настройки), а не общий список
+  // вперемешку с предметными пунктами.
+  const FINANCE_NAV_ITEMS = [
+    { level: 'dashboard', title: 'Дашборд',
+      icon: '<rect x="2" y="2" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.6"/><rect x="11" y="2" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.6"/><rect x="2" y="11" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.6"/><rect x="11" y="11" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.6"/>' },
+    { level: 'all_students', title: 'Ученики',
+      icon: '<circle cx="10" cy="7" r="3" stroke="currentColor" stroke-width="1.6"/><path d="M4 17c0-3 2.7-5 6-5s6 2 6 5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>' },
+    { level: 'schedule_grid', title: 'Расписание',
+      icon: '<rect x="3" y="4" width="14" height="13" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M3 8H17M7 2V5M13 2V5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>' },
+    { title: 'Настройки', action: 'openPersonalSettings',
+      icon: '<circle cx="10" cy="10" r="2.5" stroke="currentColor" stroke-width="1.6"/><path d="M10 2V4M10 16V18M18 10H16M4 10H2M15.5 4.5L14 6M6 14L4.5 15.5M15.5 15.5L14 14M6 6L4.5 4.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>' },
   ];
 
   function renderSideNav() {
@@ -634,11 +649,11 @@
     // первый предмет — тупик). Теперь всегда показываем то, что не привязано
     // к конкретному предмету (Дашборд/Мои уроки/Оплаты/Абонементы/Админ-панель),
     // а привязанные к предмету пункты — только когда предмет выбран.
-    // В режиме «Финансы» — свой отдельный набор пунктов (только finance:true),
-    // предметные пункты в нём не показываются вообще, даже если предмет выбран.
-    SIDE_NAV_ITEMS
-      .filter((item) => currentMode === 'finance' ? item.finance : !item.finance && (item.standalone || currentSubjectId) && (!item.adminOnly || currentUserRole === 'admin'))
-      .forEach((item) => {
+    // В режиме «Финансы» — отдельный, простой набор FINANCE_NAV_ITEMS
+    // (4 пункта, как в референсе), предметные пункты в нём не участвуют
+    // вообще, даже если какой-то предмет всё ещё выбран.
+    const items = currentMode === 'finance' ? FINANCE_NAV_ITEMS : SIDE_NAV_ITEMS.filter((item) => (item.standalone || currentSubjectId) && (!item.adminOnly || currentUserRole === 'admin'));
+    items.forEach((item) => {
       const btn = document.createElement('button');
       btn.className = 'side-nav-item' + (item.primary ? '' : ' desktop-only');
       const isActive = rootLevel === item.level && (item.extra?.sectionsKind || undefined) === rootKind;
@@ -646,6 +661,7 @@
       btn.title = item.title;
       btn.innerHTML = `<svg viewBox="0 0 20 20" fill="none">${item.icon}</svg><span class="side-nav-label">${item.navLabel || item.title}</span>`;
       btn.onclick = () => {
+        if (item.action === 'openPersonalSettings') { openPersonalSettings(); return; }
         if (item.level === 'students') studentsGroupFilter = 'all';
         stack = [Object.assign({ level: item.level, title: item.title }, item.extra || {})];
         render(false);
@@ -662,6 +678,7 @@
       nav.appendChild(btn);
     });
 
+    if (currentMode !== 'finance') {
     const moreBtn = document.createElement('button');
     moreBtn.className = 'side-nav-item side-nav-more';
     if (rootLevel === 'menu') moreBtn.classList.add('active');
@@ -677,6 +694,7 @@
       render(false);
     };
     nav.appendChild(moreBtn);
+    }
   }
 
   function swapScreen(buildFn, isBack) {
@@ -1290,6 +1308,10 @@
       renderPayments(isBack);
     } else if (current.level === 'dashboard') {
       renderDashboard(isBack);
+    } else if (current.level === 'all_students') {
+      renderAllStudents(isBack);
+    } else if (current.level === 'schedule_grid') {
+      renderScheduleGrid(isBack);
     } else if (current.level === 'lessons') {
       renderLessons(isBack);
     } else if (current.level === 'packages') {
@@ -2798,6 +2820,176 @@
 
   const WEEKDAY_NAMES = ['Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота', 'Воскресенье'];
   const WEEKDAY_SHORT = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
+
+  let allStudentsFilter = 'all';
+  let allStudentsSearch = '';
+
+  async function renderAllStudents(isBack) {
+    showLoadingMenu();
+    try {
+      const students = await apiGet('/api/teacher/all-students');
+      swapScreen((screen) => {
+        const searchInput = document.createElement('input');
+        searchInput.className = 'field-input';
+        searchInput.type = 'text';
+        searchInput.placeholder = 'Найти ученика';
+        searchInput.value = allStudentsSearch;
+        searchInput.style.marginBottom = '10px';
+        screen.appendChild(searchInput);
+
+        const chipsRow = document.createElement('div');
+        chipsRow.style.cssText = 'display:flex;gap:6px;overflow-x:auto;padding-bottom:8px;margin-bottom:12px;';
+        const chips = [
+          { key: 'all', label: 'Все' },
+          { key: 'individual', label: 'Индивидуальные' },
+          { key: 'paired', label: 'Парные' },
+          { key: 'awaiting_payment', label: 'Ожидают оплату' },
+          { key: 'payment_due_soon', label: 'Скоро оплата' },
+          { key: 'no_upcoming_lesson', label: 'Без занятия' },
+        ];
+        const listBox = document.createElement('div');
+
+        function matchesFilter(s) {
+          if (allStudentsFilter === 'individual') return s.lesson_type === 'Индивидуальный';
+          if (allStudentsFilter === 'paired') return s.lesson_type === 'Парный';
+          if (allStudentsFilter === 'awaiting_payment') return s.awaiting_payment;
+          if (allStudentsFilter === 'payment_due_soon') return s.payment_due_soon;
+          if (allStudentsFilter === 'no_upcoming_lesson') return s.no_upcoming_lesson;
+          return true;
+        }
+
+        function renderList() {
+          listBox.innerHTML = '';
+          const q = allStudentsSearch.trim().toLowerCase();
+          const filtered = students.filter((s) => matchesFilter(s) && (!q || s.display_name.toLowerCase().includes(q)));
+          if (!filtered.length) {
+            const p = document.createElement('p');
+            p.className = 'state-msg';
+            p.textContent = 'Никого не нашлось.';
+            listBox.appendChild(p);
+            return;
+          }
+          filtered.forEach((s) => {
+            const card = document.createElement('div');
+            card.className = 'row-card';
+            card.style.cssText = 'align-items:center;cursor:pointer;';
+            const nextLessonText = s.next_lesson_at
+              ? `Следующее: ${s.next_lesson_at.slice(8, 10)}.${s.next_lesson_at.slice(5, 7)} ${s.next_lesson_at.slice(11, 16)}`
+              : 'нет следующего занятия';
+            const badges = [];
+            if (s.awaiting_payment) badges.push('<span style="padding:3px 7px;border-radius:7px;font-size:10.5px;font-weight:800;background:#FFF3D6;color:#B7791F;">ждёт оплаты</span>');
+            else if (s.payment_due_soon) badges.push('<span style="padding:3px 7px;border-radius:7px;font-size:10.5px;font-weight:800;background:#FFF3D6;color:#B7791F;">скоро оплата</span>');
+            const info = document.createElement('div');
+            info.style.cssText = 'flex:1;min-width:0;';
+            info.innerHTML = `<div class="row-title">${escapeHtml(s.display_name)}</div>` +
+              `<div class="field-hint" style="margin-top:2px;">${escapeHtml(s.lesson_type)} \u00b7 ${nextLessonText}</div>` +
+              (badges.length ? `<div style="margin-top:4px;">${badges.join(' ')}</div>` : '');
+            card.appendChild(info);
+            card.onclick = () => openStudentFromAllList(s);
+            listBox.appendChild(card);
+          });
+        }
+
+        chips.forEach((c) => {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          function applyStyle() {
+            const active = allStudentsFilter === c.key;
+            btn.style.cssText = `flex-shrink:0;padding:7px 12px;border-radius:20px;border:2px solid ${active ? 'var(--accent)' : 'var(--border)'};background:${active ? 'var(--blue-tint)' : 'var(--bg)'};color:${active ? 'var(--accent)' : 'var(--text-soft)'};font-weight:700;font-size:12px;cursor:pointer;white-space:nowrap;`;
+          }
+          applyStyle();
+          btn.textContent = c.label;
+          btn.onclick = () => {
+            allStudentsFilter = c.key;
+            renderAllStudents(false);
+          };
+          chipsRow.appendChild(btn);
+        });
+        screen.appendChild(chipsRow);
+        screen.appendChild(listBox);
+        renderList();
+
+        let searchTimer = null;
+        searchInput.oninput = () => {
+          allStudentsSearch = searchInput.value;
+          clearTimeout(searchTimer);
+          searchTimer = setTimeout(renderList, 200);
+        };
+      }, isBack);
+    } catch (err) { showErrorMsg(err, isBack); }
+  }
+
+  function openStudentFromAllList(s) {
+    if (s.subjects.length >= 1) {
+      currentSubjectId = s.subjects[0].subject_id;
+      currentSubjectTitle = s.subjects[0].title;
+    }
+    renderStudentSubscriptions(s.telegram_id, s.display_name, null);
+  }
+
+  async function renderScheduleGrid(isBack) {
+    showLoadingMenu();
+    try {
+      if (!scheduleGridWeekStart) {
+        const today = new Date();
+        scheduleGridWeekStart = new Date(today);
+        scheduleGridWeekStart.setDate(today.getDate() - ((today.getDay() + 6) % 7));
+      }
+      const weekStart = scheduleGridWeekStart;
+      const weekEnd = new Date(weekStart);
+      weekEnd.setDate(weekStart.getDate() + 7);
+      const fmt = (d) => d.toISOString().slice(0, 10);
+      const lessons = await apiGet(`/api/teacher/lessons?date_from=${fmt(weekStart)}&date_to=${fmt(weekEnd)}`);
+      swapScreen((screen) => {
+        const nav = document.createElement('div');
+        nav.style.cssText = 'display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;';
+        const prevBtn = document.createElement('button');
+        prevBtn.textContent = '←';
+        prevBtn.style.cssText = 'width:34px;height:34px;border-radius:10px;border:2px solid var(--border);background:var(--bg);cursor:pointer;font-weight:800;';
+        prevBtn.onclick = () => { scheduleGridWeekStart.setDate(scheduleGridWeekStart.getDate() - 7); renderScheduleGrid(false); };
+        const label = document.createElement('div');
+        label.style.cssText = 'font-weight:800;';
+        label.textContent = `${weekStart.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })} — ${new Date(weekEnd - 86400000).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })}`;
+        const nextBtn = document.createElement('button');
+        nextBtn.textContent = '→';
+        nextBtn.style.cssText = 'width:34px;height:34px;border-radius:10px;border:2px solid var(--border);background:var(--bg);cursor:pointer;font-weight:800;';
+        nextBtn.onclick = () => { scheduleGridWeekStart.setDate(scheduleGridWeekStart.getDate() + 7); renderScheduleGrid(false); };
+        nav.appendChild(prevBtn);
+        nav.appendChild(label);
+        nav.appendChild(nextBtn);
+        screen.appendChild(nav);
+
+        const grid = document.createElement('div');
+        grid.style.cssText = 'display:flex;gap:8px;overflow-x:auto;';
+        for (let i = 0; i < 7; i++) {
+          const day = new Date(weekStart);
+          day.setDate(weekStart.getDate() + i);
+          const dayStr = fmt(day);
+          const col = document.createElement('div');
+          col.style.cssText = 'flex:1;min-width:120px;';
+          const isToday = dayStr === fmt(new Date());
+          col.innerHTML = `<div style="text-align:center;font-weight:800;font-size:12px;padding:6px 0;border-radius:8px;${isToday ? 'background:var(--blue-tint);color:var(--accent);' : ''}">${WEEKDAY_SHORT[i]}<br>${day.getDate()}</div>`;
+          const dayLessons = lessons.filter((l) => l.scheduled_at.slice(0, 10) === dayStr).sort((a, b) => a.scheduled_at.localeCompare(b.scheduled_at));
+          dayLessons.forEach((l) => {
+            const block = document.createElement('div');
+            const colors = {
+              scheduled: 'background:var(--blue-tint);color:var(--accent);',
+              conducted: 'background:#E3F9E5;color:var(--green-dark);',
+              rescheduled: 'background:var(--bg-soft);color:var(--text-soft);',
+              cancelled_no_charge: 'background:var(--bg-soft);color:var(--text-soft);',
+              cancelled_charged: 'background:#FFF3D6;color:#B7791F;',
+            };
+            block.style.cssText = `margin-top:6px;padding:6px 8px;border-radius:8px;font-size:11px;cursor:pointer;${colors[l.status] || ''}`;
+            block.innerHTML = `<b>${l.scheduled_at.slice(11, 16)}</b><br>${escapeHtml(l.student_name)}`;
+            block.onclick = () => promptLessonActions(l, () => renderScheduleGrid(false));
+            col.appendChild(block);
+          });
+          grid.appendChild(col);
+        }
+        screen.appendChild(grid);
+      }, isBack);
+    } catch (err) { showErrorMsg(err, isBack); }
+  }
 
   async function renderDashboard(isBack) {
     showLoadingMenu();
@@ -4556,8 +4748,8 @@
     showLoadingMenu();
     try {
       const [subs, groups, info, card] = await Promise.all([
-        apiGet(`/api/teacher/subjects/${currentSubjectId}/student-subscriptions/${studentId}`),
-        apiGet(`/api/teacher/subjects/${currentSubjectId}/groups`),
+        currentSubjectId ? apiGet(`/api/teacher/subjects/${currentSubjectId}/student-subscriptions/${studentId}`).catch(() => []) : Promise.resolve([]),
+        currentSubjectId ? apiGet(`/api/teacher/subjects/${currentSubjectId}/groups`).catch(() => []) : Promise.resolve([]),
         apiGet(`/api/teacher/students/${studentId}/info`).catch(() => ({})),
         apiGet(`/api/teacher/students/${studentId}/card`).catch(() => null),
       ]);
@@ -4685,12 +4877,14 @@
           screen.appendChild(groupSelect);
         }
 
-        const addBtn = document.createElement('button');
-        addBtn.className = 'add-row-btn';
-        addBtn.style.marginBottom = '10px';
-        addBtn.textContent = '➕ Продлить / выдать ещё';
-        addBtn.onclick = () => promptGrantSubscription(studentId);
-        screen.appendChild(addBtn);
+        if (currentSubjectId) {
+          const addBtn = document.createElement('button');
+          addBtn.className = 'add-row-btn';
+          addBtn.style.marginBottom = '10px';
+          addBtn.textContent = '➕ Продлить / выдать ещё';
+          addBtn.onclick = () => promptGrantSubscription(studentId);
+          screen.appendChild(addBtn);
+        }
 
         const hwBtn = document.createElement('button');
         hwBtn.className = 'add-row-btn';
