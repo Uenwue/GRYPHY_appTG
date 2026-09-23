@@ -621,12 +621,20 @@
 
   function renderSideNav() {
     const nav = document.getElementById('sideNav');
-    if (!nav || !currentSubjectId) { if (nav) nav.innerHTML = ''; return; }
+    if (!nav) return;
     nav.innerHTML = '';
     const rootLevel = stack[0]?.level;
     const rootKind = stack[0]?.sectionsKind;
 
-    SIDE_NAV_ITEMS.filter((item) => !item.adminOnly || currentUserRole === 'admin').forEach((item) => {
+    // Раньше боковое меню целиком пряталось, пока не выбран currentSubjectId —
+    // из-за этого у нового репетитора без единого предмета не было вообще
+    // никакой навигации (даже до «Админ-панели», где как раз и создаётся
+    // первый предмет — тупик). Теперь всегда показываем то, что не привязано
+    // к конкретному предмету (Дашборд/Мои уроки/Оплаты/Абонементы/Админ-панель),
+    // а привязанные к предмету пункты — только когда предмет выбран.
+    SIDE_NAV_ITEMS
+      .filter((item) => (item.standalone || currentSubjectId) && (!item.adminOnly || currentUserRole === 'admin'))
+      .forEach((item) => {
       const btn = document.createElement('button');
       btn.className = 'side-nav-item' + (item.primary ? '' : ' desktop-only');
       const isActive = rootLevel === item.level && (item.extra?.sectionsKind || undefined) === rootKind;
@@ -960,8 +968,18 @@
           swapScreen((screen) => {
             const p = document.createElement('p');
             p.className = 'state-msg';
-            p.textContent = 'За вами пока не закреплён ни один предмет.';
+            p.textContent = role === 'admin'
+              ? 'У вас пока нет ни одного предмета — создайте первый, чтобы начать.'
+              : 'За вами пока не закреплён ни один предмет.';
             screen.appendChild(p);
+            if (role === 'admin') {
+              const createBtn = document.createElement('button');
+              createBtn.className = 'add-row-btn';
+              createBtn.style.cssText = 'width:100%;margin-top:10px;';
+              createBtn.textContent = '➕ Создать первый предмет';
+              createBtn.onclick = () => promptCreateSubject();
+              screen.appendChild(createBtn);
+            }
           }, isBack);
           return;
         }
