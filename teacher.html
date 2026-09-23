@@ -3117,7 +3117,7 @@
     overlay.querySelector('#avClose').onclick = () => { unlockBodyScroll(); overlay.remove(); render(false); };
   }
 
-  function buildLessonRow(l) {
+  function buildLessonRow(l, onDone) {
     const row = document.createElement('div');
     row.className = 'row-card';
     row.style.cssText = 'align-items:center;cursor:pointer;';
@@ -3141,11 +3141,12 @@
     badge.style.cssText = 'padding:4px 9px;border-radius:8px;font-size:11px;font-weight:800;flex-shrink:0;' + style;
     badge.textContent = label;
     row.appendChild(badge);
-    row.onclick = () => promptLessonActions(l);
+    row.onclick = () => promptLessonActions(l, onDone);
     return row;
   }
 
-  function promptLessonActions(l) {
+  function promptLessonActions(l, onDone) {
+    onDone = onDone || (() => render(false));
     lockBodyScroll();
     const overlay = document.createElement('div');
     overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center;z-index:30;padding:20px;';
@@ -3156,6 +3157,7 @@
       `<div style="font-weight:700;margin-bottom:14px;">${escapeHtml(who)} — ${l.scheduled_at.slice(0, 16).replace('T', ' ')}</div>` +
       '<div style="display:flex;flex-direction:column;gap:8px;">' +
       (isActive ? '<button class="save-btn" id="lConducted" style="margin-top:0;">✅ Проведён</button>' : '') +
+      (isActive ? '<button class="back-btn" id="lRemind">🔔 Напомнить об уроке</button>' : '') +
       (isActive ? '<button class="back-btn" id="lReschedule">🔁 Перенести</button>' : '') +
       (isActive ? '<button class="back-btn" id="lCancelNo">🚫 Отмена без списания</button>' : '') +
       (isActive ? '<button class="back-btn" id="lCancelYes">🚫 Отмена со списанием</button>' : '') +
@@ -3168,33 +3170,48 @@
     const conductedBtn = overlay.querySelector('#lConducted');
     if (conductedBtn) conductedBtn.onclick = async () => {
       await apiSend('POST', `/api/teacher/lessons/${l.id}/conducted`, {});
-      closeOverlay(); render(false);
+      closeOverlay(); onDone();
+    };
+    const remindBtn = overlay.querySelector('#lRemind');
+    if (remindBtn) remindBtn.onclick = async () => {
+      remindBtn.disabled = true;
+      remindBtn.textContent = 'Отправляю…';
+      try {
+        await apiSend('POST', `/api/teacher/lessons/${l.id}/remind`, {});
+        showToast('Напоминание отправлено');
+        closeOverlay();
+      } catch (err) {
+        remindBtn.disabled = false;
+        remindBtn.textContent = '🔔 Напомнить об уроке';
+        showToast('Не получилось: ' + err.message);
+      }
     };
     const cancelNoBtn = overlay.querySelector('#lCancelNo');
     if (cancelNoBtn) cancelNoBtn.onclick = async () => {
       await apiSend('POST', `/api/teacher/lessons/${l.id}/cancel`, { charge: false });
-      closeOverlay(); render(false);
+      closeOverlay(); onDone();
     };
     const cancelYesBtn = overlay.querySelector('#lCancelYes');
     if (cancelYesBtn) cancelYesBtn.onclick = async () => {
       await apiSend('POST', `/api/teacher/lessons/${l.id}/cancel`, { charge: true });
-      closeOverlay(); render(false);
+      closeOverlay(); onDone();
     };
     const rescheduleBtn = overlay.querySelector('#lReschedule');
     if (rescheduleBtn) rescheduleBtn.onclick = () => {
       closeOverlay();
-      promptRescheduleLesson(l);
+      promptRescheduleLesson(l, onDone);
     };
     overlay.querySelector('#lDelete').onclick = () => {
       closeOverlay();
       confirmDelete('Удалить запись об уроке безвозвратно?', async () => {
         await apiSend('DELETE', `/api/teacher/lessons/${l.id}`);
-        render(false);
+        onDone();
       });
     };
   }
 
-  function promptRescheduleLesson(l) {
+  function promptRescheduleLesson(l, onDone) {
+    onDone = onDone || (() => render(false));
     lockBodyScroll();
     const overlay = document.createElement('div');
     overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center;z-index:30;padding:20px;';
@@ -3230,7 +3247,7 @@
           scheduled_at: `${dateInput.value} ${timeInput.value}:00`,
         });
         closeOverlay();
-        render(false);
+        onDone();
       } catch (err) {
         saveBtn.disabled = false;
         saveBtn.textContent = 'Перенести';
@@ -4468,11 +4485,13 @@
   async function renderStudentSubscriptions(studentId, displayName, groupTitle) {
     showLoadingMenu();
     try {
-      const [subs, groups, info] = await Promise.all([
+      const [subs, groups, info, card] = await Promise.all([
         apiGet(`/api/teacher/subjects/${currentSubjectId}/student-subscriptions/${studentId}`),
         apiGet(`/api/teacher/subjects/${currentSubjectId}/groups`),
         apiGet(`/api/teacher/students/${studentId}/info`).catch(() => ({})),
+        apiGet(`/api/teacher/students/${studentId}/card`).catch(() => null),
       ]);
+      const refreshThisScreen = () => renderStudentSubscriptions(studentId, displayName, groupTitle);
       swapScreen((screen) => {
         const title = document.createElement('div');
         title.style.cssText = "font-family:'Jost',sans-serif;font-weight:800;font-size:17px;margin-bottom:14px;";
@@ -4483,8 +4502,14 @@
         infoCard.style.cssText = 'background:var(--bg-soft);border-radius:14px;padding:14px 16px;margin-bottom:14px;';
         function refreshInfoCard() {
           infoCard.innerHTML = '';
+          if (card) {
+            const typeRow = document.createElement('div');
+            typeRow.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:4px 0;';
+            typeRow.innerHTML = `<span>Тип занятий</span><span style="font-weight:700;">${escapeHtml(card.lesson_type)}</span>`;
+            infoCard.appendChild(typeRow);
+          }
           const levelRow = document.createElement('div');
-          levelRow.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:4px 0;cursor:pointer;';
+          levelRow.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-top:1px solid var(--border);cursor:pointer;';
           levelRow.innerHTML = `<span>Уровень</span><span style="font-weight:700;">${info.level ? escapeHtml(info.level) : '+ добавить'}</span>`;
           levelRow.onclick = () => {
             const val = prompt('Уровень (например A1+, Beginner):', info.level || '');
@@ -4523,6 +4548,49 @@
         }
         refreshInfoCard();
         screen.appendChild(infoCard);
+
+        if (card && card.recurring.length) {
+          const recText = card.recurring.map((r) => `${WEEKDAY_SHORT[r.weekday]} ${r.time}`).join(' · ');
+          const recCard = document.createElement('div');
+          recCard.style.cssText = 'background:var(--bg-soft);border-radius:14px;padding:12px 16px;margin-bottom:14px;font-size:13.5px;';
+          recCard.innerHTML = `<span class="field-hint">Регулярно:</span> <b>${escapeHtml(recText)}</b>`;
+          screen.appendChild(recCard);
+        }
+
+        if (card && card.upcoming_lessons.length) {
+          const lessonsTitle = document.createElement('div');
+          lessonsTitle.className = 'field-hint';
+          lessonsTitle.style.cssText = 'margin:0 0 8px;text-transform:uppercase;font-weight:800;letter-spacing:0.03em;font-size:11px;';
+          lessonsTitle.textContent = 'Ближайшие уроки';
+          screen.appendChild(lessonsTitle);
+          card.upcoming_lessons.forEach((l) => {
+            const lessonObj = {
+              id: l.id, telegram_id: studentId, student_name: displayName,
+              partner_name: l.partner_name, scheduled_at: l.scheduled_at,
+              duration_minutes: l.duration_minutes, status: l.status,
+            };
+            screen.appendChild(buildLessonRow(lessonObj, refreshThisScreen));
+          });
+        }
+
+        if (card && card.active_package) {
+          const p = card.active_package;
+          const pkgCard = document.createElement('div');
+          pkgCard.style.cssText = 'background:var(--bg-soft);border-radius:14px;padding:14px 16px;margin:14px 0;cursor:pointer;';
+          const label = p.status === 'unpaid' ? 'Ждёт оплаты' : 'Активен';
+          pkgCard.innerHTML = `<div class="field-hint" style="text-transform:uppercase;font-weight:800;margin-bottom:6px;">Абонемент \u00b7 ${label}</div>` +
+            `<div style="font-weight:800;font-size:16px;">${p.remaining_lessons} из ${p.total_lessons} \u00b7 ${p.price} ${escapeHtml(p.currency)}</div>`;
+          pkgCard.onclick = () => { stack = [{ level: 'packages', title: 'Абонементы' }]; render(false); };
+          screen.appendChild(pkgCard);
+        } else {
+          const noPkgBtn = document.createElement('button');
+          noPkgBtn.className = 'add-row-btn';
+          noPkgBtn.style.width = '100%';
+          noPkgBtn.style.margin = '14px 0';
+          noPkgBtn.textContent = '➕ Создать абонемент';
+          noPkgBtn.onclick = () => { stack = [{ level: 'packages', title: 'Абонементы' }]; render(false); };
+          screen.appendChild(noPkgBtn);
+        }
 
         if (groups.length) {
           const groupLabel = document.createElement('div');
