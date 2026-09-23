@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Панель учителя — мини-апп</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Jost:wght@400;500;600;700&family=Nunito:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
@@ -901,6 +902,13 @@
     overlay.innerHTML = '<div style="background:var(--bg);border-radius:16px;padding:18px;max-width:340px;width:100%;max-height:85vh;overflow-y:auto;">' +
       '<div class="field-label" style="margin-bottom:14px;">Настройки</div>' +
       '<div id="pSettingsModeSlot" style="margin-bottom:18px;"></div>' +
+      '<div class="field-label" style="margin-bottom:8px;">Календарь на телефоне</div>' +
+      '<div class="field-hint" style="margin-bottom:8px;">Ссылка-подписка — добавьте её один раз в Apple Calendar / Google Calendar / календарь Android, и уроки будут появляться там сами (обновляется календарём периодически, не мгновенно).</div>' +
+      '<input class="field-input" id="pCalendarLink" readonly style="margin-bottom:8px;font-size:11.5px;">' +
+      '<div style="display:flex;gap:8px;margin-bottom:18px;">' +
+      '<button class="back-btn" id="pCalendarCopy" style="flex:1;">📋 Копировать</button>' +
+      '<button class="back-btn" id="pCalendarRegen" style="flex:1;">🔄 Новая ссылка</button>' +
+      '</div>' +
       '<div class="field-label" style="margin-bottom:8px;">Каталог репетиторов</div>' +
       '<label style="display:flex;align-items:center;gap:8px;margin-bottom:10px;font-size:13px;">' +
       '<input type="checkbox" id="pCatalogPublic"> Показываться в каталоге ученикам платформы</label>' +
@@ -921,6 +929,28 @@
       if (studentAppUrl) window.location.href = withDirectParam(studentAppUrl);
     };
     slot.appendChild(modeBtn);
+
+    const calendarLinkInput = overlay.querySelector('#pCalendarLink');
+    async function loadCalendarLink() {
+      try {
+        const res = await apiGet('/api/teacher/calendar-link');
+        calendarLinkInput.value = res.url;
+      } catch (err) { calendarLinkInput.value = 'Не удалось загрузить'; }
+    }
+    loadCalendarLink();
+    overlay.querySelector('#pCalendarCopy').onclick = () => {
+      calendarLinkInput.select();
+      navigator.clipboard?.writeText(calendarLinkInput.value).then(() => showToast('Ссылка скопирована'));
+    };
+    overlay.querySelector('#pCalendarRegen').onclick = () => {
+      confirmDelete('Старая ссылка перестанет работать (если она уже добавлена в чей-то календарь — там уроки пропадут). Создать новую?', async () => {
+        try {
+          const res = await apiSend('POST', '/api/teacher/calendar-link/regenerate', {});
+          calendarLinkInput.value = res.url;
+          showToast('Новая ссылка создана');
+        } catch (err) { showToast('Не получилось: ' + err.message); }
+      });
+    };
 
     const publicCheckbox = overlay.querySelector('#pCatalogPublic');
     const bioInput = overlay.querySelector('#pCatalogBio');
@@ -2765,6 +2795,58 @@
     };
   }
 
+  function promptChangeLessonType(currentComputed, currentOverride, onChoose) {
+    lockBodyScroll();
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center;z-index:30;padding:20px;';
+    overlay.innerHTML = '<div style="background:var(--bg);border-radius:16px;padding:18px;max-width:340px;width:100%;">' +
+      '<div class="field-label" style="margin-bottom:6px;">Тип занятий</div>' +
+      '<div class="field-hint" style="margin-bottom:14px;">Сейчас определяется автоматически, по наличию пары в уроках. Можно задать вручную.</div>' +
+      '<div style="display:flex;flex-direction:column;gap:8px;">' +
+      '<button class="back-btn" id="ltAuto">↩️ Определять автоматически</button>' +
+      `<button class="back-btn" id="ltIndividual">🙋 Индивидуальный</button>` +
+      `<button class="back-btn" id="ltPaired">👥 Парный</button>` +
+      '<button class="back-btn" id="ltClose">Отмена</button>' +
+      '</div></div>';
+    document.body.appendChild(overlay);
+    const closeOverlay = () => { unlockBodyScroll(); overlay.remove(); };
+    overlay.querySelector('#ltClose').onclick = closeOverlay;
+    overlay.querySelector('#ltAuto').onclick = () => { closeOverlay(); onChoose(''); };
+    overlay.querySelector('#ltIndividual').onclick = () => { closeOverlay(); onChoose('Индивидуальный'); };
+    overlay.querySelector('#ltPaired').onclick = () => { closeOverlay(); onChoose('Парный'); };
+  }
+
+  function promptChangeGroupKind(group, onDone) {
+    lockBodyScroll();
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center;z-index:30;padding:20px;';
+    overlay.innerHTML = '<div style="background:var(--bg);border-radius:16px;padding:18px;max-width:340px;width:100%;">' +
+      `<div class="field-label" style="margin-bottom:14px;">Тип «${escapeHtml(group.title)}»</div>` +
+      '<div id="gkChangeBox" style="display:flex;gap:6px;margin-bottom:14px;"></div>' +
+      '<button class="back-btn" id="gkChangeClose" style="width:100%;">Отмена</button>' +
+      '</div>';
+    document.body.appendChild(overlay);
+    const closeOverlay = () => { unlockBodyScroll(); overlay.remove(); };
+    overlay.querySelector('#gkChangeClose').onclick = closeOverlay;
+
+    const box = overlay.querySelector('#gkChangeBox');
+    ['Курс', 'Мини-группа', 'Экспресс-курс'].forEach((k) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      const active = (group.kind || 'Мини-группа') === k;
+      btn.style.cssText = `flex:1;padding:8px 2px;border-radius:10px;border:2px solid ${active ? 'var(--accent)' : 'var(--border)'};background:${active ? 'var(--blue-tint)' : 'var(--bg)'};color:${active ? 'var(--accent)' : 'var(--text-soft)'};font-weight:700;font-size:11.5px;cursor:pointer;`;
+      btn.textContent = k;
+      btn.onclick = async () => {
+        try {
+          await apiSend('PATCH', `/api/teacher/groups/${group.id}`, { kind: k });
+          closeOverlay();
+          onDone();
+        } catch (err) { showToast('Не получилось: ' + err.message); }
+      };
+      box.appendChild(btn);
+    });
+  }
+
   function promptCreateGroup(onSave) {
     lockBodyScroll();
     const overlay = document.createElement('div');
@@ -3448,7 +3530,8 @@
     overlay.innerHTML = '<div style="background:var(--bg);border-radius:16px;padding:18px;max-width:340px;width:100%;">' +
       `<div style="font-weight:700;margin-bottom:14px;">${escapeHtml(who)} — ${l.scheduled_at.slice(0, 16).replace('T', ' ')}</div>` +
       '<div style="display:flex;flex-direction:column;gap:8px;">' +
-      (isActive ? '<button class="save-btn" id="lConducted" style="margin-top:0;">✅ Проведён</button>' : '') +
+      (isActive ? '<button class="save-btn" id="lLiveSession" style="margin-top:0;">🎨 Живое занятие</button>' : '') +
+      (isActive ? '<button class="back-btn" id="lConducted">✅ Проведён</button>' : '') +
       (isActive ? '<button class="back-btn" id="lRemind">🔔 Напомнить об уроке</button>' : '') +
       (isActive ? '<button class="back-btn" id="lReschedule">🔁 Перенести</button>' : '') +
       (isActive ? '<button class="back-btn" id="lCancelNo">🚫 Отмена без списания</button>' : '') +
@@ -3458,6 +3541,8 @@
       '</div></div>';
     document.body.appendChild(overlay);
     const closeOverlay = () => { unlockBodyScroll(); overlay.remove(); };
+    const liveBtn = overlay.querySelector('#lLiveSession');
+    if (liveBtn) liveBtn.onclick = () => { closeOverlay(); openLiveSession(l.id); };
     overlay.querySelector('#lClose').onclick = closeOverlay;
     const conductedBtn = overlay.querySelector('#lConducted');
     if (conductedBtn) conductedBtn.onclick = async () => {
@@ -3500,6 +3585,139 @@
         onDone();
       });
     };
+  }
+
+  // --- Живое занятие: общая доска + синхронизация текущего задания ---
+  let _liveSocket = null;
+
+  function openLiveSession(lessonId) {
+    lockBodyScroll();
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;background:var(--bg);z-index:50;display:flex;flex-direction:column;';
+    overlay.innerHTML =
+      '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--border);flex-shrink:0;">' +
+      '<span style="font-weight:800;">🎨 Живое занятие</span>' +
+      '<div style="display:flex;gap:8px;">' +
+      '<span id="lsStatus" class="field-hint">подключаемся…</span>' +
+      '<button id="lsClose" style="border:none;background:none;font-size:18px;cursor:pointer;">✕</button>' +
+      '</div></div>' +
+      '<div style="padding:8px 14px;border-bottom:1px solid var(--border);flex-shrink:0;">' +
+      '<textarea id="lsTaskText" class="field-input" rows="2" placeholder="Напишите сюда текст задания — ученик увидит его сразу" style="margin-bottom:6px;resize:vertical;"></textarea>' +
+      '<div class="field-hint">Ответ ученика (видно вживую, по мере ввода):</div>' +
+      '<div id="lsAnswerView" style="min-height:20px;font-weight:700;padding:4px 0;"></div>' +
+      '</div>' +
+      '<div style="flex:1;position:relative;overflow:hidden;">' +
+      '<canvas id="lsCanvas" style="width:100%;height:100%;touch-action:none;background:#fff;"></canvas>' +
+      '</div>' +
+      '<div style="display:flex;gap:8px;padding:10px 14px;border-top:1px solid var(--border);flex-shrink:0;">' +
+      '<input type="color" id="lsColor" value="#1a1a2e" style="width:40px;height:40px;border:none;padding:0;">' +
+      '<button id="lsClear" class="back-btn" style="flex:1;">Очистить доску</button>' +
+      '</div>';
+    document.body.appendChild(overlay);
+
+    const canvas = overlay.querySelector('#lsCanvas');
+    const ctx2d = canvas.getContext('2d');
+    function resizeCanvas() {
+      const rect = canvas.getBoundingClientRect();
+      canvas.width = rect.width;
+      canvas.height = rect.height;
+    }
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
+
+    function drawStroke(stroke) {
+      if (!stroke.points || stroke.points.length < 2) return;
+      ctx2d.strokeStyle = stroke.color || '#1a1a2e';
+      ctx2d.lineWidth = stroke.width || 3;
+      ctx2d.lineJoin = 'round';
+      ctx2d.lineCap = 'round';
+      ctx2d.beginPath();
+      ctx2d.moveTo(stroke.points[0][0] * canvas.width, stroke.points[0][1] * canvas.height);
+      for (let i = 1; i < stroke.points.length; i++) {
+        ctx2d.lineTo(stroke.points[i][0] * canvas.width, stroke.points[i][1] * canvas.height);
+      }
+      ctx2d.stroke();
+    }
+
+    const socket = io(API_BASE_URL, { transports: ['websocket', 'polling'] });
+    _liveSocket = socket;
+    const statusEl = overlay.querySelector('#lsStatus');
+    socket.on('connect', () => {
+      socket.emit('join_lesson', { lesson_id: lessonId, init_data: tg?.initData || '' });
+      statusEl.textContent = 'подключено';
+    });
+    socket.on('disconnect', () => { statusEl.textContent = 'соединение потеряно'; });
+    socket.on('error', (e) => { statusEl.textContent = e.message || 'ошибка'; });
+    socket.on('board_state', (state) => {
+      ctx2d.clearRect(0, 0, canvas.width, canvas.height);
+      (state.strokes || []).forEach(drawStroke);
+      if (state.current_task) taskTextEl.value = state.current_task.text || '';
+    });
+    socket.on('stroke_added', drawStroke);
+    socket.on('board_cleared', () => ctx2d.clearRect(0, 0, canvas.width, canvas.height));
+    socket.on('task_opened', (task) => { taskTextEl.value = (task && task.text) || ''; });
+    const answerView = overlay.querySelector('#lsAnswerView');
+    socket.on('answer_input', (data) => { answerView.textContent = data.value || ''; });
+
+    let drawing = false;
+    let currentStroke = null;
+    const colorInput = overlay.querySelector('#lsColor');
+    function pointFromEvent(e) {
+      const rect = canvas.getBoundingClientRect();
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      return [(clientX - rect.left) / rect.width, (clientY - rect.top) / rect.height];
+    }
+    function startDraw(e) {
+      e.preventDefault();
+      drawing = true;
+      currentStroke = { points: [pointFromEvent(e)], color: colorInput.value, width: 3 };
+    }
+    function moveDraw(e) {
+      if (!drawing) return;
+      e.preventDefault();
+      const prevPoint = currentStroke.points[currentStroke.points.length - 1];
+      const newPoint = pointFromEvent(e);
+      currentStroke.points.push(newPoint);
+      drawStroke({ points: [prevPoint, newPoint], color: currentStroke.color, width: currentStroke.width });
+    }
+    function endDraw() {
+      if (!drawing) return;
+      drawing = false;
+      if (currentStroke && currentStroke.points.length >= 2) {
+        socket.emit('draw_stroke', { lesson_id: lessonId, init_data: tg?.initData || '', stroke: currentStroke });
+      }
+      currentStroke = null;
+    }
+    canvas.addEventListener('mousedown', startDraw);
+    canvas.addEventListener('mousemove', moveDraw);
+    canvas.addEventListener('mouseup', endDraw);
+    canvas.addEventListener('mouseleave', endDraw);
+    canvas.addEventListener('touchstart', startDraw);
+    canvas.addEventListener('touchmove', moveDraw);
+    canvas.addEventListener('touchend', endDraw);
+
+    overlay.querySelector('#lsClear').onclick = () => {
+      ctx2d.clearRect(0, 0, canvas.width, canvas.height);
+      socket.emit('clear_board', { lesson_id: lessonId, init_data: tg?.initData || '' });
+    };
+
+    const taskTextEl = overlay.querySelector('#lsTaskText');
+    let taskTimer = null;
+    taskTextEl.oninput = () => {
+      clearTimeout(taskTimer);
+      taskTimer = setTimeout(() => {
+        socket.emit('open_task', { lesson_id: lessonId, init_data: tg?.initData || '', task: { text: taskTextEl.value } });
+      }, 300);
+    };
+
+    function closeSession() {
+      window.removeEventListener('resize', resizeCanvas);
+      socket.disconnect();
+      unlockBodyScroll();
+      overlay.remove();
+    }
+    overlay.querySelector('#lsClose').onclick = closeSession;
   }
 
   function promptRescheduleLesson(l, onDone) {
@@ -3982,6 +4200,15 @@
             render(false);
           };
           card.appendChild(info);
+          const editKindBtn = document.createElement('button');
+          editKindBtn.className = 'icon-btn';
+          editKindBtn.title = 'Изменить тип';
+          editKindBtn.innerHTML = '<svg viewBox="0 0 20 20" fill="none"><path d="M14.2 3.3a1.6 1.6 0 0 1 2.3 2.3L6.5 15.6l-3 .7.7-3 10-10Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>';
+          editKindBtn.onclick = (e) => {
+            e.stopPropagation();
+            promptChangeGroupKind(g, () => render(false));
+          };
+          card.appendChild(editKindBtn);
           const progressBtn = document.createElement('button');
           progressBtn.className = 'icon-btn';
           progressBtn.title = 'Прогресс по ДЗ';
@@ -4796,8 +5023,16 @@
           infoCard.innerHTML = '';
           if (card) {
             const typeRow = document.createElement('div');
-            typeRow.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:4px 0;';
-            typeRow.innerHTML = `<span>Тип занятий</span><span style="font-weight:700;">${escapeHtml(card.lesson_type)}</span>`;
+            typeRow.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:4px 0;cursor:pointer;';
+            const autoSuffix = info.lesson_type_override ? '' : ' (авто)';
+            typeRow.innerHTML = `<span>Тип занятий</span><span style="font-weight:700;">${escapeHtml(card.lesson_type)}${autoSuffix}</span>`;
+            typeRow.onclick = () => {
+              promptChangeLessonType(card.lesson_type, info.lesson_type_override, async (value) => {
+                await apiSend('POST', `/api/teacher/students/${studentId}/info`, { lesson_type_override: value });
+                info.lesson_type_override = value || null;
+                refreshThisScreen();
+              });
+            };
             infoCard.appendChild(typeRow);
           }
           const levelRow = document.createElement('div');
