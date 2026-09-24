@@ -223,6 +223,137 @@
     body { zoom: 1.4; }
   }
 
+
+
+  /* ===== Доска занятий (как виджет календаря) ===== */
+  .board { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .board-col { min-width: 0; display: flex; flex-direction: column; gap: 7px; }
+  .board-weekday { font-size: 13px; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; color: var(--d-accent); }
+  .board-daynum { font-size: 46px; font-weight: 600; line-height: 1; margin: 0 0 8px; color: var(--text); }
+  .board-label { font-size: 12.5px; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; color: var(--text-soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .board-label.next { margin-top: 6px; }
+  .board-empty { font-size: 16px; font-weight: 600; color: var(--text-soft); line-height: 1.3; }
+  .board-empty.small { font-size: 13px; font-weight: 600; }
+  .board-ev {
+    --ev: #238BA7; --ev-tint: #E3F4F8;
+    position: relative; display: flex; align-items: center; gap: 8px;
+    background: var(--ev-tint); background: color-mix(in srgb, var(--ev) 13%, var(--bg));
+    border-radius: 10px; padding: 7px 8px 7px 12px; cursor: pointer; overflow: hidden;
+    transition: opacity 0.25s ease, max-height 0.3s ease, margin 0.3s ease, padding 0.3s ease;
+    max-height: 90px;
+  }
+  .board-ev::before { content: ''; position: absolute; left: 5px; top: 7px; bottom: 7px; width: 3px; border-radius: 2px; background: var(--ev); }
+  .board-ev .txt { flex: 1; min-width: 0; }
+  .board-ev .nm { font-size: 14.5px; font-weight: 700; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .board-ev .tm { font-size: 13px; font-weight: 600; color: var(--ev); margin-top: 1px; white-space: nowrap; }
+  html[data-theme="dark"] .board-ev .tm { filter: brightness(1.35); }
+  @media (prefers-color-scheme: dark) { html:not([data-theme="light"]) .board-ev .tm { filter: brightness(1.35); } }
+  .board-ev.past .nm, .board-ev.past .tm { opacity: 0.6; }
+  .board-ev.gone { opacity: 0; max-height: 0; padding-top: 0; padding-bottom: 0; margin-top: -7px; }
+  .board-check {
+    flex-shrink: 0; width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--ev); background: transparent;
+    padding: 0; cursor: pointer; display: flex; align-items: center; justify-content: center; color: #fff;
+    transition: background 0.15s ease, transform 0.12s var(--bounce);
+  }
+  .board-check:active { transform: scale(0.85); }
+  .board-check svg { width: 13px; height: 13px; opacity: 0; transition: opacity 0.15s ease; }
+  .board-check.on { background: var(--ev); }
+  .board-check.on svg { opacity: 1; }
+  .board-more { position: relative; padding-left: 12px; font-size: 13px; font-weight: 700; color: var(--text-soft); }
+  .board-more::before { content: ''; position: absolute; left: 5px; top: 2px; bottom: 2px; width: 3px; border-radius: 2px; background: var(--border); }
+  .board-foot { display: flex; justify-content: flex-end; margin-top: 12px; }
+  .board-foot button { background: none; border: none; color: var(--d-accent); font-size: 12.5px; font-weight: 700; cursor: pointer; padding: 0; }
+  .board-hint { font-size: 11px; color: var(--text-soft); margin-top: 2px; }
+  /* ===== Дашборд (главная репетитора) — фирменный бирюзовый ===== */
+  .dash { --d-accent: #238BA7; --d-accent-dark: #1B6F86; --d-tint: #E3F4F8; }
+  html[data-theme="dark"] .dash { --d-tint: rgba(35,139,167,0.18); }
+  @media (prefers-color-scheme: dark) { html:not([data-theme="light"]) .dash { --d-tint: rgba(35,139,167,0.18); } }
+  .dash-date { font-size: 11.5px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-soft); margin: 0 0 12px; }
+  .dash-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .dash-card {
+    background: var(--bg); border: 1px solid var(--border); border-radius: 18px; padding: 16px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.04); min-width: 0; grid-column: span 2;
+  }
+  .dash-card.half { grid-column: span 1; }
+  .dash-card.clickable { cursor: pointer; transition: transform 0.12s var(--bounce); }
+  .dash-card.clickable:active { transform: scale(0.98); }
+  .dash-title {
+    display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 10px;
+    font-size: 11.5px; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase; color: var(--text);
+  }
+  .dash-title .count { font-size: 14px; letter-spacing: 0; }
+  .dash-plus {
+    width: 24px; height: 24px; border-radius: 50%; border: none; background: var(--d-tint); color: var(--d-accent);
+    font-size: 16px; line-height: 24px; text-align: center; cursor: pointer; padding: 0; flex-shrink: 0;
+  }
+  .dash-row { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; font-size: 13px; padding: 5px 0; }
+  .dash-row + .dash-row { border-top: 1px solid var(--border); }
+  .dash-row .name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .dash-row .muted { color: var(--text-soft); font-size: 11.5px; white-space: nowrap; flex-shrink: 0; }
+  .dash-row .late { color: var(--red-dark); font-size: 11.5px; white-space: nowrap; flex-shrink: 0; }
+  .dash-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; margin-right: 7px; vertical-align: middle; background: var(--d-accent); }
+  .dash-dot.late { background: var(--red-dark); }
+  .dash-empty { font-size: 13px; color: var(--text-soft); }
+  .dash-big { font-size: 13px; font-weight: 800; margin: -4px 0 6px; }
+
+  .dash-today-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+  .dash-today-title { font-size: 30px; font-weight: 700; line-height: 1.1; color: var(--d-accent-dark); margin: 0 0 8px; }
+  html[data-theme="dark"] .dash-today-title { color: #5CC3DE; }
+  @media (prefers-color-scheme: dark) { html:not([data-theme="light"]) .dash-today-title { color: #5CC3DE; } }
+  .dash-today-label { font-size: 11.5px; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase; color: var(--text-soft); padding-top: 8px; }
+  .dash-lesson { display: flex; align-items: center; gap: 12px; padding: 9px 0; border-top: 1px solid var(--border); font-size: 14px; }
+  .dash-lesson .time { font-weight: 800; color: var(--d-accent); min-width: 44px; }
+  .dash-lesson .who { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .dash-lesson .dur { color: var(--text-soft); font-size: 12px; }
+  .dash-lesson.done { opacity: 0.55; }
+
+  .dash-income { background: var(--d-accent); color: #fff; border: none; box-shadow: 0 6px 20px rgba(35,139,167,0.25); }
+  .dash-income .top { display: flex; justify-content: space-between; align-items: center; font-size: 11.5px; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase; opacity: 0.9; }
+  .dash-income .more { background: none; border: none; color: #fff; font-size: 12.5px; font-weight: 700; cursor: pointer; padding: 0; text-transform: none; letter-spacing: 0; }
+  .dash-income .sum { font-size: 40px; font-weight: 700; line-height: 1.1; margin: 8px 0 10px; }
+  .dash-income .sum small { font-size: 22px; opacity: 0.6; font-weight: 600; }
+  .dash-income .trend { display: flex; align-items: center; gap: 10px; font-size: 12px; opacity: 0.95; margin-bottom: 14px; flex-wrap: wrap; }
+  .dash-income .badge { background: rgba(255,255,255,0.22); border-radius: 20px; padding: 3px 10px; font-weight: 800; }
+  .dash-income .bars { border-top: 1px solid rgba(255,255,255,0.25); padding-top: 12px; display: flex; flex-direction: column; gap: 9px; }
+  .dash-income .bar-row { display: flex; align-items: center; gap: 10px; font-size: 11.5px; }
+  .dash-income .bar-row .m { width: 32px; text-transform: uppercase; opacity: 0.8; font-weight: 700; }
+  .dash-income .bar-row .track { flex: 1; height: 6px; border-radius: 3px; background: rgba(255,255,255,0.22); overflow: hidden; }
+  .dash-income .bar-row .fill { height: 100%; border-radius: 3px; background: #fff; }
+  .dash-income .bar-row .v { min-width: 78px; text-align: right; font-weight: 800; }
+
+  .dash-week-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; gap: 8px; }
+  .dash-week-nav { display: flex; align-items: center; gap: 4px; }
+  .dash-week-nav button { border: none; background: none; color: var(--text-soft); font-size: 16px; cursor: pointer; padding: 2px 6px; border-radius: 6px; }
+  .dash-week-nav button:active { background: var(--bg-soft); }
+  .dash-week-total { font-size: 20px; font-weight: 700; color: var(--d-accent-dark); }
+  .dash-week-total span { font-size: 12px; font-weight: 600; color: var(--text-soft); }
+  .dash-week-days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; text-align: center; }
+  .dash-week-day .lbl { font-size: 10.5px; font-weight: 700; color: var(--text-soft); margin-bottom: 6px; text-transform: uppercase; white-space: nowrap; }
+  .dash-week-day.today .lbl { color: var(--d-accent); }
+
+  .dash-ring { position: relative; display: inline-flex; align-items: center; justify-content: center; }
+  .dash-ring svg { transform: rotate(-90deg); display: block; }
+  .dash-ring .val { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-weight: 800; }
+  .dash-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; text-align: center; }
+  .dash-stat .lbl { margin-top: 8px; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; }
+  .dash-stat .sub { font-size: 11px; color: var(--text-soft); margin-top: 2px; }
+
+  @media (min-width: 640px) {
+    .dash-grid { grid-template-columns: repeat(6, 1fr); }
+    .dash-card { grid-column: span 6; }
+    .dash-card.w3 { grid-column: span 3; }
+    .dash-card.w2 { grid-column: span 2; }
+    .dash-card.half { grid-column: span 3; }
+    .dash-card.w2.half { grid-column: span 2; }
+  }
+  @media (min-width: 1200px) {
+    body.dash-wide.has-side-nav .wrap { max-width: 1320px; }
+    .dash-grid { grid-template-columns: repeat(12, 1fr); }
+    .dash-card { grid-column: span 12; }
+    .dash-card.w6, .dash-card.w3 { grid-column: span 6; }
+    .dash-card.q3, .dash-card.half.q3 { grid-column: span 3; }
+    .dash-card.w2, .dash-card.w2.half { grid-column: span 2; }
+  }
   header {
     display: flex; align-items: center; gap: 10px; margin-bottom: 18px;
     background: var(--bg);
@@ -1215,6 +1346,7 @@
     renderCrumbs();
     renderSideNav();
     const current = stack[stack.length - 1];
+    document.body.classList.toggle('dash-wide', current.level === 'dashboard');
 
     if (current.level === 'personal_settings') {
       try { await renderPersonalSettingsScreen(isBack); }
@@ -3372,166 +3504,453 @@
     } catch (err) { showErrorMsg(err, isBack); }
   }
 
+  // ===== Дашборд репетитора (главная) =====
+  let dashWeekOffset = 0;
+
+  function dashPlural(n, one, few, many) {
+    const a = Math.abs(n) % 100, b = a % 10;
+    if (a > 10 && a < 20) return many;
+    if (b > 1 && b < 5) return few;
+    if (b === 1) return one;
+    return many;
+  }
+  function dashMoney(n) { return Math.round(Number(n) || 0).toLocaleString('ru-RU'); }
+  const DASH_MONTHS_SHORT = ['янв', 'фев', 'мар', 'апр', 'май', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
+  const DASH_MONTHS_NOM = ['январь', 'февраль', 'март', 'апрель', 'май', 'июнь', 'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь'];
+  const DASH_MONTHS_DAT = ['январю', 'февралю', 'марту', 'апрелю', 'маю', 'июню', 'июлю', 'августу', 'сентябрю', 'октябрю', 'ноябрю', 'декабрю'];
+
+  function dashRing(pct, size, stroke, color, text, fontSize, fillBg) {
+    const r = (size - stroke) / 2, c = 2 * Math.PI * r;
+    const p = pct === null || pct === undefined ? 0 : Math.max(0, Math.min(100, pct));
+    const el = document.createElement('div');
+    el.className = 'dash-ring';
+    el.innerHTML = `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">` +
+      `<circle cx="${size / 2}" cy="${size / 2}" r="${r}" fill="${fillBg || 'none'}" stroke="var(--border)" stroke-width="${stroke}"/>` +
+      (p > 0 ? `<circle cx="${size / 2}" cy="${size / 2}" r="${r}" fill="none" stroke="${color}" stroke-width="${stroke}" stroke-dasharray="${p / 100 * c} ${c}" stroke-linecap="round"/>` : '') +
+      `</svg><div class="val" style="font-size:${fontSize}px;">${text}</div>`;
+    return el;
+  }
+
+  function dashCard(extraClass, title, opts) {
+    opts = opts || {};
+    const card = document.createElement('div');
+    card.className = 'dash-card ' + (extraClass || '');
+    if (title) {
+      const t = document.createElement('div');
+      t.className = 'dash-title';
+      t.innerHTML = `<span>${title}</span>`;
+      if (opts.count !== undefined) {
+        const c = document.createElement('span');
+        c.className = 'count';
+        c.textContent = opts.count;
+        t.appendChild(c);
+      }
+      if (opts.onPlus) {
+        const plus = document.createElement('button');
+        plus.className = 'dash-plus';
+        plus.title = opts.plusTitle || 'Добавить';
+        plus.textContent = '+';
+        plus.onclick = (e) => { e.stopPropagation(); opts.onPlus(); };
+        t.appendChild(plus);
+      }
+      card.appendChild(t);
+    }
+    if (opts.onClick) {
+      card.classList.add('clickable');
+      card.onclick = opts.onClick;
+    }
+    return card;
+  }
+
+  function dashGo(level, title) {
+    stack = [{ level, title }];
+    render(false);
+  }
+
+  // Цвет занятия: у каждого ученика (или пары) свой, всегда один и тот же —
+  // вычисляется из его id, поэтому совпадает на всех экранах.
+  const LESSON_COLORS = [
+    ['#238BA7', '#E3F4F8'], ['#4A74C9', '#E8EEFA'], ['#8A63C9', '#F0EAFA'], ['#D05C8E', '#FBE9F1'],
+    ['#E08A3C', '#FDF0E3'], ['#3E9E6A', '#E5F5EC'], ['#D0584E', '#FBE8E6'], ['#B8961F', '#FBF5DE'],
+    ['#5B5FC7', '#EBEBFA'], ['#9A6B4A', '#F4ECE5'],
+  ];
+  function lessonColor(l) {
+    const ids = [l.telegram_id, l.partner_telegram_id].filter(Boolean).map(Number).sort((a, b) => a - b);
+    const key = ids.length ? ids.join('-') : String(l.subject_id || l.student_name || '');
+    let h = 0;
+    for (let i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) >>> 0;
+    return LESSON_COLORS[h % LESSON_COLORS.length];
+  }
+
+  function buildLessonBoard(s, nowDate, nowStr) {
+    const card = dashCard('w6');
+    const pad2 = (n) => String(n).padStart(2, '0');
+    const dateKey = (d) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+    const hm = (str) => str.slice(11, 16);
+    const endHm = (l) => {
+      const d = new Date(`${l.scheduled_at.slice(0, 10)}T${hm(l.scheduled_at)}:00`);
+      d.setMinutes(d.getMinutes() + (l.duration_minutes || 60));
+      return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+    };
+    const nowHm = nowStr.slice(11, 16);
+    const checkSvg = '<svg viewBox="0 0 20 20" fill="none"><path d="M4 10.5L8 14.5L16 6" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+    function eventEl(l, withCheck) {
+      const [c, tint] = lessonColor(l);
+      const ev = document.createElement('div');
+      ev.className = 'board-ev';
+      ev.style.setProperty('--ev', c);
+      ev.style.setProperty('--ev-tint', tint);
+      const end = endHm(l);
+      if (withCheck && nowHm && end <= nowHm) ev.classList.add('past');
+      ev.innerHTML = `<div class="txt"><div class="nm">${escapeHtml(l.student_name)}</div><div class="tm">${hm(l.scheduled_at)} \u2014 ${end}</div></div>`;
+      ev.onclick = () => promptLessonActions(Object.assign({ partner_name: null }, l), () => render(false));
+      if (withCheck) {
+        // Кружок «проведено»: первое нажатие отмечает, и через 2,5 секунды
+        // занятие уходит с доски. Если нажали по ошибке — нажмите ещё раз
+        // в эти 2,5 секунды, отметка снимется и ничего не сохранится.
+        const chk = document.createElement('button');
+        chk.className = 'board-check';
+        chk.title = 'Отметить проведённым';
+        chk.innerHTML = checkSvg;
+        let timer = null;
+        chk.onclick = (e) => {
+          e.stopPropagation();
+          if (timer) {
+            clearTimeout(timer);
+            timer = null;
+            chk.classList.remove('on');
+            return;
+          }
+          chk.classList.add('on');
+          timer = setTimeout(async () => {
+            timer = null;
+            try {
+              await apiSend('POST', `/api/teacher/lessons/${l.id}/conducted`, {});
+              ev.classList.add('gone');
+              setTimeout(() => {
+                const col = ev.parentElement;
+                ev.remove();
+                if (col && !col.querySelector('.board-ev')) {
+                  col.insertAdjacentHTML('beforeend', '<div class="board-empty">Все занятия на сегодня проведены \ud83c\udf89</div>');
+                }
+              }, 320);
+              showToast('Отмечено: проведён');
+            } catch (err) {
+              chk.classList.remove('on');
+              showToast('Не получилось: ' + err.message);
+            }
+          }, 2500);
+        };
+        ev.appendChild(chk);
+      }
+      return ev;
+    }
+
+    const board = document.createElement('div');
+    board.className = 'board';
+
+    // Левая колонка — сегодня.
+    const left = document.createElement('div');
+    left.className = 'board-col';
+    left.innerHTML = `<div class="board-weekday">${nowDate.toLocaleDateString('ru-RU', { weekday: 'long' })}</div><div class="board-daynum">${nowDate.getDate()}</div>`;
+    const todayList = (s.today_lessons || []).filter((l) => l.status === 'scheduled');
+    if (!todayList.length) {
+      const done = (s.today_lessons || []).some((l) => l.status === 'conducted');
+      left.insertAdjacentHTML('beforeend', `<div class="board-empty">${done ? 'Все занятия на сегодня проведены \ud83c\udf89' : 'Сегодня занятий нет'}</div>`);
+    } else {
+      todayList.forEach((l) => left.appendChild(eventEl(l, true)));
+    }
+    board.appendChild(left);
+
+    // Правая колонка — завтра, потом ближайший следующий день с занятиями.
+    const right = document.createElement('div');
+    right.className = 'board-col';
+    const tomorrow = new Date(nowDate);
+    tomorrow.setDate(nowDate.getDate() + 1);
+    const byDay = {};
+    (s.upcoming_lessons || []).forEach((l) => { (byDay[l.scheduled_at.slice(0, 10)] = byDay[l.scheduled_at.slice(0, 10)] || []).push(l); });
+    const SLOTS = 3;
+    let used = 0;
+    const tKey = dateKey(tomorrow);
+    right.insertAdjacentHTML('beforeend', '<div class="board-label">Завтра</div>');
+    const tList = byDay[tKey] || [];
+    if (!tList.length) {
+      right.insertAdjacentHTML('beforeend', '<div class="board-empty small">Занятий нет</div>');
+    } else {
+      tList.slice(0, SLOTS).forEach((l) => right.appendChild(eventEl(l, false)));
+      used = Math.min(SLOTS, tList.length);
+      if (tList.length > SLOTS) {
+        const n = tList.length - SLOTS;
+        right.insertAdjacentHTML('beforeend', `<div class="board-more">ещё ${n} ${dashPlural(n, 'занятие', 'занятия', 'занятий')}</div>`);
+      }
+    }
+    const nextKey = Object.keys(byDay).sort().find((k) => k > tKey);
+    if (nextKey) {
+      const [y, m, d] = nextKey.split('-').map(Number);
+      const nd = new Date(y, m - 1, d);
+      const label = nd.toLocaleDateString('ru-RU', { weekday: 'long' }) + ', ' + d + ' ' + DASH_MONTHS_SHORT[m - 1];
+      right.insertAdjacentHTML('beforeend', `<div class="board-label next">${label}</div>`);
+      const list = byDay[nextKey];
+      const room = Math.max(0, SLOTS - used);
+      list.slice(0, room).forEach((l) => right.appendChild(eventEl(l, false)));
+      const rest = list.length - Math.min(room, list.length);
+      if (rest > 0) {
+        right.insertAdjacentHTML('beforeend', `<div class="board-more">ещё ${rest} ${dashPlural(rest, 'занятие', 'занятия', 'занятий')}</div>`);
+      }
+    }
+    board.appendChild(right);
+    card.appendChild(board);
+
+    const foot = document.createElement('div');
+    foot.className = 'board-foot';
+    const allBtn = document.createElement('button');
+    allBtn.textContent = 'Всё расписание \u2192';
+    allBtn.onclick = () => dashGo('schedule_grid', 'Расписание');
+    foot.appendChild(allBtn);
+    card.appendChild(foot);
+    return card;
+  }
+
   async function renderDashboard(isBack) {
     showLoadingMenu();
     try {
+      dashWeekOffset = 0;
       const s = await apiGet('/api/teacher/dashboard');
       swapScreen((screen) => {
-        // --- Сегодня ---
-        const todayCard = document.createElement('div');
-        todayCard.style.cssText = 'background:var(--bg-soft);border-radius:16px;padding:16px;margin-bottom:14px;';
-        const todayTitle = document.createElement('div');
-        todayTitle.style.cssText = 'display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px;';
-        todayTitle.innerHTML = `<span style="font-family:'Involve',sans-serif;font-weight:800;font-size:20px;">${s.today_lessons.length} ${s.today_lessons.length === 1 ? 'урок' : 'урока'}</span><span class="field-hint">сегодня</span>`;
-        todayCard.appendChild(todayTitle);
-        if (!s.today_lessons.length) {
-          const p = document.createElement('div');
-          p.className = 'field-hint';
-          p.textContent = 'На сегодня уроков не запланировано.';
-          todayCard.appendChild(p);
-        } else {
-          s.today_lessons.forEach((l) => {
-            const row = document.createElement('div');
-            row.style.cssText = 'display:flex;justify-content:space-between;padding:6px 0;border-top:1px solid var(--border);font-size:13.5px;';
-            row.innerHTML = `<span>${l.scheduled_at.slice(11, 16)} \u00b7 ${escapeHtml(l.student_name)}</span><span class="field-hint">${l.duration_minutes} мин</span>`;
-            todayCard.appendChild(row);
-          });
-        }
-        screen.appendChild(todayCard);
+        const root = document.createElement('div');
+        root.className = 'dash';
+
+        // --- Дата сверху: «ЧЕТВЕРГ · 24 СЕНТЯБРЯ 2026 · 14:42» ---
+        const nowStr = s.now || '';
+        const [ny, nm, nd] = (nowStr.slice(0, 10) || '').split('-').map(Number);
+        const nowDate = ny ? new Date(ny, nm - 1, nd) : new Date();
+        const dateLine = document.createElement('div');
+        dateLine.className = 'dash-date';
+        dateLine.textContent = nowDate.toLocaleDateString('ru-RU', { weekday: 'long' }) + ' \u00b7 ' +
+          nowDate.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' }).replace(' г.', '') +
+          (nowStr.length >= 16 ? ' \u00b7 ' + nowStr.slice(11, 16) : '');
+        root.appendChild(dateLine);
+
+        const grid = document.createElement('div');
+        grid.className = 'dash-grid';
+        root.appendChild(grid);
+
+        // --- Доска занятий: сегодня слева, завтра и дальше справа ---
+        grid.appendChild(buildLessonBoard(s, nowDate, nowStr));
 
         // --- Доход ---
-        const incomeCard = document.createElement('div');
-        incomeCard.style.cssText = 'background:var(--accent-dark, var(--accent));color:#fff;border-radius:16px;padding:16px;margin-bottom:14px;';
-        const diff = s.income_this_month - s.income_last_month;
-        const diffPct = s.income_last_month > 0 ? Math.round((diff / s.income_last_month) * 100) : null;
-        incomeCard.innerHTML = `<div style="font-size:11px;opacity:0.8;text-transform:uppercase;letter-spacing:0.03em;margin-bottom:4px;">Доход за месяц</div>` +
-          `<div style="font-family:'Involve',sans-serif;font-weight:800;font-size:28px;margin-bottom:8px;">${s.income_this_month} ₽</div>` +
-          (diffPct !== null ? `<div style="font-size:12.5px;opacity:0.9;">${diff >= 0 ? '↗' : '↘'} ${diff >= 0 ? '+' : ''}${diffPct}% к прошлому месяцу (${s.income_last_month} ₽)</div>` : '');
-        screen.appendChild(incomeCard);
+        const inc = dashCard('dash-income w6');
+        const monthIdx = nowDate.getMonth();
+        const hist = s.income_history || [];
+        const prev = hist[0] ? hist[0].amount : (s.income_last_month || 0);
+        const diff = s.income_this_month - prev;
+        const diffPct = prev > 0 ? Math.round(diff / prev * 100) : null;
+        const prevMonthIdx = (monthIdx + 11) % 12;
+        const top = document.createElement('div');
+        top.className = 'top';
+        top.innerHTML = `<span>Доход \u00b7 ${DASH_MONTHS_NOM[monthIdx]}</span>`;
+        const more = document.createElement('button');
+        more.className = 'more';
+        more.textContent = 'Подробнее \u2192';
+        more.onclick = () => dashGo('payments', 'Оплаты');
+        top.appendChild(more);
+        inc.appendChild(top);
+        const sum = document.createElement('div');
+        sum.className = 'sum';
+        sum.innerHTML = `${dashMoney(s.income_this_month)} <small>\u20bd</small>`;
+        inc.appendChild(sum);
+        const trend = document.createElement('div');
+        trend.className = 'trend';
+        trend.innerHTML = diffPct === null
+          ? '<span style="opacity:0.8;">Сравнение появится, когда будут оплаты за прошлый месяц</span>'
+          : `<span class="badge">${diff >= 0 ? '\u2197 +' : '\u2198 '}${diffPct}%</span><span style="opacity:0.85;">${diff >= 0 ? '+' : '\u2212'}${dashMoney(Math.abs(diff))} \u20bd к ${DASH_MONTHS_DAT[prevMonthIdx]}</span>`;
+        inc.appendChild(trend);
+        if (hist.length) {
+          const bars = document.createElement('div');
+          bars.className = 'bars';
+          const maxV = Math.max(1, s.income_this_month, ...hist.map((x) => x.amount));
+          hist.forEach((x) => {
+            const mIdx = Number(x.month.slice(5, 7)) - 1;
+            const row = document.createElement('div');
+            row.className = 'bar-row';
+            row.innerHTML = `<span class="m">${DASH_MONTHS_SHORT[mIdx]}</span><span class="track"><span class="fill" style="display:block;width:${Math.round(x.amount / maxV * 100)}%;"></span></span><span class="v">${dashMoney(x.amount)} \u20bd</span>`;
+            bars.appendChild(row);
+          });
+          inc.appendChild(bars);
+        }
+        grid.appendChild(inc);
+
+        // --- Записи на занятия (заявки) ---
+        const reqs = s.pending_requests || [];
+        const reqCard = dashCard('w3 q3', 'Записи на занятия', {
+          count: reqs.length ? s.pending_requests_count : undefined,
+          onClick: () => dashGo('lessons', 'Мои уроки'),
+          onPlus: () => promptAddLesson(() => render(false)), plusTitle: 'Добавить урок',
+        });
+        if (!reqs.length) {
+          reqCard.insertAdjacentHTML('beforeend', '<div class="dash-empty">Заявок нет</div>');
+        } else {
+          reqs.forEach((r) => {
+            const d = r.requested_at || '';
+            const [, m, dd] = d.slice(0, 10).split('-');
+            reqCard.insertAdjacentHTML('beforeend',
+              `<div class="dash-row"><span class="name">${escapeHtml(r.student_name)}</span><span class="muted">${dd ? `${Number(dd)} ${DASH_MONTHS_SHORT[Number(m) - 1]} ${d.slice(11, 16)}` : ''}</span></div>`);
+          });
+        }
+        grid.appendChild(reqCard);
+
+        // --- Ежедневник (ДЗ по всем ученикам) ---
+        const diary = s.diary || [];
+        const diaryCard = dashCard('w3 q3', 'Ежедневник', { onClick: () => dashGo('all_students', 'Ученики') });
+        if (!diary.length) {
+          diaryCard.insertAdjacentHTML('beforeend', '<div class="dash-empty">Невыполненных заданий нет</div>');
+        } else {
+          diary.slice(0, 5).forEach((e) => {
+            const title = e.subject_title || e.text || 'Задание';
+            let right;
+            if (e.status === 'awaiting_review') right = '<span class="muted" style="color:var(--d-accent);">на проверке</span>';
+            else if (e.overdue) right = '<span class="late">просрочено</span>';
+            else {
+              const [, m, dd] = e.entry_date.slice(0, 10).split('-');
+              right = `<span class="muted">${dd ? `${Number(dd)} ${DASH_MONTHS_SHORT[Number(m) - 1]}` : ''}${e.entry_date.length >= 16 ? ' ' + e.entry_date.slice(11, 16) : ''}</span>`;
+            }
+            diaryCard.insertAdjacentHTML('beforeend',
+              `<div class="dash-row"><span class="name"><span class="dash-dot${e.overdue ? ' late' : ''}"></span>${escapeHtml(e.student_name)} \u00b7 ${escapeHtml(title)}</span>${right}</div>`);
+          });
+        }
+        grid.appendChild(diaryCard);
 
         // --- Долги ---
-        if (s.debts_count > 0) {
-          const debtsCard = document.createElement('div');
-          debtsCard.style.cssText = 'background:var(--bg-soft);border-radius:16px;padding:16px;margin-bottom:14px;';
-          debtsCard.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;">` +
-            `<span class="field-hint" style="text-transform:uppercase;font-weight:800;">Долги по оплате</span><span style="font-family:'Involve',sans-serif;font-weight:800;font-size:16px;">${s.debts_count}</span></div>` +
-            `<div style="font-family:'Involve',sans-serif;font-weight:800;font-size:20px;margin-bottom:8px;">${s.debts_total} ₽</div>`;
+        const debtsCard = dashCard('w2 half', 'Долги', { onClick: () => dashGo('payments', 'Оплаты') });
+        if (!s.debts_count) {
+          debtsCard.insertAdjacentHTML('beforeend', '<div class="dash-empty">Долгов нет</div>');
+        } else {
+          debtsCard.insertAdjacentHTML('beforeend', `<div class="dash-big">${dashMoney(s.debts_total)} \u20bd</div>`);
           s.debts.forEach((d) => {
-            const row = document.createElement('div');
-            row.style.cssText = 'display:flex;justify-content:space-between;padding:4px 0;font-size:13.5px;';
-            row.innerHTML = `<span>${escapeHtml(d.student_name)}</span><span>${d.amount} ${escapeHtml(d.currency)}</span>`;
-            debtsCard.appendChild(row);
+            debtsCard.insertAdjacentHTML('beforeend', `<div class="dash-row"><span class="name">${escapeHtml(d.student_name)}</span><span class="muted">${dashMoney(d.amount)}</span></div>`);
           });
-          debtsCard.style.cursor = 'pointer';
-          debtsCard.onclick = () => { stack = [{ level: 'payments', title: 'Оплаты' }]; render(false); };
-          screen.appendChild(debtsCard);
         }
+        grid.appendChild(debtsCard);
 
-        // --- Абонементы на исходе ---
-        if (s.renewals.length) {
-          const renewalsCard = document.createElement('div');
-          renewalsCard.style.cssText = 'background:var(--bg-soft);border-radius:16px;padding:16px;margin-bottom:14px;cursor:pointer;';
-          renewalsCard.innerHTML = `<div class="field-hint" style="text-transform:uppercase;font-weight:800;margin-bottom:8px;">🔔 Абонементы на исходе</div>`;
-          s.renewals.forEach((r) => {
-            const row = document.createElement('div');
-            row.style.cssText = 'display:flex;justify-content:space-between;padding:4px 0;font-size:13.5px;';
-            row.innerHTML = `<span>${escapeHtml(r.student_name)}</span><span>${r.remaining} из ${r.total}</span>`;
-            renewalsCard.appendChild(row);
+        // --- Продлить (абонементы на исходе) ---
+        const ren = s.renewals || [];
+        const renCard = dashCard('w2 half', 'Продлить', { count: ren.length || undefined, onClick: () => dashGo('packages', 'Абонементы') });
+        if (!ren.length) {
+          renCard.insertAdjacentHTML('beforeend', '<div class="dash-empty">Всё в порядке</div>');
+        } else {
+          ren.slice(0, 5).forEach((r) => {
+            const label = r.remaining <= 0 ? 'истёк' : `${r.remaining} ${dashPlural(r.remaining, 'урок', 'урока', 'уроков')}`;
+            renCard.insertAdjacentHTML('beforeend', `<div class="dash-row"><span class="name">${escapeHtml(r.student_name)}</span><span class="${r.remaining <= 0 ? 'late' : 'muted'}">${label}</span></div>`);
           });
-          renewalsCard.onclick = () => { stack = [{ level: 'packages', title: 'Абонементы' }]; render(false); };
-          screen.appendChild(renewalsCard);
         }
-
-        // --- Заявки на запись ---
-        if (s.pending_requests_count > 0) {
-          const reqCard = document.createElement('div');
-          reqCard.style.cssText = 'background:var(--blue-tint);border-radius:16px;padding:14px 16px;margin-bottom:14px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;';
-          reqCard.innerHTML = `<span style="font-weight:700;">📩 Заявки на запись</span><span style="font-family:'Involve',sans-serif;font-weight:800;font-size:18px;">${s.pending_requests_count}</span>`;
-          reqCard.onclick = () => { stack = [{ level: 'lessons', title: 'Мои уроки' }]; render(false); };
-          screen.appendChild(reqCard);
-        }
-
-        // --- Нагрузка на неделю ---
-        const loadCard = document.createElement('div');
-        loadCard.style.cssText = 'background:var(--bg-soft);border-radius:16px;padding:16px;margin-bottom:14px;';
-        loadCard.innerHTML = `<div class="field-hint" style="text-transform:uppercase;font-weight:800;margin-bottom:10px;">Нагрузка на неделю</div>`;
-        const loadRow = document.createElement('div');
-        loadRow.style.cssText = 'display:flex;justify-content:space-between;';
-        const maxLoad = Math.max(1, ...s.week_load);
-        s.week_load.forEach((count, i) => {
-          const col = document.createElement('div');
-          col.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;';
-          const bar = document.createElement('div');
-          const h = 6 + Math.round((count / maxLoad) * 34);
-          bar.style.cssText = `width:16px;height:${h}px;border-radius:6px;background:${count > 0 ? 'var(--accent)' : 'var(--border)'};`;
-          col.appendChild(bar);
-          const lbl = document.createElement('div');
-          lbl.style.cssText = 'font-size:10px;color:var(--text-soft);font-weight:700;';
-          lbl.textContent = WEEKDAY_SHORT[i];
-          col.appendChild(lbl);
-          const num = document.createElement('div');
-          num.style.cssText = 'font-size:11px;font-weight:800;';
-          num.textContent = count;
-          col.appendChild(num);
-          loadRow.appendChild(col);
-        });
-        loadCard.appendChild(loadRow);
-        screen.appendChild(loadCard);
-
-        // --- Статистика месяца ---
-        const ms = s.month_stats;
-        const statsCard = document.createElement('div');
-        statsCard.style.cssText = 'background:var(--bg-soft);border-radius:16px;padding:16px;margin-bottom:14px;';
-        statsCard.innerHTML = `<div class="field-hint" style="text-transform:uppercase;font-weight:800;margin-bottom:12px;">Статистика месяца</div>`;
-        const statsRow = document.createElement('div');
-        statsRow.style.cssText = 'display:flex;justify-content:space-between;gap:8px;text-align:center;';
-
-        function buildStatRing(pct, label, sublabel, color) {
-          const col = document.createElement('div');
-          col.style.cssText = 'flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;';
-          const size = 56, stroke = 5, r = (size - stroke) / 2, c = 2 * Math.PI * r;
-          const dash = pct === null ? 0 : Math.max(0, Math.min(100, pct)) / 100 * c;
-          col.innerHTML = `
-            <svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" style="transform:rotate(-90deg);">
-              <circle cx="${size / 2}" cy="${size / 2}" r="${r}" fill="none" stroke="var(--border)" stroke-width="${stroke}"/>
-              <circle cx="${size / 2}" cy="${size / 2}" r="${r}" fill="none" stroke="${color}" stroke-width="${stroke}"
-                stroke-dasharray="${dash} ${c}" stroke-linecap="round"/>
-            </svg>
-            <div style="font-weight:800;font-size:14px;margin-top:-42px;">${pct === null ? '—' : pct + '%'}</div>
-            <div style="margin-top:22px;font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text-soft);">${label}</div>
-            <div class="field-hint" style="font-size:10.5px;">${sublabel}</div>`;
-          return col;
-        }
-
-        statsRow.appendChild(buildStatRing(
-          ms.paid_pct, 'Оплачено', ms.waiting_amount > 0 ? `ждём ${ms.waiting_amount} ₽` : 'долгов нет', 'var(--accent)'
-        ));
-        statsRow.appendChild(buildStatRing(
-          ms.pace_pct === null ? null : Math.max(0, ms.pace_pct),
-          'Темп',
-          ms.pace_pct === null ? 'нет данных за прошлый месяц' : `${ms.pace_diff >= 0 ? '+' : ''}${ms.pace_diff} ₽ к тому же дню`,
-          ms.pace_pct !== null && ms.pace_pct < 0 ? '#EA2B2B' : 'var(--green-dark)'
-        ));
-        statsRow.appendChild(buildStatRing(
-          ms.no_disruption_pct, 'Без срывов', `${ms.cancelled_count} отмен \u00b7 ${ms.rescheduled_count} перенос`, '#5B8DEF'
-        ));
-        statsCard.appendChild(statsRow);
-        screen.appendChild(statsCard);
+        grid.appendChild(renCard);
 
         // --- Дни рождения ---
-        if (s.birthdays.length) {
-          const bdayCard = document.createElement('div');
-          bdayCard.style.cssText = 'background:var(--bg-soft);border-radius:16px;padding:16px;';
-          bdayCard.innerHTML = `<div class="field-hint" style="text-transform:uppercase;font-weight:800;margin-bottom:8px;">🎂 Дни рождения</div>`;
-          s.birthdays.forEach((b) => {
-            const row = document.createElement('div');
-            row.style.cssText = 'display:flex;justify-content:space-between;padding:4px 0;font-size:13.5px;';
+        const bd = s.birthdays || [];
+        const bdCard = dashCard('w2', 'Дни рождения');
+        if (!bd.length) {
+          bdCard.insertAdjacentHTML('beforeend', '<div class="dash-empty">В ближайшие 2 недели нет</div>');
+        } else {
+          bd.forEach((b) => {
             const name = b.first_name || (b.username ? '@' + b.username : 'id' + b.telegram_id);
-            row.innerHTML = `<span>${escapeHtml(name)}</span><span class="field-hint">${b.date}${b.days_left === 0 ? ' · сегодня!' : ''}</span>`;
-            bdayCard.appendChild(row);
+            const [dd, mm] = String(b.date || '').split('.');
+            const when = b.days_left === 0 ? '🎂 сегодня' : (dd ? `${Number(dd)} ${DASH_MONTHS_SHORT[Number(mm) - 1]}` : b.date);
+            bdCard.insertAdjacentHTML('beforeend', `<div class="dash-row"><span class="name">${escapeHtml(name)}</span><span class="muted">${when}</span></div>`);
           });
-          screen.appendChild(bdayCard);
         }
+        grid.appendChild(bdCard);
+
+        // --- Нагрузка на неделю (со стрелками ‹ ›) ---
+        const weekCard = dashCard('w6');
+        grid.appendChild(weekCard);
+        function drawWeek(weekStartStr, load) {
+          weekCard.innerHTML = '';
+          const [wy, wm, wd] = weekStartStr.split('-').map(Number);
+          const start = new Date(wy, wm - 1, wd);
+          const total = load.reduce((a, b) => a + b, 0);
+          const headRow = document.createElement('div');
+          headRow.className = 'dash-week-head';
+          const left = document.createElement('div');
+          left.style.cssText = 'display:flex;align-items:center;gap:8px;';
+          left.innerHTML = `<span class="dash-title" style="margin:0;">${dashWeekOffset === 0 ? 'Нагрузка на неделю' : start.getDate() + ' ' + DASH_MONTHS_SHORT[start.getMonth()] + ' \u2014 неделя'}</span>`;
+          const nav = document.createElement('div');
+          nav.className = 'dash-week-nav';
+          const prevBtn = document.createElement('button');
+          prevBtn.textContent = '\u2039';
+          prevBtn.onclick = (e) => { e.stopPropagation(); loadWeek(dashWeekOffset - 1); };
+          const nextBtn = document.createElement('button');
+          nextBtn.textContent = '\u203a';
+          nextBtn.onclick = (e) => { e.stopPropagation(); loadWeek(dashWeekOffset + 1); };
+          nav.appendChild(prevBtn);
+          nav.appendChild(nextBtn);
+          left.appendChild(nav);
+          headRow.appendChild(left);
+          const tot = document.createElement('div');
+          tot.className = 'dash-week-total';
+          tot.innerHTML = `${total} <span>${dashPlural(total, 'урок', 'урока', 'уроков')}</span>`;
+          headRow.appendChild(tot);
+          weekCard.appendChild(headRow);
+
+          const days = document.createElement('div');
+          days.className = 'dash-week-days';
+          const maxLoad = Math.max(1, ...load);
+          const todayKey = nowDate.toDateString();
+          load.forEach((count, i) => {
+            const d = new Date(start);
+            d.setDate(start.getDate() + i);
+            const isToday = d.toDateString() === todayKey;
+            const col = document.createElement('div');
+            col.className = 'dash-week-day' + (isToday ? ' today' : '');
+            col.innerHTML = `<div class="lbl">${WEEKDAY_SHORT[i]} ${d.getDate()}</div>`;
+            // Цвет по загрузке: мало — бирюзовый, средне — жёлтый, много — красный.
+            const ratio = count / maxLoad;
+            const color = count === 0 ? 'var(--border)' : (count >= 5 ? '#E0605A' : (count >= 3 ? '#E3B341' : 'var(--d-accent)'));
+            const ring = dashRing(count === 0 ? 0 : Math.max(25, ratio * 100), 40, 3.5, color, count, 14, isToday ? 'var(--d-tint)' : 'none');
+            if (count === 0) ring.querySelector('.val').style.color = 'var(--text-soft)';
+            col.appendChild(ring);
+            days.appendChild(col);
+          });
+          weekCard.appendChild(days);
+        }
+        async function loadWeek(offset) {
+          try {
+            const w = await apiGet('/api/teacher/week-load?offset=' + offset);
+            dashWeekOffset = offset;
+            drawWeek(w.week_start, w.load);
+          } catch (err) { showToast('Не получилось загрузить неделю'); }
+        }
+        drawWeek(s.week_start || (() => {
+          const d = new Date(nowDate); d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+          return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        })(), s.week_load || [0, 0, 0, 0, 0, 0, 0]);
+
+        // --- Статистика месяца ---
+        const ms = s.month_stats || {};
+        const statsCard = dashCard('w6', 'Статистика месяца');
+        const stats = document.createElement('div');
+        stats.className = 'dash-stats';
+        function addStat(pct, text, label, sub, color) {
+          const col = document.createElement('div');
+          col.className = 'dash-stat';
+          col.appendChild(dashRing(pct, 56, 4.5, color, text, 14));
+          col.insertAdjacentHTML('beforeend', `<div class="lbl">${label}</div><div class="sub">${sub}</div>`);
+          stats.appendChild(col);
+        }
+        addStat(ms.paid_pct, ms.paid_pct === null || ms.paid_pct === undefined ? '\u2014' : ms.paid_pct + '%', 'Оплачено',
+          ms.waiting_amount > 0 ? `ждём ${dashMoney(ms.waiting_amount)} \u20bd` : 'долгов нет', 'var(--d-accent)');
+        const pace = ms.pace_pct;
+        addStat(pace === null || pace === undefined ? null : Math.min(100, Math.abs(pace)),
+          pace === null || pace === undefined ? '\u2014' : (pace >= 0 ? '+' : '') + pace + '%', 'Темп',
+          pace === null || pace === undefined ? 'нет данных' : `${ms.pace_diff >= 0 ? '+' : '\u2212'}${dashMoney(Math.abs(ms.pace_diff))} \u20bd к ${nowDate.getDate()}-му`,
+          pace !== null && pace < 0 ? '#E0605A' : '#E3B341');
+        addStat(ms.no_disruption_pct, ms.no_disruption_pct === null || ms.no_disruption_pct === undefined ? '\u2014' : ms.no_disruption_pct + '%', 'Без срывов',
+          `${ms.cancelled_count || 0} ${dashPlural(ms.cancelled_count || 0, 'отмена', 'отмены', 'отмен')} \u00b7 ${ms.rescheduled_count || 0} ${dashPlural(ms.rescheduled_count || 0, 'перенос', 'переноса', 'переносов')}`,
+          '#5BAE7E');
+        statsCard.appendChild(stats);
+        grid.appendChild(statsCard);
+
+        screen.appendChild(root);
       }, isBack);
     } catch (err) { showErrorMsg(err, isBack); }
   }
