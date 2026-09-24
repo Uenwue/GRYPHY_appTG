@@ -455,14 +455,14 @@
   .board-ev.past .nm, .board-ev.past .tm { opacity: 0.6; }
   .board-ev.gone { opacity: 0; max-height: 0; padding-top: 0; padding-bottom: 0; margin-top: -7px; }
   .board-check {
-    flex-shrink: 0; width: 28px; height: 28px; border-radius: 50%; border: 2px solid var(--ev); background: var(--bg);
+    flex-shrink: 0; width: 18px; height: 18px; border-radius: 50%; border: 1.5px solid var(--ev); background: var(--bg);
     padding: 0; cursor: pointer; display: flex; align-items: center; justify-content: center; color: #fff;
     position: relative;
     transition: background 0.15s ease, transform 0.12s var(--bounce);
   }
   .board-check:active { transform: scale(0.85); }
-  .board-check::after { content: ''; position: absolute; inset: -10px; } /* большая зона нажатия */
-  .board-check svg { width: 13px; height: 13px; opacity: 0; transition: opacity 0.15s ease; }
+  .board-check::after { content: ''; position: absolute; inset: -12px; } /* кружок маленький, а зона нажатия большая */
+  .board-check svg { width: 10px; height: 10px; opacity: 0; transition: opacity 0.15s ease; }
   .board-check.on { background: var(--ev); }
   .board-check.on svg { opacity: 1; }
   .undo-toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(90px + env(safe-area-inset-bottom, 0px)); z-index: 70; background: #1F2933; color: #fff; border-radius: 14px; padding: 10px 12px 10px 16px; display: flex; align-items: center; gap: 12px; font-size: 13.5px; box-shadow: 0 8px 24px rgba(0,0,0,0.25); animation: toast-in 0.25s var(--bounce) both; max-width: calc(100% - 32px); }
@@ -7765,6 +7765,7 @@
         const toLessonObj = (l) => ({
           id: l.id, telegram_id: studentId, student_name: displayName, partner_name: l.partner_name,
           scheduled_at: l.scheduled_at, duration_minutes: l.duration_minutes, status: l.status, note: l.note,
+          attendance: l.attendance,
         });
         if (upcoming.length) {
           const n = upcoming[0];
@@ -7773,7 +7774,7 @@
           box.className = 'sc-next';
           const nh = document.createElement('div');
           nh.className = 'sc-next-head';
-          nh.innerHTML = `<div class="sc-next-when">${scLessonWhen(n.scheduled_at)}</div>`;
+          nh.innerHTML = `<div class="sc-next-when">${scLessonWhen(n.scheduled_at)} ${attendanceBadge(n)}</div>`;
           const openBtn = document.createElement('button');
           openBtn.className = 'sc-next-open';
           openBtn.textContent = 'Открыть';
@@ -7827,7 +7828,7 @@
           upcoming.slice(1).forEach((l) => {
             const r = document.createElement('div');
             r.className = 'sc-more-row';
-            r.innerHTML = `<span>${scLessonWhen(l.scheduled_at)}</span><span class="muted">${l.duration_minutes || 60} мин</span>`;
+            r.innerHTML = `<span>${scLessonWhen(l.scheduled_at)} ${attendanceBadge(l)}</span><span class="muted">${l.duration_minutes || 60} мин</span>`;
             r.onclick = () => promptLessonActions(toLessonObj(l), refreshThisScreen);
             lessonsCard.appendChild(r);
           });
