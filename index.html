@@ -2895,6 +2895,15 @@
           card.style.cssText = 'background:var(--bg-soft);border-radius:14px;padding:14px 16px;margin-bottom:12px;';
           card.innerHTML = `<div style="font-weight:800;margin-bottom:4px;">${escapeHtml(t.name)}</div>` +
             (t.bio ? `<div class="field-hint" style="margin-bottom:8px;">${escapeHtml(t.bio)}</div>` : '');
+          if (t.trial) {
+            const trialBtn = document.createElement('button');
+            trialBtn.className = 'submit-btn';
+            trialBtn.style.cssText = 'margin:4px 0 8px;background:#E08A3C;';
+            const price = Number(t.trial.price) ? `${t.trial.price} ${t.trial.currency}` : 'бесплатно';
+            trialBtn.textContent = `🎁 Пробное занятие · ${t.trial.duration} мин · ${price}`;
+            trialBtn.onclick = () => openTrialBooking(t);
+            card.appendChild(trialBtn);
+          }
           t.subjects.forEach((s) => {
             const row = document.createElement('div');
             row.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-top:1px solid var(--border);';
@@ -3078,6 +3087,8 @@
 
   async function renderBookingScreen(subjectId, isBack) {
     const myRequests = await apiGet(`/api/subjects/${subjectId}/booking/my-requests`).catch(() => []);
+    // Длительности занятий, которые учитель разрешил выбирать.
+    const durations = await apiGet(`/api/subjects/${subjectId}/booking/durations`).catch(() => []);
     swapScreen((screen) => {
       const hint = document.createElement('p');
       hint.className = 'field-hint';
@@ -3096,6 +3107,25 @@
       const today = new Date();
       let selectedDateStr = null;
       const dateButtons = [];
+      let selectedDuration = durations[0] || null;
+      // Выбор длительности занятия (если учитель настроил длительности).
+      if (durations.length > 1) {
+        const durRow = document.createElement('div');
+        durRow.style.cssText = 'display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;';
+        const paint = () => durRow.querySelectorAll('button').forEach((b) => {
+          const on = Number(b.dataset.m) === selectedDuration;
+          b.style.cssText = `padding:8px 12px;border-radius:12px;border:1px solid ${on ? 'var(--accent)' : 'var(--border)'};background:${on ? 'var(--accent)' : 'var(--bg)'};color:${on ? '#fff' : 'var(--text)'};font-weight:700;font-size:13px;cursor:pointer;`;
+        });
+        durations.forEach((m) => {
+          const b = document.createElement('button');
+          b.dataset.m = m;
+          b.textContent = m < 60 ? `${m} мин` : (m % 60 ? `${Math.floor(m / 60)} ч ${m % 60} мин` : `${m / 60} ч`);
+          b.onclick = () => { selectedDuration = m; paint(); const i = dateButtons.findIndex((x) => x.dataset.date === selectedDateStr); if (i >= 0) selectDate(selectedDateStr, dateButtons[i]); };
+          durRow.appendChild(b);
+        });
+        paint();
+        screen.insertBefore(durRow, dateRow);
+      }
 
       async function selectDate(dateStr, btn) {
         selectedDateStr = dateStr;
@@ -3104,7 +3134,7 @@
         btn.style.background = 'var(--blue-tint)';
         slotsBox.innerHTML = '<span class="field-hint">Загрузка…</span>';
         try {
-          const slots = await apiGet(`/api/subjects/${subjectId}/booking/free-slots?date=${dateStr}`);
+          const slots = await apiGet(`/api/subjects/${subjectId}/booking/free-slots?date=${dateStr}${selectedDuration ? '&duration=' + selectedDuration : ''}`);
           slotsBox.innerHTML = '';
           if (!slots.length) {
             slotsBox.innerHTML = '<span class="field-hint">На эту дату свободного времени нет.</span>';
@@ -3112,18 +3142,19 @@
           }
           slots.forEach((s) => {
             const timeBtn = document.createElement('button');
-            timeBtn.textContent = s.time;
+            const endLabel = (() => { const [h, m] = s.time.split(':').map(Number); const e = h * 60 + m + (s.duration_minutes || 60); return `${String(Math.floor(e / 60) % 24).padStart(2, '0')}:${String(e % 60).padStart(2, '0')}`; })();
+            timeBtn.textContent = `${s.time} – ${endLabel}`;
             timeBtn.style.cssText = 'padding:10px 14px;border-radius:12px;border:2px solid var(--border);background:var(--bg);color:var(--text);font-weight:700;font-size:13px;cursor:pointer;';
             timeBtn.onclick = async () => {
               timeBtn.disabled = true;
               timeBtn.textContent = '…';
               try {
-                await apiPost(`/api/subjects/${subjectId}/booking/request`, { date: dateStr, time: s.time });
+                await apiPost(`/api/subjects/${subjectId}/booking/request`, { date: dateStr, time: s.time, duration_minutes: s.duration_minutes });
                 renderBookingScreen(subjectId, false);
               } catch (err) {
                 alert('Не получилось: ' + err.message);
                 timeBtn.disabled = false;
-                timeBtn.textContent = s.time;
+                timeBtn.textContent = `${s.time} – ${endLabel}`;
               }
             };
             slotsBox.appendChild(timeBtn);
@@ -3136,9 +3167,10 @@
       let firstDateStr = null;
       for (let i = 0; i < 14; i++) {
         const d = new Date(today.getFullYear(), today.getMonth(), today.getDate() + i);
-        const dateStr = d.toISOString().slice(0, 10);
+        const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
         if (i === 0) firstDateStr = dateStr;
         const btn = document.createElement('button');
+        btn.dataset.date = dateStr;
         btn.style.cssText = 'flex-shrink:0;min-width:52px;padding:8px 6px;border-radius:12px;border:2px solid var(--border);background:var(--bg);color:var(--text);font-weight:700;cursor:pointer;text-align:center;';
         btn.innerHTML = `<div style="font-size:10px;color:var(--text-soft);">${d.toLocaleDateString('ru-RU', { weekday: 'short' })}</div><div style="font-size:15px;">${d.getDate()}</div>`;
         btn.onclick = () => selectDate(dateStr, btn);
@@ -4693,6 +4725,70 @@
         body.appendChild(b);
       }
     });
+  }
+
+  // Запись на пробное занятие из каталога: дата → свободное окно →
+  // заявка уходит преподавателю на подтверждение.
+  function openTrialBooking(t) {
+    const pad2 = (n) => String(n).padStart(2, '0');
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.35);display:flex;align-items:flex-end;justify-content:center;z-index:60;';
+    const box = document.createElement('div');
+    box.style.cssText = 'background:var(--bg);border-radius:20px 20px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom,0px));width:100%;max-width:480px;max-height:85vh;overflow-y:auto;';
+    box.innerHTML = `<div style="font-size:18px;font-weight:700;margin-bottom:2px;">🎁 Пробное занятие</div>` +
+      `<div class="field-hint" style="margin-bottom:12px;">${escapeHtml(t.name)} · ${t.trial.duration} мин · ${Number(t.trial.price) ? t.trial.price + ' ' + t.trial.currency : 'бесплатно'}</div>`;
+    const dates = document.createElement('div');
+    dates.style.cssText = 'display:flex;gap:6px;overflow-x:auto;padding-bottom:6px;margin-bottom:12px;';
+    const slots = document.createElement('div');
+    slots.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px;min-height:40px;';
+    box.appendChild(dates);
+    box.appendChild(slots);
+    const close = document.createElement('button');
+    close.className = 'submit-btn';
+    close.style.cssText = 'margin-top:14px;background:var(--bg);color:var(--text);border:1px solid var(--border);';
+    close.textContent = 'Закрыть';
+    close.onclick = () => overlay.remove();
+    box.appendChild(close);
+    overlay.appendChild(box);
+    overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+    document.body.appendChild(overlay);
+
+    const today = new Date();
+    const btns = [];
+    const loadDay = async (dateStr, btn) => {
+      btns.forEach((b) => b.classList.toggle('on', b === btn));
+      slots.innerHTML = '<span class="field-hint">Загрузка…</span>';
+      try {
+        const list = await apiGet(`/api/catalog/${t.tutor_id}/trial-slots?date=${dateStr}`);
+        slots.innerHTML = list.length ? '' : '<span class="field-hint">В этот день свободного времени нет.</span>';
+        list.forEach((s) => {
+          const b = document.createElement('button');
+          b.className = 'lr-slot';
+          b.textContent = `${s.start} \u2013 ${s.end}`;
+          b.onclick = async () => {
+            b.disabled = true;
+            try {
+              await apiPost('/api/catalog/trial-request', { tutor_id: t.tutor_id, subject_id: (t.subjects[0] || {}).subject_id, date: dateStr, time: s.start });
+              box.innerHTML = `<div style="font-size:18px;font-weight:700;margin-bottom:8px;">✅ Заявка отправлена</div><div class="field-hint" style="font-size:14px;">Пробное занятие у ${escapeHtml(t.name)}: ${dateStr.split('-').reverse().join('.')} в ${s.start}. Преподаватель подтвердит время — придёт сообщение в боте.</div>`;
+              box.appendChild(close);
+            } catch (err) { b.disabled = false; alert(err.message || 'Не получилось'); }
+          };
+          slots.appendChild(b);
+        });
+      } catch (err) { slots.innerHTML = '<span class="field-hint">Не удалось загрузить время.</span>'; }
+    };
+    for (let i = 0; i < 14; i++) {
+      const d = new Date(today.getFullYear(), today.getMonth(), today.getDate() + i);
+      const ds = `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+      const b = document.createElement('button');
+      b.className = 'lr-slot';
+      b.style.cssText = 'flex-shrink:0;min-width:54px;padding:6px;';
+      b.innerHTML = `<div style="font-size:10px;font-weight:600;opacity:0.8;">${d.toLocaleDateString('ru-RU', { weekday: 'short' })}</div><div>${d.getDate()}</div>`;
+      b.onclick = () => loadDay(ds, b);
+      dates.appendChild(b);
+      btns.push(b);
+      if (i === 1) setTimeout(() => loadDay(ds, b), 0);
+    }
   }
 
   // Полоса с логотипом для экранов без обычной шапки («Мои курсы»,
