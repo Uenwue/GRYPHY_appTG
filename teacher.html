@@ -986,14 +986,21 @@
       teacherBtn.className = 'submit-btn';
       teacherBtn.style.cssText = 'margin-bottom:12px;';
       teacherBtn.textContent = '👩‍🏫 Я учитель';
-      teacherBtn.onclick = () => { setAppChromeVisible(true); render(false); };
+      teacherBtn.onclick = () => {
+        try { localStorage.setItem('gryphy_preferred_role', 'teacher'); } catch (err) {}
+        setAppChromeVisible(true);
+        render(false);
+      };
       screen.appendChild(teacherBtn);
 
       const studentBtn = document.createElement('button');
       studentBtn.className = 'submit-btn';
       studentBtn.style.cssText = 'background:var(--bg-soft);color:var(--text);border:2px solid var(--border);';
       studentBtn.textContent = '🎓 Я ученик';
-      studentBtn.onclick = () => { window.location.href = withDirectParam(studentAppUrl); };
+      studentBtn.onclick = () => {
+        try { localStorage.setItem('gryphy_preferred_role', 'student'); } catch (err) {}
+        window.location.href = withDirectParam(studentAppUrl);
+      };
       screen.appendChild(studentBtn);
     });
   }
@@ -1036,7 +1043,13 @@
           }
 
           const isDirect = new URLSearchParams(location.search).has('direct');
-          if (!isDirect && hasStudentAccess && studentAppUrl) {
+          let storedRoleChoice = null;
+          try { storedRoleChoice = localStorage.getItem('gryphy_preferred_role'); } catch (err) {}
+          // Как и в index.html — если человек уже выбирал «я учитель» на
+          // этом устройстве, обновление страницы не должно снова
+          // спрашивать: иначе любой рефреш кидал бы на этот экран вместо
+          // того, чтобы остаться там, где человек и был.
+          if (!isDirect && storedRoleChoice !== 'teacher' && hasStudentAccess && studentAppUrl) {
             setAppChromeVisible(false);
             renderTeacherStudentChooser();
             return;
