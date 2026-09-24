@@ -886,6 +886,8 @@
   .g-head { display: flex; align-items: center; gap: 8px; font-size: 14px; }
   .sched-grid { display: grid; grid-template-columns: 64px 1fr 1fr; gap: 6px 8px; align-items: center; }
   .sched-grid .field-label { margin: 0; }
+  .sched-grid .field-input { padding: 9px 6px; min-width: 0; text-align: center; }
+  .sched-grid input[type="time"]::-webkit-calendar-picker-indicator { display: none; }
   .sched-lbl { font-size: 13px; font-weight: 700; color: var(--text-soft); }
   .set-url { margin-top: 8px; font-size: 11px; color: var(--text-soft); background: var(--bg-soft); border-radius: 8px; padding: 6px 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .cal-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
@@ -1122,7 +1124,7 @@
     // на самом экране — строка «крошек» там не нужна.
     const topLvl = stack[stack.length - 1]?.level;
     crumbsEl.classList.toggle('crumbs-hidden', (currentMode === 'finance' && stack.length === 1)
-      || topLvl === 'personal_settings' || topLvl === 'courses_list'
+      || topLvl === 'personal_settings' || topLvl === 'courses_list' || topLvl === 'income'
       || (topLvl === 'students' && stack.length === 1));
     crumbsEl.classList.toggle('crumbs-root', stack.length === 1);
     if (stack.length > 1) {
@@ -4545,12 +4547,10 @@
         if (types.length && !types.some(fx)) return false;
         if (stats.length && !stats.some(fx)) return false;
         // Уровень / класс / теги: внутри группы — «или», между — «и».
-        for (const prefix of ['level:', 'grade:', 'tag:']) {
-          const wanted = [...sel].filter((k) => k.startsWith(prefix)).map((k) => k.slice(prefix.length));
-          if (!wanted.length) continue;
-          const has = (m) => prefix === 'tag:' ? (m.tags || []).some((t) => wanted.includes(t))
-            : wanted.includes(String((prefix === 'level:' ? m.level : m.grade) || ''));
-          if (!u.members.some(has)) return false;
+        const wantedTags = [...sel].filter((k) => k.startsWith('tag:')).map((k) => k.slice(4));
+        if (wantedTags.length) {
+          const tagsOfM = (m) => [m.level, m.grade && (/^\d+$/.test(m.grade) ? m.grade + ' класс' : m.grade), ...(m.tags || [])].filter(Boolean);
+          if (!u.members.some((m) => tagsOfM(m).some((t) => wantedTags.includes(t)))) return false;
         }
         return true;
       };
@@ -4621,14 +4621,12 @@
         });
         // «Фильтры»: уровень, класс и теги учителя (раскрывающаяся панель).
         const uniq = (arr) => [...new Set(arr.filter(Boolean).map(String))].sort((a, b) => a.localeCompare(b, 'ru', { numeric: true }));
-        const levels = uniq(students.map((x) => x.level));
-        const grades = uniq(students.map((x) => x.grade));
-        const tags = uniq(students.flatMap((x) => x.tags || []));
+        const tags = uniq(students.flatMap((x) => [x.level, x.grade, ...(x.tags || [])]));
         const extraCount = [...sel].filter((k) => k.includes(':')).length;
-        if (levels.length || grades.length || tags.length) {
+        if (tags.length) {
           const fBtn = document.createElement('button');
           fBtn.className = 'st-chip' + (extraCount ? ' on' : '');
-          fBtn.innerHTML = `⚙ Фильтры${extraCount ? `<sup>${extraCount}</sup>` : ''} ${allStudentsPanelOpen ? '\u25b4' : '\u25be'}`;
+          fBtn.innerHTML = `🏷 Теги${extraCount ? `<sup>${extraCount}</sup>` : ''} ${allStudentsPanelOpen ? '\u25b4' : '\u25be'}`;
           fBtn.onclick = () => { allStudentsPanelOpen = !allStudentsPanelOpen; renderAllStudents(false); };
           chips.appendChild(fBtn);
         }
@@ -4646,10 +4644,9 @@
           const panel = document.createElement('div');
           panel.className = 'st-panel';
           const uniq2 = (arr) => [...new Set(arr.filter(Boolean).map(String))].sort((a, b) => a.localeCompare(b, 'ru', { numeric: true }));
+          const tagsOfS = (x) => [x.level, x.grade && (/^\d+$/.test(x.grade) ? x.grade + ' класс' : x.grade), ...(x.tags || [])].filter(Boolean);
           const groupsDef = [
-            ['Уровень', 'level:', uniq2(students.map((x) => x.level)), (v) => v],
-            ['Класс', 'grade:', uniq2(students.map((x) => x.grade)), (v) => (/^\d+$/.test(v) ? v + ' класс' : v)],
-            ['Теги', 'tag:', uniq2(students.flatMap((x) => x.tags || [])), (v) => '#' + v],
+            ['Теги', 'tag:', uniq2(students.flatMap(tagsOfS)), (v) => '#' + v],
           ];
           groupsDef.forEach(([label, prefix, values, fmt]) => {
             const row = document.createElement('div');
@@ -4724,9 +4721,8 @@
             } else {
               const bits = [escapeHtml(first.lesson_type)];
               if (first.price_per_lesson) bits.push(`${Math.round(first.price_per_lesson).toLocaleString('ru-RU')} ${first.currency ? (CURRENCY_SYMBOLS[first.currency] || first.currency) : curSym()}/урок`);
-              if (first.grade) bits.splice(1, 0, /^\d+$/.test(first.grade) ? first.grade + ' кл.' : escapeHtml(first.grade));
               if (dur) bits.push(dur);
-              body.innerHTML = `<div class="st-name">${escapeHtml(first.display_name)}${first.level ? ` <span>\u00b7 ${escapeHtml(first.level)}</span>` : ''}</div>` +
+              body.innerHTML = `<div class="st-name">${escapeHtml(first.display_name)}</div>` +
                 `<div class="st-line">${bits.join(' \u00b7 ')}</div>`;
             }
             body.insertAdjacentHTML('beforeend', u.next_lesson_at
@@ -4736,6 +4732,10 @@
               body.insertAdjacentHTML('beforeend', '<div class="st-members">' + u.members.map((m) =>
                 `${escapeHtml(m.display_name)}${remText(m) ? ` <span>${remText(m)}</span>` : ''}`).join(' <span>\u00b7</span> ') + '</div>');
             }
+            // Теги (уровень, класс и свои).
+            const tagsOf = (m) => [m.level, m.grade && (/^\d+$/.test(m.grade) ? m.grade + ' класс' : m.grade), ...(m.tags || [])].filter(Boolean);
+            const tagList = [...new Set(u.members.flatMap(tagsOf))];
+            if (tagList.length) body.insertAdjacentHTML('beforeend', `<div class="sc-tags" style="margin-top:6px;">${tagList.slice(0, 5).map((t) => `<span class="sc-tag" style="cursor:default;">#${escapeHtml(t)}</span>`).join('')}</div>`);
             const flags = [];
             if (u.members.some((m) => m.awaiting_payment)) flags.push('<span class="st-flag">ждёт оплаты</span>');
             else if (u.members.some((m) => m.payment_due_soon)) flags.push('<span class="st-flag">скоро оплата</span>');
@@ -5049,17 +5049,17 @@
   // ===== Прибыль: доход минус налоги и расходы =====
   const TAX_MODES = [
     { key: 'none', title: 'Не учитывать', sub: 'Показывать только доход' },
-    { key: 'self_employed', title: 'Самозанятый', sub: 'Налог с дохода, обычно 10%', rate: 10 },
+    { key: 'custom_turnover', title: 'Свой процент', sub: 'Налог — ваш процент от дохода' },
     { key: 'usn', title: 'ООО / ИП на УСН', sub: 'Налог с выручки, обычно 6%', rate: 6 },
     { key: 'profit', title: 'ИП / ООО без УСН', sub: 'Налог с прибыли (доход − расходы), плюс взносы', rate: 20 },
-    { key: 'custom_turnover', title: 'Свой процент', sub: 'Любая ставка от дохода', rate: 0 },
   ];
 
   function calcProfit(income, tax) {
     const t = tax || {};
-    const mode = t.mode || 'none';
+    const mode = t.mode === 'self_employed' ? 'custom_turnover' : (t.mode || 'none');
     const rate = Number(t.rate || 0) / 100;
-    const expenses = Number(t.expenses_monthly || 0);
+    // Расходы — список «тег + сумма»; старое одно поле тоже понимаем.
+    const expenses = Array.isArray(t.expenses) ? t.expenses.reduce((a, e) => a + (Number(e.amount) || 0), 0) : Number(t.expenses_monthly || 0);
     const fixed = Number(t.fixed_monthly || 0);
     if (mode === 'none') return null;
     let taxSum;
@@ -5533,6 +5533,7 @@
     const d = await apiGet('/api/teacher/income');
     if (d.currency) setTutorCurrency(d.currency);
     const tax = Object.assign({ mode: 'none', rate: 0, expenses_monthly: 0, fixed_monthly: 0 }, d.tax || {});
+    if (tax.mode === 'self_employed') tax.mode = 'custom_turnover';
     const money = (v, cur) => `${dashMoney(v)} ${cur ? (CURRENCY_SYMBOLS[cur] || cur) : curSym()}`;
     swapScreen((screen) => {
       const root = document.createElement('div');
@@ -5587,7 +5588,7 @@
         const r = calcProfit(cur.total, tax);
         result.innerHTML = !r ? '' : '<div style="background:var(--bg-soft);border-radius:12px;padding:12px;font-size:13.5px;display:grid;grid-template-columns:1fr auto;row-gap:6px;margin-top:6px;">' +
           `<span>Доход</span><b>${money(cur.total)}</b><span>Налог</span><b style="color:var(--red-dark);">\u2212${money(r.tax)}</b>` +
-          (r.expenses ? `<span>Расходы</span><b style="color:var(--red-dark);">\u2212${money(r.expenses)}</b>` : '') +
+          (tax.expenses || []).filter((e) => Number(e.amount) > 0).map((e) => `<span>${escapeHtml(e.tag || 'Расход')}</span><b style="color:var(--red-dark);">\u2212${money(e.amount)}</b>`).join('') +
           (r.fixed ? `<span>Взносы</span><b style="color:var(--red-dark);">\u2212${money(r.fixed)}</b>` : '') +
           `<span style="font-weight:800;">Чистая прибыль</span><b style="font-size:16px;color:var(--accent-dark);">${money(r.net)}</b></div>`;
       };
@@ -5606,7 +5607,6 @@
           fields.appendChild(w);
         };
         field(tax.mode === 'profit' ? 'Налог с прибыли, %' : 'Налог с дохода, %', 'rate');
-        field('Расходы в месяц', 'expenses_monthly', 'Аренда, реклама, сервисы — вычитаются из дохода.');
         if (tax.mode === 'profit') field('Обязательные взносы в месяц', 'fixed_monthly', 'Например, взносы в ФСЗН и другие фиксированные платежи.');
         drawResult();
       };
@@ -5621,8 +5621,36 @@
           modes.appendChild(b);
         });
       };
+      // Расходы: сколько угодно строк «тег + сумма» (аренда, реклама, сервисы…).
+      if (!Array.isArray(tax.expenses)) tax.expenses = tax.expenses_monthly ? [{ tag: 'Расходы', amount: tax.expenses_monthly }] : [];
+      const expBox = document.createElement('div');
+      const drawExpenses = () => {
+        expBox.innerHTML = '<div class="set-title" style="margin-top:12px;">Расходы в месяц</div>';
+        tax.expenses.forEach((e, idx) => {
+          const row = document.createElement('div');
+          row.style.cssText = 'display:grid;grid-template-columns:1fr 110px 32px;gap:6px;margin-bottom:6px;align-items:center;';
+          const tagIn = document.createElement('input');
+          tagIn.className = 'field-input'; tagIn.placeholder = 'Тег: аренда, реклама…'; tagIn.value = e.tag || '';
+          tagIn.oninput = () => { e.tag = tagIn.value; };
+          const amIn = document.createElement('input');
+          amIn.className = 'field-input'; amIn.type = 'number'; amIn.min = '0'; amIn.step = 'any'; amIn.placeholder = curSym(); amIn.value = e.amount || '';
+          amIn.oninput = () => { e.amount = parseFloat(String(amIn.value).replace(',', '.')) || 0; drawResult(); };
+          const del = document.createElement('button');
+          del.className = 'st-more'; del.textContent = '\u2715'; del.title = 'Удалить';
+          del.onclick = () => { tax.expenses.splice(idx, 1); drawExpenses(); drawResult(); };
+          row.appendChild(tagIn); row.appendChild(amIn); row.appendChild(del);
+          expBox.appendChild(row);
+        });
+        const add = document.createElement('button');
+        add.className = 'set-btn';
+        add.style.cssText = 'width:100%;';
+        add.textContent = '+ Добавить расход';
+        add.onclick = () => { tax.expenses.push({ tag: '', amount: 0 }); drawExpenses(); const ins = expBox.querySelectorAll('input'); if (ins.length) ins[ins.length - 2].focus(); };
+        expBox.appendChild(add);
+      };
+      drawExpenses();
       drawModes(); drawFields();
-      tc.appendChild(modes); tc.appendChild(fields); tc.appendChild(result);
+      tc.appendChild(modes); tc.appendChild(fields); tc.appendChild(expBox); tc.appendChild(result);
       const save = document.createElement('button');
       save.className = 'set-btn primary';
       save.style.cssText = 'width:100%;margin-top:10px;';
@@ -5657,7 +5685,7 @@
         dateLine.textContent = nowDate.toLocaleDateString('ru-RU', { weekday: 'long' }) + ' \u00b7 ' +
           nowDate.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' }).replace(' г.', '') +
           (nowStr.length >= 16 ? ' \u00b7 ' + nowStr.slice(11, 16) : '');
-        root.appendChild(dateLine);
+        // Строка с датой и временем над доходом убрана — дата есть на доске занятий.
 
         const grid = document.createElement('div');
         grid.className = 'dash-grid';
@@ -5690,6 +5718,14 @@
         trend.className = 'trend';
         // Сравнение и полоски прошлых месяцев — только когда есть с чем
         // сравнивать (был доход в прошлом месяце). Пока нет — не показываем.
+        // Чистыми и налог — как на странице «Доход» (если выбран налоговый режим).
+        const profitNow = calcProfit(s.income_this_month, s.tax);
+        if (profitNow) {
+          const pl = document.createElement('div');
+          pl.className = 'trend';
+          pl.innerHTML = `<span>Чистыми \u2248 <b style="font-size:15px;">${dashMoney(profitNow.net)} ${curSym()}</b></span><span style="opacity:0.85;">налог ${dashMoney(profitNow.tax)} ${curSym()}${profitNow.expenses ? ' \u00b7 расходы ' + dashMoney(profitNow.expenses) + ' ' + curSym() : ''}</span>`;
+          inc.appendChild(pl);
+        }
         const hasComparison = diffPct !== null;
         if (hasComparison) {
           trend.innerHTML = `<span class="badge">${diff >= 0 ? '\u2197 +' : '\u2198 '}${diffPct}%</span><span style="opacity:0.85;">${diff >= 0 ? '+' : '\u2212'}${dashMoney(Math.abs(diff))} ${curSym()} к ${DASH_MONTHS_DAT[prevMonthIdx]}</span>`;
@@ -6081,6 +6117,45 @@
     return row;
   }
 
+  // Длительность и цена занятия: только на эту дату или на это и все
+  // следующие (у регулярного — и для будущих повторов).
+  function promptLessonTerms(l, onDone) {
+    lockBodyScroll();
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center;z-index:60;padding:20px;';
+    overlay.innerHTML = '<div style="background:var(--bg);border-radius:18px;padding:18px;max-width:360px;width:100%;">' +
+      `<div style="font-size:17px;font-weight:700;margin-bottom:4px;">⏱ Длительность и цена</div><div class="set-hint">${escapeHtml(l.student_name)} \u00b7 ${l.scheduled_at.slice(8, 10)}.${l.scheduled_at.slice(5, 7)} в ${l.scheduled_at.slice(11, 16)}</div>` +
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">' +
+      `<div><div class="field-label">Минут</div><input type="number" min="10" step="5" class="field-input" id="ltDur" value="${l.duration_minutes || 60}"></div>` +
+      `<div><div class="field-label">Цена, ${curSym()}</div><input type="number" min="0" step="any" class="field-input" id="ltPrice" placeholder="как в карточке" value="${l.price != null ? l.price : ''}"></div>` +
+      '</div>' +
+      '<div class="field-label" style="margin-top:12px;">Применить</div>' +
+      '<div class="sched-seg" id="ltScope"><button class="on" data-s="one">Только к этому</button><button data-s="following">К этому и следующим</button></div>' +
+      '<div class="set-hint" style="margin-top:8px;font-size:11.5px;">Пустая цена — берётся цена из карточки ученика.</div>' +
+      '<div style="display:flex;gap:8px;margin-top:12px;"><button class="set-btn" id="ltCancel" style="flex:1;">Отмена</button><button class="set-btn primary" id="ltSave" style="flex:1;">Сохранить</button></div></div>';
+    document.body.appendChild(overlay);
+    const close = () => { unlockBodyScroll(); overlay.remove(); };
+    let scope = 'one';
+    overlay.querySelectorAll('#ltScope button').forEach((b) => {
+      b.onclick = () => { scope = b.dataset.s; overlay.querySelectorAll('#ltScope button').forEach((x) => x.classList.toggle('on', x === b)); };
+    });
+    overlay.querySelector('#ltCancel').onclick = close;
+    overlay.querySelector('#ltSave').onclick = async () => {
+      const dur = parseInt(overlay.querySelector('#ltDur').value, 10);
+      const priceRaw = overlay.querySelector('#ltPrice').value.trim();
+      try {
+        const res = await apiSend('POST', `/api/teacher/lessons/${l.id}/terms`, {
+          duration_minutes: dur || null,
+          price: priceRaw === '' ? -1 : parseFloat(priceRaw.replace(',', '.')),
+          scope,
+        });
+        close();
+        showToast(scope === 'following' ? `Изменено занятий: ${res.updated}` : 'Сохранено');
+        onDone();
+      } catch (err) { showToast('Не получилось: ' + err.message); }
+    };
+  }
+
   function promptLessonActions(l, onDone) {
     onDone = onDone || (() => render(false));
     lockBodyScroll();
@@ -6098,7 +6173,6 @@
       `<textarea class="field-input" id="lNote" rows="3" placeholder="Что прошли, что задать, что повторить…" style="resize:vertical;margin-bottom:6px;">${escapeHtml(l.note || '')}</textarea>` +
       '<button class="back-btn" id="lNoteSave" style="width:100%;margin-bottom:14px;">Сохранить заметку</button>' +
       '<div style="display:flex;flex-direction:column;gap:8px;">' +
-      (isActive ? '<button class="save-btn" id="lLiveSession" style="margin-top:0;">🎨 Живое занятие</button>' : '') +
       (isActive ? '<button class="back-btn" id="lConducted">✅ Проведён</button>' : '') +
       (isActive ? '<button class="back-btn" id="lRemind">🔔 Напомнить об уроке</button>' : '') +
       (isActive ? '<button class="back-btn" id="lReschedule">🔁 Перенести</button>' : '') +
@@ -6107,6 +6181,7 @@
       (l.status === 'rescheduled' ? '<div class="set-hint" style="margin:0;">Этот урок перенесён — все действия доступны у урока на новом времени.</div><button class="save-btn" id="lMovedTo" style="margin-top:0;">➡️ Открыть урок на новом времени</button>' : '') +
       (['conducted', 'cancelled_charged', 'cancelled_no_charge'].includes(l.status)
         ? `<div class="set-hint" style="margin:0;">Статус: ${{ conducted: 'проведён', cancelled_charged: 'отменён со списанием', cancelled_no_charge: 'отменён без списания' }[l.status]}</div><button class="back-btn" id="lReopen">↩️ Вернуть в запланированные</button>` : '') +
+      (isActive ? `<button class="back-btn" id="lTerms">⏱ Длительность и цена${l.price != null ? ' \u00b7 ' + l.price + ' ' + curSym() : ''}</button>` : '') +
       (isActive ? `<button class="back-btn" id="lTrial">${l.is_trial ? '🎁 Убрать отметку «пробное»' : '🎁 Сделать пробным'}</button>` : '') +
       '<button class="back-btn" id="lDelete" style="color:var(--red-dark);">🗑 Удалить запись</button>' +
       '<button class="back-btn" id="lClose">Закрыть</button>' +
@@ -6116,6 +6191,8 @@
     const liveBtn = overlay.querySelector('#lLiveSession');
     if (liveBtn) liveBtn.onclick = () => { closeOverlay(); openLiveSession(l.id); };
     overlay.querySelector('#lClose').onclick = closeOverlay;
+    const termsBtn = overlay.querySelector('#lTerms');
+    if (termsBtn) termsBtn.onclick = () => { closeOverlay(); promptLessonTerms(l, onDone); };
     const trialBtn = overlay.querySelector('#lTrial');
     if (trialBtn) trialBtn.onclick = async () => {
       try {
@@ -7753,7 +7830,7 @@
       if (st.days.size > 1) {
         const same = document.createElement('label');
         same.className = 'sched-check';
-        same.innerHTML = `<input type="checkbox" ${st.sameTime ? 'checked' : ''}> Одно время для всех дней`;
+        same.innerHTML = `<input type="checkbox" ${st.sameTime ? 'checked' : ''}> Одинаковые время и цена для всех дней`;
         same.querySelector('input').onchange = (e) => { st.sameTime = e.target.checked; draw(); };
         box.appendChild(same);
       }
@@ -7765,6 +7842,12 @@
         own.forEach((x) => st.ends.set(x.weekday, fromMin(toMin(x.time) + (x.duration_minutes || st.duration))));
       }
       if (!st.endTime) st.endTime = fromMin(toMin(st.time) + st.duration);
+      // Цена может быть своя у каждого дня (пусто — из карточки ученика).
+      if (!st.prices) {
+        st.prices = new Map();
+        own.forEach((x) => { if (x.price != null) st.prices.set(x.weekday, x.price); });
+        st.priceCommon = own.length && own[0].price != null ? own[0].price : '';
+      }
       const timesWrap = document.createElement('div');
       timesWrap.className = 'sched-grid';
       const mkTime = (value, onChange) => {
@@ -7775,24 +7858,37 @@
         inp.onchange = () => onChange(inp.value);
         return inp;
       };
-      const addRow = (label, startVal, endVal, onStart, onEnd) => {
+      const mkPrice = (value, onChange) => {
+        const inp = document.createElement('input');
+        inp.type = 'number'; inp.min = '0'; inp.step = 'any';
+        inp.className = 'field-input';
+        inp.placeholder = '—';
+        inp.value = value === '' || value == null ? '' : value;
+        inp.onchange = () => onChange(inp.value.trim());
+        return inp;
+      };
+      const addRow = (label, startVal, endVal, onStart, onEnd, priceVal, onPrice) => {
         const lbl = document.createElement('div');
         lbl.className = 'sched-lbl';
         lbl.textContent = label;
         timesWrap.appendChild(lbl);
         timesWrap.appendChild(mkTime(startVal, onStart));
         timesWrap.appendChild(mkTime(endVal, onEnd));
+        timesWrap.appendChild(mkPrice(priceVal, onPrice));
       };
-      timesWrap.insertAdjacentHTML('beforeend', '<div></div><div class="field-label">Начало</div><div class="field-label">Конец</div>');
+      timesWrap.style.gridTemplateColumns = '34px 1fr 1fr 66px';
+      timesWrap.insertAdjacentHTML('beforeend', `<div></div><div class="field-label">Начало</div><div class="field-label">Конец</div><div class="field-label">Цена, ${curSym()}</div>`);
       if (st.sameTime || st.days.size <= 1) {
-        addRow('Все дни', st.time, st.endTime,
+        addRow('Все', st.time, st.endTime,
           (v) => { const d = toMin(st.endTime) - toMin(st.time); st.time = v; st.endTime = fromMin(toMin(v) + (d > 0 ? d : 60)); st.days.forEach((_, k) => st.days.set(k, v)); draw(); },
-          (v) => { st.endTime = v; });
+          (v) => { st.endTime = v; },
+          st.priceCommon, (v) => { st.priceCommon = v; });
       } else {
         [...st.days.keys()].sort().forEach((k) => {
           const sv = st.days.get(k) || st.time;
           const ev = st.ends.get(k) || fromMin(toMin(sv) + (toMin(st.endTime) - toMin(st.time) || 60));
-          addRow(WEEKDAY_SHORT[k], sv, ev, (v) => { st.days.set(k, v); }, (v) => { st.ends.set(k, v); });
+          addRow(WEEKDAY_SHORT[k], sv, ev, (v) => { st.days.set(k, v); }, (v) => { st.ends.set(k, v); },
+            st.prices.has(k) ? st.prices.get(k) : st.priceCommon, (v) => { if (v === '') st.prices.delete(k); else st.prices.set(k, v); });
         });
       }
       box.appendChild(timesWrap);
@@ -7890,7 +7986,8 @@
           const endT = st.sameTime ? st.endTime : (st.ends.get(weekday) || st.endTime);
           let dur = toMinS(endT) - toMinS(startT);
           if (dur <= 0) dur += 1440;
-          return { weekday, time: startT, duration_minutes: dur };
+          const pr = st.sameTime ? st.priceCommon : (st.prices.has(weekday) ? st.prices.get(weekday) : st.priceCommon);
+          return { weekday, time: startT, duration_minutes: dur, price: pr === '' || pr == null ? null : parseFloat(String(pr).replace(',', '.')) };
         });
         if (slots.some((x) => x.duration_minutes < 10 || x.duration_minutes > 600)) {
           err.textContent = 'Проверьте время: конец должен быть позже начала.'; err.style.display = 'block'; return;
@@ -8003,10 +8100,19 @@
         const val = prompt('Класс (например 9, 11, «студент»). Пусто — убрать:', info.grade || '');
         if (val !== null) saveInfo({ grade: val.trim() });
       };
+      // Уровень и класс — это просто теги (как «ЦТ», «олимпиада»). Старые
+      // поля «уровень»/«класс» при первом сохранении переезжают в теги.
+      const allTags = () => {
+        const list = [];
+        if (info.level) list.push(info.level);
+        if (info.grade) list.push(/^\d+$/.test(info.grade) ? info.grade + ' класс' : info.grade);
+        (info.tags || []).forEach((t) => { if (!list.includes(t)) list.push(t); });
+        return list;
+      };
       const editTags = () => {
-        const val = prompt('Теги через запятую (например: ЦТ, олимпиада, выпускной):', (info.tags || []).join(', '));
+        const val = prompt('Теги через запятую (уровень, класс, цель…), например: A2, 9 класс, ЦТ:', allTags().join(', '));
         if (val === null) return;
-        saveInfo({ tags: val.split(',').map((t) => t.trim()).filter(Boolean) });
+        saveInfo({ tags: val.split(',').map((t) => t.trim()).filter(Boolean), level: '', grade: '' });
       };
       const editCurrency = () => scMenu([
         { label: `Как в кабинете (${curSym()} ${tutorCurrency})`, onClick: () => saveInfo({ currency: '' }) },
@@ -8119,8 +8225,6 @@
         };
         parts.push(chip(`<b>${escapeHtml(c.lesson_type)}</b>`, editType));
         if (c.usual_duration) parts.push(chip(`${c.usual_duration} мин`, () => {}));
-        parts.push(info.level ? chip(escapeHtml(info.level), editLevel) : chip('+ уровень', editLevel, true));
-        parts.push(info.grade ? chip(escapeHtml(/^\d+$/.test(info.grade) ? info.grade + ' класс' : info.grade), editGrade) : chip('+ класс', editGrade, true));
         parts.push(info.price_per_lesson
           ? chip(`<b>${Math.round(info.price_per_lesson).toLocaleString('ru-RU')} ${stSym()}</b>/занятие`, editPrice)
           : chip('+ цена', editPrice, true));
@@ -8132,7 +8236,7 @@
         // Теги учителя — для своих подгрупп и фильтров в списке учеников.
         const tagsRow = document.createElement('div');
         tagsRow.className = 'sc-tags';
-        (info.tags || []).forEach((t) => {
+        allTags().forEach((t) => {
           const tg_ = document.createElement('span');
           tg_.className = 'sc-tag';
           tg_.textContent = '#' + t;
@@ -8141,7 +8245,7 @@
         });
         const addTag = document.createElement('span');
         addTag.className = 'sc-tag add';
-        addTag.textContent = (info.tags || []).length ? '+ тег' : '+ теги';
+        addTag.textContent = allTags().length ? '+ тег' : '+ теги (уровень, класс…)';
         addTag.onclick = editTags;
         tagsRow.appendChild(addTag);
         sum.appendChild(tagsRow);
