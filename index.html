@@ -4570,7 +4570,14 @@
     }
     const goApp = () => { window.location.href = location.pathname + '?direct=1'; };
     swapScreen((screen) => {
-      screen.appendChild(buildStudentLogoBar(false));
+      const bar = buildStudentLogoBar(false);
+      const back = document.createElement('button');
+      back.className = 'back-btn';
+      back.title = 'Назад';
+      back.innerHTML = '<svg viewBox="0 0 20 20" fill="none"><path d="M12.5 4.5L7 10L12.5 15.5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+      back.onclick = goApp;
+      bar.insertBefore(back, bar.firstChild);
+      screen.appendChild(bar);
       const card = document.createElement('div');
       card.className = 'form-card';
       card.innerHTML = `<div style="font-size:12px;font-weight:800;letter-spacing:0.05em;text-transform:uppercase;color:var(--text-soft);">Занятие</div>` +
@@ -4749,6 +4756,50 @@
       title.textContent = 'Мои курсы';
       headerRow.appendChild(title);
       screen.appendChild(headerRow);
+
+      // «Ближайшие занятия»: подтвердить, перенести или «не смогу» прямо
+      // отсюда, не дожидаясь напоминания. Грузится отдельно, не задерживая экран.
+      const upcomingBox = document.createElement('div');
+      upcomingBox.style.cssText = 'width:100%;max-width:398px;margin:0 auto;box-sizing:border-box;';
+      screen.appendChild(upcomingBox);
+      apiGet('/api/me/lessons').then((items) => {
+        if (!items || !items.length) return;
+        upcomingBox.innerHTML = '<div style="font-size:12px;font-weight:800;letter-spacing:0.05em;text-transform:uppercase;color:var(--text-soft);margin:0 2px 8px;">Ближайшие занятия</div>';
+        items.slice(0, 3).forEach((l) => {
+          const c = document.createElement('div');
+          c.className = 'form-card';
+          c.style.cssText = 'margin-bottom:10px;padding:14px 16px;';
+          const state = l.attendance === 'confirmed' ? '<span style="color:#3E9E6A;font-weight:700;">✅ Вы подтвердили</span>'
+            : l.attendance === 'cancel_requested' ? '<span style="color:#D0584E;font-weight:700;">🚫 Вы сообщили, что не сможете</span>' : '';
+          c.innerHTML = `<div style="font-weight:700;font-size:15.5px;">${lrWhen(l.scheduled_at)}</div>` +
+            `<div class="field-hint" style="font-size:12.5px;margin-top:2px;">${l.tutor_name ? '👩‍🏫 ' + escapeHtml(l.tutor_name) : ''}${l.subject_title ? ' · ' + escapeHtml(l.subject_title) : ''} · ${l.duration_minutes} мин</div>` +
+            (state ? `<div style="font-size:12.5px;margin-top:6px;">${state}</div>` : '');
+          if (l.attendance !== 'cancel_requested') {
+            const row = document.createElement('div');
+            row.style.cssText = 'display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:10px;';
+            const mk = (text, primary, fn) => {
+              const b = document.createElement('button');
+              b.className = 'lr-slot';
+              b.style.cssText = 'font-size:12.5px;padding:8px 4px;' + (primary ? 'background:var(--accent);border-color:var(--accent);color:#fff;' : '');
+              b.textContent = text;
+              b.onclick = fn;
+              row.appendChild(b);
+              return b;
+            };
+            if (l.attendance !== 'confirmed') {
+              const yes = mk('✅ Буду', true, async () => {
+                yes.disabled = true;
+                try { await apiPost(`/api/me/lessons/${l.id}/confirm`, {}); l.attendance = 'confirmed'; yes.textContent = '✅ Готово'; }
+                catch (err) { yes.disabled = false; alert('Не получилось: ' + err.message); }
+              });
+            }
+            mk('🔁 Перенести', false, () => { setCoursesPageBackground(false); renderLessonResponse(l.id, 'reschedule'); });
+            mk('🚫 Не смогу', false, () => { setCoursesPageBackground(false); renderLessonResponse(l.id, 'cancel'); });
+            c.appendChild(row);
+          }
+          upcomingBox.appendChild(c);
+        });
+      }).catch(() => {});
 
       // Большой белый «лист» (398) — подложка ТОЛЬКО для карточек курсов,
       // начинается ниже заголовка, а не накрывает его.
