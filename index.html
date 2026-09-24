@@ -217,10 +217,12 @@
     white-space: normal; min-width: 0; line-height: 1.3; padding-top: 6px;
   }
 
-  .screen { animation: screen-in 0.32s var(--bounce) both; }
-  .screen.back { animation: screen-in-back 0.32s var(--bounce) both; }
-  @keyframes screen-in { from { opacity: 0; transform: translateX(18px) scale(0.98); } to { opacity: 1; transform: translateX(0) scale(1); } }
-  @keyframes screen-in-back { from { opacity: 0; transform: translateX(-18px) scale(0.98); } to { opacity: 1; transform: translateX(0) scale(1); } }
+  .screen { animation: screen-in 0.34s cubic-bezier(0.22, 0.8, 0.24, 1) both; }
+  .screen.back { animation: screen-in-back 0.34s cubic-bezier(0.22, 0.8, 0.24, 1) both; }
+  /* Плавные переходы как в Telegram. */
+  @keyframes screen-in { from { opacity: 0; transform: translateX(28%); } to { opacity: 1; transform: translateX(0); } }
+  @keyframes screen-in-back { from { opacity: 0; transform: translateX(-22%); } to { opacity: 1; transform: translateX(0); } }
+  #screenHost { overflow-x: clip; }
 
   .list { display: flex; flex-direction: column; gap: 12px; }
 
@@ -346,16 +348,15 @@
 
   .submit-btn {
     width: 100%; padding: 10px 16px; background: var(--accent); color: white; border: none;
-    border-bottom: 3px solid var(--accent-dark);
-    border-radius: 10px; font-family: 'Involve', sans-serif; font-size: 13px; font-weight: 700; cursor: pointer;
-    text-transform: uppercase; letter-spacing: 0.02em;
+    border-bottom: 0;
+    border-radius: 12px; font-family: 'Involve', sans-serif; font-size: 14px; font-weight: 700; cursor: pointer;
     transition: transform 0.12s var(--bounce), border-bottom-width 0.12s ease;
   }
   .submit-btn:disabled {
     background: var(--border); color: var(--text-soft); border-bottom-color: var(--border);
     opacity: 1; cursor: default;
   }
-  .submit-btn:active:not(:disabled) { transform: translateY(3px); border-bottom-width: 0; }
+  .submit-btn:active:not(:disabled) { transform: scale(0.97); }
 
   .feedback { margin-top: 18px; padding: 14px 16px; border-radius: 16px; border: 2px solid; animation: feedback-in 0.3s var(--bounce) both; }
   @keyframes feedback-in { from { opacity: 0; transform: translateY(-6px) scale(0.96); } to { opacity: 1; transform: translateY(0) scale(1); } }
@@ -3919,7 +3920,7 @@
             return b;
           };
           mk('📅 Google', true, () => openExternal(calendarLinks.google_url));
-          mk('🍏 iPhone / Mac', false, () => openExternal(calendarLinks.apple_url));
+          mk('🍏 Apple', false, () => openExternal(calendarLinks.apple_url));
           const copyBtn = mk('📋 Ссылка', false, () => {
             const done = () => { copyBtn.textContent = '✅ Готово'; };
             if (navigator.clipboard) navigator.clipboard.writeText(calendarLinks.url).then(done).catch(() => prompt('Скопируйте ссылку:', calendarLinks.url));
@@ -4410,14 +4411,11 @@
     // В боте теперь одна кнопка «Открыть» — она всегда ведёт сюда. Поэтому
     // репетитор, который уже выбирал «Я репетитор» на этом устройстве,
     // сразу переходит в свой кабинет; остальные видят выбор роли.
+    // При каждом открытии мини-аппа (кнопка «Открыть» в боте или кнопка
+    // меню) сначала экран «Я ученик / Я преподаватель». Пропускается только
+    // при внутренних переходах между режимами (параметр direct).
     const isDirect = new URLSearchParams(location.search).has('direct');
-    if (!isDirect && storedRoleChoice === 'teacher' && roleInfo && roleInfo.is_teacher && roleInfo.teacher_app_url) {
-      window.location.href = withDirectParam(roleInfo.teacher_app_url);
-      return;
-    }
-    const showChooser = !isDirect
-      && storedRoleChoice !== 'student'
-      && roleInfo && (roleInfo.role === 'guest' || roleInfo.is_teacher);
+    const showChooser = !isDirect && !!roleInfo;
     if (showChooser) {
       removeBootLoader();
       renderRoleChooser(roleInfo, () => { setAppChromeVisible(true); proceedAsStudent(info, status, subjects); });
@@ -4636,7 +4634,7 @@
       const subtitle = document.createElement('p');
       subtitle.className = 'field-hint';
       subtitle.style.cssText = 'margin:0 0 22px;font-size:13px;';
-      subtitle.textContent = 'Вы сейчас как ученик или как репетитор?';
+      subtitle.textContent = 'Кем вы заходите сейчас?';
       screen.appendChild(subtitle);
 
       const studentBtn = document.createElement('button');
@@ -4656,7 +4654,7 @@
       const teacherBtn = document.createElement('button');
       teacherBtn.className = 'submit-btn';
       teacherBtn.style.cssText = 'background:var(--bg);color:var(--text);border:1px solid var(--border);';
-      teacherBtn.textContent = '👩‍🏫 Я репетитор';
+      teacherBtn.textContent = '👩‍🏫 Я преподаватель';
       teacherBtn.onclick = async () => {
         try { localStorage.setItem('gryphy_preferred_role', 'teacher'); } catch (err) {}
         // Уже учитель — переходим в существующий кабинет и никогда не
@@ -4680,7 +4678,7 @@
           window.location.href = withDirectParam(res.teacher_app_url || roleInfo.teacher_app_url);
         } catch (err) {
           teacherBtn.disabled = false;
-          teacherBtn.textContent = '👩‍🏫 Я репетитор';
+          teacherBtn.textContent = '👩‍🏫 Я преподаватель';
           alert('Не получилось: ' + err.message);
         }
       };
