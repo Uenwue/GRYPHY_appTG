@@ -259,6 +259,8 @@
   .st-chip { border: 1px solid var(--border); background: var(--bg); color: var(--text); border-radius: 20px; padding: 7px 13px; font-size: 13.5px; cursor: pointer; }
   .st-chip sup { font-size: 10.5px; color: var(--text-soft); margin-left: 3px; vertical-align: super; }
   .st-chip.on { background: var(--d-tint); border-color: var(--d-accent); color: var(--d-accent-dark); font-weight: 700; }
+  .st-panel { background: var(--bg); border: 1px solid var(--border); border-radius: 16px; padding: 12px 14px; margin: -6px 0 16px; display: flex; flex-direction: column; gap: 10px; }
+  .st-panel-label { font-size: 11px; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase; color: var(--text-soft); margin-bottom: 6px; }
   .st-list { display: grid; grid-template-columns: 1fr; gap: 12px; }
   .st-card { display: flex; gap: 14px; align-items: flex-start; background: var(--bg); border: 1px solid var(--border); border-radius: 20px; padding: 16px; cursor: pointer; box-shadow: 0 2px 12px rgba(0,0,0,0.04); min-width: 0; transition: transform 0.12s var(--bounce); }
   .st-card:active { transform: scale(0.985); }
@@ -352,7 +354,8 @@
   .sg-head > div:first-child { position: sticky; left: 0; z-index: 4; background: var(--bg); }
   .sg-scroll { overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
   @media (max-width: 639px) {
-    .sg { --hour: 60px; --timecol: 38px; --daycol: 92px; }
+    .sg { --hour: 60px; --timecol: 38px; }
+    .sg-scroll { overflow-x: hidden; }
     .sg-title { font-size: 21px; }
     .sg-week { order: 3; flex-basis: 100%; justify-content: space-between; }
     .sg-today-btn { order: 2; }
@@ -378,6 +381,9 @@
   .sc-chip { cursor: pointer; border-radius: 6px; padding: 0 2px; margin: 0 -2px; }
   .sc-chip:hover { background: var(--bg-soft); }
   .sc-chip.add { color: var(--text-soft); }
+  .sc-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .sc-tag { font-size: 12px; font-weight: 700; padding: 3px 9px; border-radius: 10px; background: var(--blue-tint); color: var(--accent-dark); cursor: pointer; }
+  .sc-tag.add { background: var(--bg-soft); color: var(--text-soft); }
   .sc-sub { font-size: 13px; color: var(--text-soft); margin-top: 4px; cursor: pointer; }
   .sc-sub.note { color: var(--text); }
   .sc-next { border: 1px solid var(--border); border-radius: 14px; padding: 14px; margin-bottom: 12px; }
@@ -502,6 +508,9 @@
   .dash-income .sum small { font-size: 22px; opacity: 0.6; font-weight: 600; }
   .dash-income .trend { display: flex; align-items: center; gap: 10px; font-size: 12px; opacity: 0.95; margin-bottom: 14px; flex-wrap: wrap; }
   .dash-income .badge { background: rgba(255,255,255,0.22); border-radius: 20px; padding: 3px 10px; font-weight: 800; }
+  .dash-income .dash-profit { display: block; width: 100%; text-align: left; background: rgba(255,255,255,0.16); border: 1px solid rgba(255,255,255,0.25); color: #fff; border-radius: 12px; padding: 9px 12px; font-size: 13px; cursor: pointer; margin-bottom: 14px; }
+  .dash-income .dash-profit b { font-size: 15px; }
+  .dash-income .dash-profit span { display: block; font-size: 11px; opacity: 0.8; margin-top: 1px; }
   .dash-income .bars { border-top: 1px solid rgba(255,255,255,0.25); padding-top: 12px; display: flex; flex-direction: column; gap: 9px; }
   /* Полоски на всю ширину карточки: подпись и сумма — строкой выше. */
   .dash-income .bar-row { display: grid; grid-template-columns: 1fr auto; row-gap: 5px; font-size: 11.5px; }
@@ -610,6 +619,7 @@
   body:not(.mode-finance) .tb-support span { display: none; }
   body:not(.mode-finance) .tb-support { padding: 8px; }
   .crumbs.crumbs-hidden { display: none; }
+  .crumbs.crumbs-root .crumb-title, .crumbs.crumbs-root > div:last-child { font-size: 22px; font-weight: 700; }
   .side-nav-item.mobile-only { display: flex; }
   @media (max-width: 767px) {
     .tb-sep, .tb-nav { display: none; }
@@ -629,22 +639,25 @@
 
   .crumbs { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; min-height: 36px; }
   .back-btn {
-    background: var(--bg); border: 2px solid var(--border); border-bottom: 4px solid var(--border);
-    border-radius: 12px; padding: 6px 14px; font-family: 'Involve', sans-serif; font-size: 13px; font-weight: 700;
-    color: var(--text-soft); cursor: pointer; transition: transform 0.12s var(--bounce);
-    text-transform: uppercase; letter-spacing: 0.02em;
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: 12px; padding: 8px 14px; font-family: 'Involve', sans-serif; font-size: 13.5px; font-weight: 700;
+    color: var(--text); cursor: pointer; transition: transform 0.12s var(--bounce);
     flex-shrink: 0; white-space: nowrap;
   }
-  .back-btn:active { transform: translateY(3px); border-bottom-width: 1px; }
+  .back-btn:active { transform: scale(0.96); }
   .crumb-title {
     font-family: 'Involve', sans-serif; font-size: 16px; font-weight: 700;
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0;
   }
 
-  .screen { animation: screen-in 0.3s var(--bounce) both; }
-  .screen.back { animation: screen-in-back 0.3s var(--bounce) both; }
-  @keyframes screen-in { from { opacity: 0; transform: translateX(16px); } to { opacity: 1; transform: translateX(0); } }
-  @keyframes screen-in-back { from { opacity: 0; transform: translateX(-16px); } to { opacity: 1; transform: translateX(0); } }
+  .screen { animation: screen-in 0.34s cubic-bezier(0.22, 0.8, 0.24, 1) both; }
+  .screen.back { animation: screen-in-back 0.34s cubic-bezier(0.22, 0.8, 0.24, 1) both; }
+  /* Плавные переходы как в Telegram: новый экран въезжает справа,
+     при возврате — слева. */
+  @keyframes screen-in { from { opacity: 0; transform: translateX(28%); } to { opacity: 1; transform: translateX(0); } }
+  @keyframes screen-in-back { from { opacity: 0; transform: translateX(-22%); } to { opacity: 1; transform: translateX(0); } }
+  #screenHost { overflow-x: clip; }
+  .screen-loading { opacity: 0.45; pointer-events: none; transition: opacity 0.18s ease; }
 
   .list { display: flex; flex-direction: column; gap: 10px; }
 
@@ -731,7 +744,7 @@
   .choice-card .choice-icon { width: 34px; height: 34px; margin: 0 0 8px; flex-shrink: 0; }
   .choice-card .choice-title { font-family: 'Involve', sans-serif; font-size: 14.5px; font-weight: 700; color: var(--text); line-height: 1.2; }
 
-  .state-msg { text-align: center; color: var(--text-soft); font-size: 14px; padding: 24px 10px; }
+  .state-msg { text-align: center; color: var(--text-soft); font-size: 14px; padding: 12px 10px; }
 
   .form-card {
     background: var(--bg); border: 2px solid var(--border); border-radius: 16px;
@@ -809,7 +822,7 @@
 
   .save-btn {
     width: 100%; padding: 13px 16px; margin-top: 18px; background: var(--accent); color: white; border: none;
-    border-bottom: 3px solid var(--accent-dark);
+    border-bottom: 0;
     border-radius: 12px; font-family: 'Involve', sans-serif; font-size: 14.5px; font-weight: 700; cursor: pointer;
     text-transform: uppercase; letter-spacing: 0.02em;
     transition: transform 0.12s var(--bounce), border-bottom-width 0.12s ease;
@@ -818,21 +831,33 @@
     background: var(--border); color: var(--text-soft); border-bottom-color: var(--border);
     opacity: 1; cursor: default;
   }
-  .save-btn:active:not(:disabled) { transform: translateY(3px); border-bottom-width: 0; }
+  .save-btn:active:not(:disabled) { transform: scale(0.97); }
 
   .submit-btn {
     width: 100%; padding: 10px 16px; background: var(--accent); color: white; border: none;
-    border-bottom: 3px solid var(--accent-dark);
-    border-radius: 10px; font-family: 'Involve', sans-serif; font-size: 13px; font-weight: 700; cursor: pointer;
-    text-transform: uppercase; letter-spacing: 0.02em;
+    border-bottom: 0;
+    border-radius: 12px; font-family: 'Involve', sans-serif; font-size: 14px; font-weight: 700; cursor: pointer;
     transition: transform 0.12s var(--bounce), border-bottom-width 0.12s ease;
   }
   .submit-btn:disabled {
     background: var(--border); color: var(--text-soft); border-bottom-color: var(--border);
     opacity: 1; cursor: default;
   }
-  .submit-btn:active:not(:disabled) { transform: translateY(3px); border-bottom-width: 0; }
+  .submit-btn:active:not(:disabled) { transform: scale(0.97); }
 
+  /* ===== Настройки: белые карточки-блоки ===== */
+  .set-page-title { font-size: 24px; font-weight: 700; margin: 0 0 14px; }
+  .set-card { background: var(--bg); border: 1px solid var(--border); border-radius: 18px; padding: 16px; margin-bottom: 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.04); }
+  .set-title { font-size: 11.5px; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase; color: var(--text); margin-bottom: 10px; }
+  .set-hint { font-size: 12.5px; color: var(--text-soft); line-height: 1.4; margin-bottom: 10px; }
+  .set-btn { border: 1px solid var(--border); background: var(--bg); color: var(--text); border-radius: 12px; padding: 11px 10px; font-size: 13px; font-weight: 700; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; transition: transform 0.12s var(--bounce); }
+  .set-btn:active { transform: scale(0.97); }
+  .set-btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .set-btn:disabled { opacity: 0.5; }
+  .set-choice { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; padding: 10px 4px; border-radius: 12px; border: 1px solid var(--border); background: var(--bg); color: var(--text-soft); cursor: pointer; font-size: 12px; font-weight: 700; }
+  .set-choice.inline { flex-direction: row; padding: 8px 12px; font-size: 13px; color: var(--text); }
+  .set-choice.on { border-color: var(--accent); background: var(--blue-tint); color: var(--accent-dark); }
+  .set-url { margin-top: 8px; font-size: 11px; color: var(--text-soft); background: var(--bg-soft); border-radius: 8px; padding: 6px 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .cal-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
   .cal-row .submit-btn { padding: 11px 4px; font-size: 12px; letter-spacing: 0; text-transform: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .skip-btn {
@@ -1065,7 +1090,11 @@
     crumbsEl.innerHTML = '';
     // Главные разделы (Главная/Ученики/Расписание) уже подписаны в шапке и
     // на самом экране — строка «крошек» там не нужна.
-    crumbsEl.classList.toggle('crumbs-hidden', currentMode === 'finance' && stack.length === 1);
+    const topLvl = stack[stack.length - 1]?.level;
+    crumbsEl.classList.toggle('crumbs-hidden', (currentMode === 'finance' && stack.length === 1)
+      || topLvl === 'personal_settings' || topLvl === 'courses_list'
+      || (topLvl === 'students' && stack.length === 1));
+    crumbsEl.classList.toggle('crumbs-root', stack.length === 1);
     if (stack.length > 1) {
       const btn = document.createElement('button');
       btn.className = 'back-btn';
@@ -1078,8 +1107,13 @@
     const topItem = stack[stack.length - 1];
     // Название курса раньше было в шапке («Учитель: Английский») — теперь
     // шапка общая, поэтому показываем его здесь, на экране меню курса.
-    title.textContent = topItem.level === 'menu' && currentMode !== 'finance' && currentSubjectTitle
-      ? '📚 ' + currentSubjectTitle : topItem.title;
+    const isCourseMenu = topItem.level === 'menu' && currentMode !== 'finance' && currentSubjectTitle;
+    title.textContent = isCourseMenu ? '📚 ' + currentSubjectTitle + ' ▾' : topItem.title;
+    if (isCourseMenu) {
+      title.style.cursor = 'pointer';
+      title.title = 'Все курсы / новый курс';
+      title.onclick = goCoursesList;
+    }
     crumbsEl.appendChild(title);
   }
 
@@ -1148,11 +1182,64 @@
   }
 
   function goSubjectMode() {
+    if (!currentSubjectId) { goCoursesList(); return; }
     currentMode = 'subject';
     const subjTitleEl = document.getElementById('subjTitle');
     if (subjTitleEl) subjTitleEl.textContent = currentSubjectTitle || '…';
     stack = [{ level: 'menu', title: 'Меню' }];
     render(false);
+  }
+
+  // Список курсов (предметов) с кнопкой «+ Новый курс» — раньше в
+  // «Обучении» сразу открывался один курс, и добавить новый было негде.
+  function goCoursesList() {
+    currentMode = 'subject';
+    stack = [{ level: 'courses_list', title: 'Курсы' }];
+    render(false);
+  }
+
+  async function renderCoursesList(isBack) {
+    showLoadingMenu();
+    const { subjects } = await apiGet('/api/teacher/subjects');
+    swapScreen((screen) => {
+      const root = document.createElement('div');
+      root.className = 'st';
+      screen.appendChild(root);
+      const head = document.createElement('div');
+      head.className = 'st-top';
+      head.innerHTML = '<div class="st-title">Мои курсы</div>';
+      if (currentUserRole === 'admin') {
+        const add = document.createElement('button');
+        add.className = 'st-btn primary';
+        add.textContent = '+ Новый курс';
+        add.onclick = () => promptCreateSubject();
+        head.appendChild(add);
+      }
+      root.appendChild(head);
+      const list = document.createElement('div');
+      list.className = 'st-list';
+      if (!subjects.length) {
+        list.innerHTML = '<p class="field-hint">Пока нет ни одного курса. Нажмите «+ Новый курс».</p>';
+      }
+      subjects.forEach((sub, i) => {
+        const [color] = LESSON_COLORS[i % LESSON_COLORS.length];
+        const card = document.createElement('div');
+        card.className = 'st-card';
+        card.innerHTML = `<div class="st-ava" style="--ev:${color};border-radius:14px;font-size:20px;">📚</div>` +
+          `<div class="st-body"><div class="st-name">${escapeHtml(sub.title)}</div><div class="st-line">${sub.id === currentSubjectId ? 'Открыт сейчас' : 'Нажмите, чтобы открыть'}</div></div>` +
+          '<div class="st-right"><span style="color:var(--text-soft);font-size:20px;">\u203a</span></div>';
+        card.onclick = () => {
+          currentSubjectId = sub.id;
+          currentSubjectTitle = sub.title;
+          const subjTitleEl = document.getElementById('subjTitle');
+          if (subjTitleEl) subjTitleEl.textContent = sub.title;
+          stack = [{ level: 'menu', title: 'Меню' }];
+          render(false);
+        };
+        list.appendChild(card);
+      });
+      root.appendChild(list);
+    }, isBack);
   }
 
   function renderTopNav() {
@@ -1180,10 +1267,10 @@
     }
     // Обучение: выбор курса + разделы курса.
     const course = document.createElement('button');
-    course.className = 'tb-course';
+    course.className = 'tb-course' + (root === 'courses_list' ? ' on' : '');
     course.title = 'Сменить курс';
     course.textContent = '📚 ' + (currentSubjectTitle || 'Курсы') + ' ▾';
-    course.onclick = () => goSubjectMode();
+    course.onclick = () => goCoursesList();
     nav.appendChild(course);
     SIDE_NAV_ITEMS
       .filter((item) => !item.action && !CABINET_ONLY_LEVELS.includes(item.level)
@@ -1209,8 +1296,14 @@
         const res = await apiGet('/api/manager-contact-url');
         supportUrlCache = res.url || null;
       }
-      if (supportUrlCache) openExternalLink(supportUrlCache);
-      else showToast('Контакт поддержки пока не настроен');
+      if (supportUrlCache) {
+        // Ссылки на Telegram (t.me) внутри мини-аппа открываются только
+        // через openTelegramLink — через openLink они молча не работали.
+        if (/^https?:\/\/t\.me\//i.test(supportUrlCache) && tg && tg.openTelegramLink) tg.openTelegramLink(supportUrlCache);
+        else openExternalLink(supportUrlCache);
+      } else {
+        showToast('Поддержка не настроена: нужна переменная MANAGER_CONTACT_URL на сервере');
+      }
     } catch (err) { showToast('Не получилось открыть поддержку'); }
   }
 
@@ -1265,8 +1358,8 @@
     const moreBtn = document.createElement('button');
     moreBtn.className = 'side-nav-item side-nav-more';
     if (rootLevel === 'menu') moreBtn.classList.add('active');
-    moreBtn.title = 'Ещё';
-    moreBtn.innerHTML = '<svg viewBox="0 0 20 20" fill="none"><circle cx="4" cy="10" r="1.6" fill="currentColor"/><circle cx="10" cy="10" r="1.6" fill="currentColor"/><circle cx="16" cy="10" r="1.6" fill="currentColor"/></svg>';
+    moreBtn.title = 'Всё по курсу';
+    moreBtn.innerHTML = '<svg viewBox="0 0 20 20" fill="none"><rect x="3" y="3" width="5.5" height="5.5" rx="1.5" stroke="currentColor" stroke-width="1.6"/><rect x="11.5" y="3" width="5.5" height="5.5" rx="1.5" stroke="currentColor" stroke-width="1.6"/><rect x="3" y="11.5" width="5.5" height="5.5" rx="1.5" stroke="currentColor" stroke-width="1.6"/><rect x="11.5" y="11.5" width="5.5" height="5.5" rx="1.5" stroke="currentColor" stroke-width="1.6"/></svg><span class="side-nav-label">Ещё</span>';
     moreBtn.onclick = () => {
       currentMode = 'subject';
       const financeBtn = document.getElementById('financeToggleBtn');
@@ -1319,19 +1412,22 @@
       const list = document.createElement('div');
       list.className = 'list';
 
-      if (!items.length) {
-        const p = document.createElement('p');
-        p.className = 'state-msg';
-        p.textContent = emptyText;
-        list.appendChild(p);
-      }
-
       if (onAdd) {
         const addBtn = document.createElement('button');
         addBtn.className = 'add-row-btn';
         addBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 20 20" fill="none"><path d="M10 4V16M4 10H16" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg> ' + addLabel;
         addBtn.onclick = onAdd;
         list.appendChild(addBtn);
+      }
+
+      // Пустой список — короткая подсказка ПОД кнопкой «Добавить», без
+      // большого пустого места над ней.
+      if (!items.length) {
+        const p = document.createElement('p');
+        p.className = 'field-hint';
+        p.style.cssText = 'margin:2px 4px 0;font-size:13px;';
+        p.textContent = emptyText;
+        list.appendChild(p);
       }
 
       items.forEach((item, i) => {
@@ -1485,15 +1581,13 @@
   function openPersonalSettings() {
     const top = stack[stack.length - 1];
     if (top && top.level === 'personal_settings') {
-      if (stack.length > 1) {
-        stack.pop();
-      } else {
-        stack = [currentMode === 'finance' ? { level: 'dashboard', title: 'Дашборд' } : { level: 'menu', title: 'Меню' }];
-      }
+      stack = [currentMode === 'finance' ? { level: 'dashboard', title: 'Главная' } : { level: 'menu', title: 'Меню' }];
       render(true);
       return;
     }
-    stack.push({ level: 'personal_settings', title: 'Настройки' });
+    // Открываем как отдельный раздел (без «Назад»), закрыть — любым
+    // другим разделом или повторным нажатием «Настройки».
+    stack = [{ level: 'personal_settings', title: 'Настройки' }];
     render(false);
   }
 
@@ -1532,49 +1626,90 @@
     return btn;
   }
 
-  // Блок «Календарь» — общий вид для учителя и ученика: одна кнопка на
-  // Google Календарь (он же синхронизируется с Android), одна на
-  // календарь iPhone/Mac (подписка webcal://), плюс ручное копирование.
+  // Подтверждение с произвольной кнопкой (не «Удалить»).
+  function confirmAction(text, okLabel, onConfirm) {
+    lockBodyScroll();
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center;z-index:60;padding:20px;';
+    overlay.innerHTML = '<div style="background:var(--bg);border-radius:16px;padding:18px;max-width:340px;width:100%;">' +
+      `<div style="font-weight:600;font-size:14.5px;line-height:1.4;margin-bottom:14px;">${text}</div>` +
+      '<div id="caErr" style="color:var(--red-dark);font-size:12.5px;font-weight:700;margin-bottom:8px;display:none;"></div>' +
+      '<div style="display:flex;gap:8px;">' +
+      '<button class="back-btn" id="caCancel" style="flex:1;">Отмена</button>' +
+      `<button class="save-btn" id="caOk" style="flex:1;margin-top:0;">${okLabel}</button>` +
+      '</div></div>';
+    document.body.appendChild(overlay);
+    const close = () => { unlockBodyScroll(); overlay.remove(); };
+    overlay.querySelector('#caCancel').onclick = close;
+    overlay.onclick = (e) => { if (e.target === overlay) close(); };
+    const ok = overlay.querySelector('#caOk');
+    ok.onclick = async () => {
+      ok.disabled = true;
+      try { await onConfirm(); close(); } catch (err) {
+        ok.disabled = false;
+        const eb = overlay.querySelector('#caErr');
+        eb.textContent = 'Не получилось: ' + err.message;
+        eb.style.display = 'block';
+      }
+    };
+  }
+
+  // Блок «Календарь»: кнопки подключения в ряд + сама ссылка (видно, что
+  // она поменялась после «Новая ссылка»).
   function buildCalendarBlock(links, onRegenerate) {
     const wrap = document.createElement('div');
     const hint = document.createElement('div');
-    hint.className = 'field-hint';
-    hint.style.cssText = 'margin:0 0 10px;font-size:12.5px;line-height:1.4;';
-    hint.textContent = 'Подключите один раз — дальше все уроки (новые, перенесённые, отменённые) будут появляться в календаре сами.';
+    hint.className = 'set-hint';
+    hint.textContent = 'Подключите один раз — дальше уроки (новые, перенесённые, отменённые) будут появляться в календаре сами.';
     wrap.appendChild(hint);
-
-    const mkBtn = (text, onClick, primary) => {
-      const b = document.createElement('button');
-      b.className = 'submit-btn';
-      b.style.cssText = primary ? 'margin-bottom:8px;' : 'margin-bottom:8px;background:var(--bg-soft);color:var(--text);border:2px solid var(--border);';
-      b.textContent = text;
-      b.onclick = onClick;
-      return b;
-    };
-    // Кнопки подключения — в один ряд: Google · iPhone/Mac · Копировать.
     const row = document.createElement('div');
     row.className = 'cal-row';
-    const b1 = mkBtn('📅 Google', () => openExternalLink(links.google_url), true);
-    const b2 = mkBtn('🍏 iPhone / Mac', () => openExternalLink(links.apple_url));
-    const b3 = mkBtn('📋 Ссылка', () => {
+    const mk = (text, primary, fn) => {
+      const b = document.createElement('button');
+      b.className = primary ? 'set-btn primary' : 'set-btn';
+      b.textContent = text;
+      b.onclick = fn;
+      row.appendChild(b);
+      return b;
+    };
+    mk('📅 Google', true, () => openExternalLink(links.google_url));
+    mk('🍏 Apple', false, () => openExternalLink(links.apple_url));
+    mk('📋 Ссылка', false, () => {
       if (navigator.clipboard) navigator.clipboard.writeText(links.url).then(() => showToast('Ссылка скопирована')).catch(() => prompt('Скопируйте ссылку:', links.url));
       else prompt('Скопируйте ссылку:', links.url);
     });
-    [b1, b2, b3].forEach((b) => { b.style.marginBottom = '0'; row.appendChild(b); });
     wrap.appendChild(row);
+    const urlBox = document.createElement('div');
+    urlBox.className = 'set-url';
+    urlBox.textContent = links.url;
+    wrap.appendChild(urlBox);
     const note = document.createElement('div');
-    note.className = 'field-hint';
-    note.style.cssText = 'margin-top:8px;font-size:11.5px;';
+    note.className = 'set-hint';
+    note.style.marginTop = '8px';
     note.textContent = 'Android: подключите через Google — календарь телефона подтянет уроки сам. «Ссылка» — для любого другого календаря.';
     wrap.appendChild(note);
     if (onRegenerate) {
       const regen = document.createElement('button');
-      regen.style.cssText = 'background:none;border:none;color:var(--text-soft);font-size:12px;font-weight:700;cursor:pointer;padding:8px 0 0;';
-      regen.textContent = '🔄 Сделать новую ссылку (старая перестанет работать)';
+      regen.className = 'set-btn';
+      regen.style.cssText = 'width:100%;margin-top:10px;';
+      regen.textContent = '🔄 Новая ссылка';
       regen.onclick = onRegenerate;
       wrap.appendChild(regen);
     }
     return wrap;
+  }
+
+  // Белая карточка-блок в настройках (как карточки на «Моих курсах»).
+  function settingsCard(title) {
+    const card = document.createElement('div');
+    card.className = 'set-card';
+    if (title) {
+      const t = document.createElement('div');
+      t.className = 'set-title';
+      t.textContent = title;
+      card.appendChild(t);
+    }
+    return card;
   }
 
   async function renderPersonalSettingsScreen(isBack) {
@@ -1587,10 +1722,15 @@
     if (cur && cur.currency) setTutorCurrency(cur.currency);
 
     swapScreen((screen) => {
-      // --- Тема оформления (как у ученика) ---
-      screen.appendChild(settingsSectionTitle('Тема оформления'));
+      const h = document.createElement('div');
+      h.className = 'set-page-title';
+      h.textContent = 'Настройки';
+      screen.appendChild(h);
+
+      // --- Тема ---
+      const themeCard = settingsCard('Тема оформления');
       const themeGrid = document.createElement('div');
-      themeGrid.style.cssText = 'display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:24px;';
+      themeGrid.style.cssText = 'display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;';
       const themeOptions = [
         { key: 'system', label: 'Системная', icon: '<svg viewBox="0 0 20 20" fill="none"><rect x="5" y="2" width="10" height="16" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M9 15.5H11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>' },
         { key: 'light', label: 'Светлая', icon: '<svg viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="3.5" stroke="currentColor" stroke-width="1.5"/><path d="M10 2.5V4M10 16V17.5M3.5 4.2L4.6 5.3M15.4 14.7L16.5 15.8M2 10H3.5M16.5 10H18M3.5 15.8L4.6 14.7M15.4 5.3L16.5 4.2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>' },
@@ -1600,49 +1740,39 @@
       try { savedTheme = localStorage.getItem('miniapp-theme') || 'system'; } catch (err) {}
       themeOptions.forEach((opt) => {
         const btn = document.createElement('button');
-        const active = savedTheme === opt.key;
-        btn.style.cssText = `display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:9px 4px;border-radius:12px;border:2px solid ${active ? 'var(--accent)' : 'var(--border)'};background:${active ? 'var(--blue-tint)' : 'var(--bg)'};color:${active ? 'var(--accent)' : 'var(--text-soft)'};cursor:pointer;font-size:11.5px;font-weight:700;`;
+        btn.className = 'set-choice' + (savedTheme === opt.key ? ' on' : '');
         btn.innerHTML = `<span style="width:16px;height:16px;display:block;">${opt.icon}</span>${opt.label}`;
         btn.onclick = () => { applyThemeChoice(opt.key); renderPersonalSettingsScreen(false); };
         themeGrid.appendChild(btn);
       });
-      screen.appendChild(themeGrid);
+      themeCard.appendChild(themeGrid);
+      screen.appendChild(themeCard);
 
       // --- Календарь ---
-      screen.appendChild(settingsSectionTitle('Календарь'));
+      const calCard = settingsCard('Календарь');
       if (calendarLinks && calendarLinks.url) {
-        const block = buildCalendarBlock(calendarLinks, () => {
-          confirmDelete('Старая ссылка перестанет работать (если она уже добавлена в календарь — уроки оттуда пропадут, календарь нужно будет подключить заново). Создать новую?', async () => {
-            try {
-              await apiSend('POST', '/api/teacher/calendar-link/regenerate', {});
-              showToast('Новая ссылка создана');
-              renderPersonalSettingsScreen(false);
-            } catch (err) { showToast('Не получилось: ' + err.message); }
+        calCard.appendChild(buildCalendarBlock(calendarLinks, () => {
+          confirmAction('Создать новую ссылку? Старая перестанет работать: если календарь уже подключён, его нужно будет подключить заново.', 'Создать', async () => {
+            await apiSend('POST', '/api/teacher/calendar-link/regenerate', {});
+            showToast('Новая ссылка создана — подключите календарь заново');
+            renderPersonalSettingsScreen(false);
           });
-        });
-        screen.appendChild(block);
+        }));
       } else {
-        const p = document.createElement('div');
-        p.className = 'field-hint';
-        p.textContent = 'Не удалось загрузить ссылку на календарь — попробуйте открыть настройки ещё раз.';
-        screen.appendChild(p);
+        calCard.insertAdjacentHTML('beforeend', '<div class="set-hint">Не удалось загрузить ссылку на календарь — откройте настройки ещё раз.</div>');
       }
+      screen.appendChild(calCard);
 
-      // --- Валюта оплат ---
-      screen.appendChild(settingsSectionTitle('Валюта оплат', 24));
-      const curHint = document.createElement('div');
-      curHint.className = 'field-hint';
-      curHint.style.cssText = 'margin:0 0 8px;font-size:12.5px;';
-      curHint.textContent = 'В этой валюте создаются новые оплаты и абонементы и показываются суммы на главной.';
-      screen.appendChild(curHint);
+      // --- Валюта ---
+      const curCard = settingsCard('Валюта оплат');
+      curCard.insertAdjacentHTML('beforeend', '<div class="set-hint">Основная валюта кабинета. Для отдельного ученика её можно поменять в его карточке.</div>');
       const curRow = document.createElement('div');
       curRow.style.cssText = 'display:flex;flex-wrap:wrap;gap:8px;';
       Object.keys(CURRENCY_SYMBOLS).forEach((code) => {
         const b = document.createElement('button');
-        const on = code === tutorCurrency;
         b.type = 'button';
+        b.className = 'set-choice inline' + (code === tutorCurrency ? ' on' : '');
         b.title = CURRENCY_NAMES[code] || code;
-        b.style.cssText = `padding:8px 12px;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer;border:1px solid ${on ? 'var(--accent)' : 'var(--border)'};background:${on ? 'var(--blue-tint)' : 'var(--bg)'};color:${on ? 'var(--accent-dark)' : 'var(--text)'};`;
         b.textContent = `${CURRENCY_SYMBOLS[code]} ${code}`;
         b.onclick = async () => {
           try {
@@ -1654,30 +1784,27 @@
         };
         curRow.appendChild(b);
       });
-      screen.appendChild(curRow);
+      curCard.appendChild(curRow);
+      screen.appendChild(curCard);
 
-      // --- Каталог репетиторов ---
-      screen.appendChild(settingsSectionTitle('Каталог репетиторов', 24));
+      // --- Каталог ---
+      const catCard = settingsCard('Каталог репетиторов');
       let isPublic = !!profile.is_public;
       const pubRow = document.createElement('div');
-      pubRow.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 0;border-bottom:1px solid var(--border);';
-      const pubLbl = document.createElement('span');
-      pubLbl.style.cssText = 'font-size:14px;font-weight:600;';
-      pubLbl.textContent = 'Показываться в каталоге ученикам платформы';
-      pubRow.appendChild(pubLbl);
+      pubRow.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:10px;';
+      pubRow.innerHTML = '<span style="font-size:14px;font-weight:600;">Показываться в каталоге ученикам платформы</span>';
       pubRow.appendChild(buildSettingsToggle(isPublic, (v) => { isPublic = v; }));
-      screen.appendChild(pubRow);
-
+      catCard.appendChild(pubRow);
       const bioInput = document.createElement('textarea');
       bioInput.className = 'field-input';
       bioInput.rows = 3;
       bioInput.placeholder = 'Коротко о себе для карточки в каталоге';
       bioInput.style.cssText = 'margin:12px 0 10px;resize:vertical;';
       bioInput.value = profile.bio || '';
-      screen.appendChild(bioInput);
-
+      catCard.appendChild(bioInput);
       const saveBtn = document.createElement('button');
-      saveBtn.className = 'submit-btn';
+      saveBtn.className = 'set-btn primary';
+      saveBtn.style.width = '100%';
       saveBtn.textContent = 'Сохранить';
       saveBtn.onclick = async () => {
         saveBtn.disabled = true;
@@ -1687,25 +1814,35 @@
         } catch (err) { showToast('Не получилось: ' + err.message); }
         saveBtn.disabled = false;
       };
-      screen.appendChild(saveBtn);
+      catCard.appendChild(saveBtn);
+      screen.appendChild(catCard);
 
       // --- Режим ---
-      screen.appendChild(settingsSectionTitle('Режим', 24));
+      const modeCard = settingsCard('Режим');
       const modeBtn = document.createElement('button');
-      modeBtn.className = 'submit-btn';
-      modeBtn.style.cssText = 'background:var(--bg-soft);color:var(--text);border:2px solid var(--border);';
-      modeBtn.textContent = hasStudentAccess ? '🎓 Режим ученика' : '🎓 Стать учеником';
+      modeBtn.className = 'set-btn';
+      modeBtn.style.width = '100%';
+      modeBtn.textContent = hasStudentAccess ? '🎓 Перейти в режим ученика' : '🎓 Стать учеником';
       modeBtn.disabled = !studentAppUrl;
       modeBtn.onclick = () => {
         try { localStorage.setItem('gryphy_preferred_role', 'student'); } catch (err) {}
         if (studentAppUrl) window.location.href = withDirectParam(studentAppUrl);
       };
-      screen.appendChild(modeBtn);
+      modeCard.appendChild(modeBtn);
+      screen.appendChild(modeCard);
     }, isBack);
   }
 
   function renderTeacherStudentChooser() {
     swapScreen((screen) => {
+      const logoSrc = document.querySelector('.tb-logo-img')?.src;
+      if (logoSrc) {
+        const logo = document.createElement('img');
+        logo.src = logoSrc;
+        logo.alt = 'Navarts';
+        logo.style.cssText = 'height:34px;display:block;margin:4px 0 22px;';
+        screen.appendChild(logo);
+      }
       const title = document.createElement('h2');
       title.style.cssText = 'font-family:"Involve",sans-serif;font-size:20px;font-weight:800;margin:0 0 6px;';
       title.textContent = '👋 Добро пожаловать!';
@@ -1713,13 +1850,13 @@
       const subtitle = document.createElement('p');
       subtitle.className = 'field-hint';
       subtitle.style.cssText = 'margin:0 0 22px;font-size:13px;';
-      subtitle.textContent = 'Вы сейчас как учитель или как ученик?';
+      subtitle.textContent = 'Кем вы заходите сейчас?';
       screen.appendChild(subtitle);
 
       const teacherBtn = document.createElement('button');
       teacherBtn.className = 'submit-btn';
       teacherBtn.style.cssText = 'margin-bottom:12px;';
-      teacherBtn.textContent = '👩‍🏫 Я учитель';
+      teacherBtn.textContent = '👩‍🏫 Я преподаватель';
       teacherBtn.onclick = () => {
         try { localStorage.setItem('gryphy_preferred_role', 'teacher'); } catch (err) {}
         setAppChromeVisible(true);
@@ -1729,7 +1866,7 @@
 
       const studentBtn = document.createElement('button');
       studentBtn.className = 'submit-btn';
-      studentBtn.style.cssText = 'background:var(--bg-soft);color:var(--text);border:2px solid var(--border);';
+      studentBtn.style.cssText = 'background:var(--bg);color:var(--text);border:1px solid var(--border);';
       studentBtn.textContent = '🎓 Я ученик';
       studentBtn.onclick = () => {
         try { localStorage.setItem('gryphy_preferred_role', 'student'); } catch (err) {}
@@ -1746,6 +1883,11 @@
     const current = stack[stack.length - 1];
     document.body.classList.toggle('dash-wide', current.level === 'dashboard' || current.level === 'schedule_grid');
 
+    if (current.level === 'courses_list') {
+      try { await renderCoursesList(isBack); }
+      catch (err) { showErrorMsg(err, isBack); }
+      return;
+    }
     if (current.level === 'personal_settings') {
       try { await renderPersonalSettingsScreen(isBack); }
       catch (err) { showToast('Не получилось открыть настройки: ' + err.message); }
@@ -1792,7 +1934,9 @@
           // этом устройстве, обновление страницы не должно снова
           // спрашивать: иначе любой рефреш кидал бы на этот экран вместо
           // того, чтобы остаться там, где человек и был.
-          if (!isDirect && storedRoleChoice !== 'teacher' && hasStudentAccess && studentAppUrl) {
+          // Кабинет, открытый напрямую (кнопка меню бота), тоже сначала
+          // спрашивает «Я ученик / Я преподаватель» — как и мини-апп ученика.
+          if (!isDirect && studentAppUrl) {
             setAppChromeVisible(false);
             renderTeacherStudentChooser();
             return;
@@ -2423,7 +2567,15 @@
   }
 
   function showLoadingMenu() {
+    // Пока грузится следующий экран, текущий просто приглушается — без
+    // резкой вспышки «Загружаем…» между экранами.
+    const current = screenHost.querySelector('.screen');
+    if (current && !current.dataset.loadingScreen) {
+      current.classList.add('screen-loading');
+      return;
+    }
     swapScreen((screen) => {
+      screen.dataset.loadingScreen = '1';
       const p = document.createElement('p');
       p.className = 'state-msg';
       p.textContent = 'Загружаем…';
@@ -3163,6 +3315,9 @@
     } catch (err) { showErrorMsg(err, isBack); }
   }
 
+  // Ученики курса — по папкам: «Курс» (все ученики курса одним списком),
+  // каждая мини-группа и каждая групповая — своей папкой, индивидуальные —
+  // одной папкой. Внутри папки — поиск и фильтр по классу.
   async function renderStudents(isBack) {
     showLoadingMenu();
     try {
@@ -3170,146 +3325,171 @@
         apiGet(`/api/teacher/subjects/${currentSubjectId}/students`),
         apiGet(`/api/teacher/subjects/${currentSubjectId}/groups`),
       ]);
-      let activeFilter = studentsGroupFilter;
-      let activeCourseType = studentsCourseTypeFilter;
+      const top = stack[stack.length - 1];
+      const folderKey = top.folder || null;
+
+      const kindOf = (st) => {
+        const ct = st.course_type || 'Курс';
+        return ct === 'Экспресс-курс' ? 'Курс' : ct;
+      };
+      const groupByTitle = new Map(groups.map((g) => [g.title, g]));
+      const folders = [];
+      const courseStudents = students.filter((st) => kindOf(st) === 'Курс' && !st.group_title);
+      if (courseStudents.length) folders.push({ key: 'course', icon: '📚', title: 'Курс', sub: 'Все ученики курса', list: courseStudents, color: '#238BA7' });
+      groups.forEach((g) => {
+        const list = students.filter((st) => st.group_title === g.title);
+        const kind = g.kind === 'Экспресс-курс' ? 'Курс' : (g.kind || 'Мини-группа');
+        folders.push({
+          key: 'group:' + g.id, icon: kind === 'Групповые' ? '👨‍👩‍👧‍👦' : '👥', title: g.title,
+          sub: `${kind} \u00b7 код ${g.join_code}`, list, color: kind === 'Групповые' ? '#8A63C9' : '#E08A3C',
+        });
+      });
+      const noGroup = students.filter((st) => ['Мини-группа', 'Групповые'].includes(kindOf(st)) && (!st.group_title || !groupByTitle.has(st.group_title)));
+      if (noGroup.length) folders.push({ key: 'nogroup', icon: '🗂', title: 'Без группы', sub: 'Мини-группы и групповые без группы', list: noGroup, color: '#9AA3AE' });
+      const indiv = students.filter((st) => kindOf(st) === 'Индивидуальные');
+      folders.push({ key: 'individual', icon: '👤', title: 'Индивидуальные', sub: 'Занятия один на один', list: indiv, color: '#3E9E6A' });
+
+      const addMenu = () => scMenu([
+        { label: '📚 На курс', onClick: () => promptGrantSubscription(null, 'Курс') },
+        { label: '👥 В мини-группу', onClick: () => promptGrantSubscription(null, 'Мини-группа') },
+        { label: '👨‍👩‍👧‍👦 В групповые', onClick: () => promptGrantSubscription(null, 'Групповые') },
+        { label: '👤 Индивидуально', onClick: () => promptGrantSubscription(null, 'Индивидуальные') },
+        { label: '➕ Новая группа', onClick: () => promptCreateGroup(() => render(false)) },
+      ]);
+
       swapScreen((screen) => {
-        const addBtn = document.createElement('button');
-        addBtn.className = 'add-row-btn';
-        addBtn.style.width = '100%';
-        addBtn.style.marginBottom = '14px';
-        addBtn.textContent = '➕ Добавить ученика по id';
-        addBtn.onclick = () => promptGrantSubscription();
-        screen.appendChild(addBtn);
+        const root = document.createElement('div');
+        root.className = 'st';
+        screen.appendChild(root);
 
-        const courseTypeRow = document.createElement('div');
-        courseTypeRow.style.cssText = 'display:flex;gap:6px;overflow-x:auto;margin-bottom:10px;padding-bottom:2px;';
-        const courseTypeDefs = [
-          { key: 'all', label: 'Все' },
-          { key: 'Курс', label: 'Курс' },
-          { key: 'Мини-группа', label: 'Мини-группа' },
-          { key: 'Экспресс-курс', label: 'Экспресс' },
-        ];
-        const makeCourseTypePill = (key, label) => {
-          const pill = document.createElement('button');
-          const active = activeCourseType === key;
-          pill.textContent = label;
-          pill.style.cssText = `flex-shrink:0;padding:8px 15px;border-radius:20px;border:2px solid ${active ? 'var(--accent, var(--blue))' : 'var(--border)'};background:${active ? 'var(--blue-tint)' : 'var(--bg)'};color:${active ? 'var(--blue-dark)' : 'var(--text-soft)'};font-family:'Involve',sans-serif;font-size:12.5px;font-weight:800;cursor:pointer;white-space:nowrap;`;
-          pill.onclick = () => { studentsCourseTypeFilter = key; studentsGroupFilter = 'all'; render(false); };
-          return pill;
+        if (!folderKey) {
+          const head = document.createElement('div');
+          head.className = 'st-top';
+          head.innerHTML = '<div class="st-title">Ученики курса</div>';
+          const add = document.createElement('button');
+          add.className = 'st-btn primary';
+          add.textContent = '+ Добавить';
+          add.onclick = addMenu;
+          head.appendChild(add);
+          root.appendChild(head);
+
+          const grid = document.createElement('div');
+          grid.className = 'st-list';
+          folders.forEach((f) => {
+            const card = document.createElement('div');
+            card.className = 'st-card';
+            card.innerHTML = `<div class="st-ava" style="--ev:${f.color};border-radius:14px;font-size:20px;">${f.icon}</div>` +
+              `<div class="st-body"><div class="st-name">${escapeHtml(f.title)}</div><div class="st-line">${escapeHtml(f.sub)}</div></div>` +
+              `<div class="st-right"><span class="st-badge">${f.list.length}</span><span style="color:var(--text-soft);font-size:20px;">\u203a</span></div>`;
+            card.onclick = () => { stack.push({ level: 'students', folder: f.key, title: f.title }); render(false); };
+            grid.appendChild(card);
+          });
+          root.appendChild(grid);
+          if (!students.length) {
+            root.insertAdjacentHTML('beforeend', '<p class="field-hint" style="margin-top:14px;">Пока ни одного ученика. Нажмите «+ Добавить» — по telegram id, @нику или телефону.</p>');
+          }
+          return;
+        }
+
+        const folder = folders.find((f) => f.key === folderKey) || { title: top.title, list: [] };
+        const head = document.createElement('div');
+        head.className = 'st-top';
+        head.style.justifyContent = 'flex-end';
+        head.innerHTML = `<div class="field-hint" style="margin-right:auto;">${folder.list.length} ${dashPlural(folder.list.length, 'ученик', 'ученика', 'учеников')}</div>`;
+        const add = document.createElement('button');
+        add.className = 'st-btn primary';
+        add.textContent = '+ Добавить';
+        add.style.flex = '0 0 auto';
+        add.onclick = () => {
+          if (folderKey === 'course') promptGrantSubscription(null, 'Курс');
+          else if (folderKey === 'individual') promptGrantSubscription(null, 'Индивидуальные');
+          else addMenu();
         };
-        courseTypeDefs.forEach((d) => courseTypeRow.appendChild(makeCourseTypePill(d.key, d.label)));
-        screen.appendChild(courseTypeRow);
+        head.appendChild(add);
+        root.appendChild(head);
 
-        if (activeCourseType === 'Мини-группа' && groups.length) {
-          const filterRow = document.createElement('div');
-          filterRow.style.cssText = 'display:flex;gap:6px;overflow-x:auto;margin-bottom:14px;padding-bottom:2px;';
-          const makeFilterPill = (key, label) => {
-            const pill = document.createElement('button');
-            const active = activeFilter === key;
-            pill.textContent = label;
-            pill.style.cssText = `flex-shrink:0;padding:7px 14px;border-radius:20px;border:2px solid ${active ? 'var(--blue)' : 'var(--border)'};background:${active ? 'var(--blue-tint)' : 'var(--bg)'};color:${active ? 'var(--blue-dark)' : 'var(--text-soft)'};font-family:'Involve',sans-serif;font-size:12.5px;font-weight:800;cursor:pointer;white-space:nowrap;`;
-            pill.onclick = () => { studentsGroupFilter = key; render(false); };
-            return pill;
-          };
-          filterRow.appendChild(makeFilterPill('all', 'Все подгруппы'));
-          filterRow.appendChild(makeFilterPill('none', 'Без подгруппы'));
-          groups.forEach((g) => filterRow.appendChild(makeFilterPill(g.title, g.title)));
-          screen.appendChild(filterRow);
-        }
+        const search = document.createElement('div');
+        search.className = 'st-search';
+        search.innerHTML = '<svg viewBox="0 0 20 20" fill="none"><circle cx="9" cy="9" r="6" stroke="currentColor" stroke-width="1.8"/><path d="M13.5 13.5L17 17" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>';
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.placeholder = 'Найти ученика';
+        search.appendChild(input);
+        root.appendChild(search);
 
-        const visibleStudents = students.filter((s) => {
-          if (activeCourseType !== 'all' && (s.course_type || 'Курс') !== activeCourseType) return false;
-          if (activeCourseType === 'Мини-группа') {
-            if (activeFilter === 'none') return !s.group_title;
-            if (activeFilter !== 'all') return s.group_title === activeFilter;
-          }
-          return true;
-        });
+        // Фильтр по классу (из анкеты ученика).
+        const grades = [...new Set(folder.list.map((x) => x.grade).filter(Boolean).map(String))].sort((a, b) => a.localeCompare(b, 'ru', { numeric: true }));
+        const gradeSel = new Set();
+        const chips = document.createElement('div');
+        chips.className = 'st-chips';
+        const drawChips = () => {
+          chips.innerHTML = '';
+          if (!grades.length) return;
+          const all = document.createElement('button');
+          all.className = 'st-chip' + (gradeSel.size ? '' : ' on');
+          all.textContent = 'Все классы';
+          all.onclick = () => { gradeSel.clear(); drawChips(); drawList(); };
+          chips.appendChild(all);
+          grades.forEach((g) => {
+            const c = document.createElement('button');
+            c.className = 'st-chip' + (gradeSel.has(g) ? ' on' : '');
+            c.textContent = (gradeSel.has(g) ? '\u2713 ' : '') + (/^\d+$/.test(g) ? g + ' класс' : g);
+            c.onclick = () => { if (gradeSel.has(g)) gradeSel.delete(g); else gradeSel.add(g); drawChips(); drawList(); };
+            chips.appendChild(c);
+          });
+        };
+        drawChips();
+        root.appendChild(chips);
 
-        if (!students.length) {
-          const p = document.createElement('p');
-          p.className = 'state-msg';
-          p.textContent = 'Пока ни один ученик не решал задания по этому предмету. Чтобы добавить ученика заранее (например, сразу после оплаты) — используйте кнопку выше и укажите его telegram id.';
-          screen.appendChild(p);
-          return;
-        }
-        if (!visibleStudents.length) {
-          const p = document.createElement('p');
-          p.className = 'state-msg';
-          p.textContent = 'В этой группе пока никого нет.';
-          screen.appendChild(p);
-          return;
-        }
-        const statusLabels = {'school': 'Школа', 'college': 'Колледж/вуз', 'work': 'Работает'};
-        const PASTEL_COLORS = ['#FFB4A8', '#F5B8E0', '#FFDB70', '#C9B8F5', '#A8E6D4', '#A8D8F5'];
         const list = document.createElement('div');
-        list.className = 'list';
-        visibleStudents.forEach((s, i) => {
-          const card = document.createElement('div');
-          card.className = 'row-card';
-          card.style.cursor = 'pointer';
-          const avatar = document.createElement('div');
-          avatar.style.cssText = `width:40px;height:40px;border-radius:12px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-family:'Involve',sans-serif;font-weight:800;font-size:16px;color:rgba(0,0,0,0.55);background:${PASTEL_COLORS[i % PASTEL_COLORS.length]};`;
-          avatar.textContent = (s.display_name || '?').trim().charAt(0).toUpperCase();
-          card.appendChild(avatar);
-          const info = document.createElement('div');
-          info.style.flex = '1';
-          info.style.minWidth = '0';
-          const t = document.createElement('div');
-          t.className = 'row-title';
-          t.textContent = s.display_name;
-          info.appendChild(t);
-          const sub = document.createElement('div');
-          sub.className = 'row-sub';
-          if (s.profile_filled) {
-            const statusText = statusLabels[s.status] || s.status;
-            const gradeText = s.status === 'school' && s.grade ? `, ${s.grade} класс` : '';
-            sub.textContent = `${statusText}${gradeText} \u00b7 ${s.city}`;
-          } else {
-            sub.textContent = 'Анкета не заполнена';
-            sub.style.color = 'var(--text-soft)';
-            sub.style.fontStyle = 'italic';
+        list.className = 'st-list';
+        root.appendChild(list);
+        const statusLabels = { school: 'Школа', college: 'Колледж/вуз', work: 'Работает' };
+        function drawList() {
+          list.innerHTML = '';
+          const q = input.value.trim().toLowerCase();
+          const shown = folder.list.filter((st) => (!q || (st.display_name || '').toLowerCase().includes(q))
+            && (!gradeSel.size || gradeSel.has(String(st.grade || ''))));
+          if (!shown.length) {
+            list.innerHTML = `<p class="field-hint">${folder.list.length ? 'Никого не нашлось.' : 'В этой папке пока никого нет.'}</p>`;
+            return;
           }
-          info.appendChild(sub);
-          const tagsRow = document.createElement('div');
-          tagsRow.style.cssText = 'display:flex;gap:5px;flex-wrap:wrap;margin-top:3px;';
-          if (s.course_type) {
-            const ctTag = document.createElement('span');
-            ctTag.style.cssText = 'font-size:11px;font-weight:800;color:var(--green-dark);background:var(--green-tint);padding:2px 7px;border-radius:7px;';
-            ctTag.textContent = s.course_type;
-            tagsRow.appendChild(ctTag);
-          }
-          if (s.group_title) {
-            const groupTag = document.createElement('span');
-            groupTag.style.cssText = 'font-size:11px;font-weight:800;color:var(--blue-dark);background:var(--blue-tint);padding:2px 7px;border-radius:7px;';
-            groupTag.textContent = '👥 ' + s.group_title;
-            tagsRow.appendChild(groupTag);
-          }
-          if (tagsRow.children.length) info.appendChild(tagsRow);
-          card.appendChild(info);
-          const deleteBtn = document.createElement('button');
-          deleteBtn.className = 'icon-btn';
-          deleteBtn.title = 'Убрать из предмета';
-          deleteBtn.innerHTML = ICONS.trash;
-          deleteBtn.onclick = (e) => {
-            e.stopPropagation();
-            confirmDelete(
-              `Убрать ${s.display_name} из этого предмета? Доступ и группа по этому предмету будут сняты. Аккаунт ученика и его доступ к другим предметам не затронуты.`,
-              async () => {
-                await apiSend('DELETE', `/api/teacher/subjects/${currentSubjectId}/students/${s.telegram_id}`);
-                render(false);
-              }
-            );
-          };
-          card.appendChild(deleteBtn);
-          const arrow = document.createElement('span');
-          arrow.style.cssText = 'color:var(--border);font-size:18px;font-weight:700;flex-shrink:0;';
-          arrow.textContent = '\u203a';
-          card.appendChild(arrow);
-          card.onclick = () => renderStudentSubscriptions(s.telegram_id, s.display_name, s.group_title);
-          list.appendChild(card);
-        });
-        screen.appendChild(list);
+          shown.forEach((st) => {
+            const [color] = lessonColor({ telegram_id: st.telegram_id });
+            const card = document.createElement('div');
+            card.className = 'st-card';
+            const sub = st.profile_filled
+              ? `${statusLabels[st.status] || st.status || ''}${st.status === 'school' && st.grade ? `, ${st.grade} класс` : ''}${st.city ? ' \u00b7 ' + st.city : ''}`
+              : 'Анкета не заполнена';
+            card.innerHTML = `<div class="st-ava" style="--ev:${color};font-weight:800;font-size:17px;">${escapeHtml((st.display_name || '?').trim().charAt(0).toUpperCase())}</div>` +
+              `<div class="st-body"><div class="st-name">${escapeHtml(st.display_name)}</div><div class="st-line">${escapeHtml(sub)}</div>` +
+              (st.group_title && folderKey === 'nogroup' ? '' : '') + '</div>';
+            const right = document.createElement('div');
+            right.className = 'st-right';
+            const more = document.createElement('button');
+            more.className = 'st-more';
+            more.textContent = '\u22ef';
+            more.onclick = (e) => {
+              e.stopPropagation();
+              scMenu([
+                { label: '👤 Открыть карточку', onClick: () => renderStudentSubscriptions(st.telegram_id, st.display_name, st.group_title) },
+                {
+                  label: '🗑 Убрать из курса', danger: true,
+                  onClick: () => confirmDelete(`Убрать ${escapeHtml(st.display_name)} из этого курса? Доступ и группа по курсу будут сняты, аккаунт и прогресс останутся.`, async () => {
+                    await apiSend('DELETE', `/api/teacher/subjects/${currentSubjectId}/students/${st.telegram_id}`);
+                    render(false);
+                  }),
+                },
+              ]);
+            };
+            right.appendChild(more);
+            card.appendChild(right);
+            card.onclick = () => renderStudentSubscriptions(st.telegram_id, st.display_name, st.group_title);
+            list.appendChild(card);
+          });
+        }
+        drawList();
+        input.oninput = drawList;
       }, isBack);
     } catch (err) { showErrorMsg(err, isBack); }
   }
@@ -3642,7 +3822,7 @@
     overlay.querySelector('#gkChangeClose').onclick = closeOverlay;
 
     const box = overlay.querySelector('#gkChangeBox');
-    ['Курс', 'Мини-группа', 'Экспресс-курс'].forEach((k) => {
+    ['Курс', 'Мини-группа', 'Групповые'].forEach((k) => {
       const btn = document.createElement('button');
       btn.type = 'button';
       const active = (group.kind || 'Мини-группа') === k;
@@ -3679,7 +3859,7 @@
     const kindBox = overlay.querySelector('#gkKindBox');
     function renderKindButtons() {
       kindBox.innerHTML = '';
-      ['Курс', 'Мини-группа', 'Экспресс-курс'].forEach((k) => {
+      ['Курс', 'Мини-группа', 'Групповые'].forEach((k) => {
         const btn = document.createElement('button');
         btn.type = 'button';
         const active = selectedKind === k;
@@ -3722,6 +3902,7 @@
 
   let allStudentsFilter = 'all';
   let allStudentsFilters = new Set();
+  let allStudentsPanelOpen = false;
   let allStudentsSearch = '';
   let allStudentsCourseFilter = '';
 
@@ -3859,6 +4040,14 @@
         const fx = (k) => FILTERS.find((x) => x.key === k).test(u);
         if (types.length && !types.some(fx)) return false;
         if (stats.length && !stats.some(fx)) return false;
+        // Уровень / класс / теги: внутри группы — «или», между — «и».
+        for (const prefix of ['level:', 'grade:', 'tag:']) {
+          const wanted = [...sel].filter((k) => k.startsWith(prefix)).map((k) => k.slice(prefix.length));
+          if (!wanted.length) continue;
+          const has = (m) => prefix === 'tag:' ? (m.tags || []).some((t) => wanted.includes(t))
+            : wanted.includes(String((prefix === 'level:' ? m.level : m.grade) || ''));
+          if (!u.members.some(has)) return false;
+        }
         return true;
       };
 
@@ -3926,6 +4115,19 @@
           };
           chips.appendChild(c);
         });
+        // «Фильтры»: уровень, класс и теги учителя (раскрывающаяся панель).
+        const uniq = (arr) => [...new Set(arr.filter(Boolean).map(String))].sort((a, b) => a.localeCompare(b, 'ru', { numeric: true }));
+        const levels = uniq(students.map((x) => x.level));
+        const grades = uniq(students.map((x) => x.grade));
+        const tags = uniq(students.flatMap((x) => x.tags || []));
+        const extraCount = [...sel].filter((k) => k.includes(':')).length;
+        if (levels.length || grades.length || tags.length) {
+          const fBtn = document.createElement('button');
+          fBtn.className = 'st-chip' + (extraCount ? ' on' : '');
+          fBtn.innerHTML = `⚙ Фильтры${extraCount ? `<sup>${extraCount}</sup>` : ''} ${allStudentsPanelOpen ? '\u25b4' : '\u25be'}`;
+          fBtn.onclick = () => { allStudentsPanelOpen = !allStudentsPanelOpen; renderAllStudents(false); };
+          chips.appendChild(fBtn);
+        }
         if (sel.size) {
           const reset = document.createElement('button');
           reset.className = 'st-chip';
@@ -3935,6 +4137,39 @@
           chips.appendChild(reset);
         }
         root.appendChild(chips);
+
+        if (allStudentsPanelOpen) {
+          const panel = document.createElement('div');
+          panel.className = 'st-panel';
+          const uniq2 = (arr) => [...new Set(arr.filter(Boolean).map(String))].sort((a, b) => a.localeCompare(b, 'ru', { numeric: true }));
+          const groupsDef = [
+            ['Уровень', 'level:', uniq2(students.map((x) => x.level)), (v) => v],
+            ['Класс', 'grade:', uniq2(students.map((x) => x.grade)), (v) => (/^\d+$/.test(v) ? v + ' класс' : v)],
+            ['Теги', 'tag:', uniq2(students.flatMap((x) => x.tags || [])), (v) => '#' + v],
+          ];
+          groupsDef.forEach(([label, prefix, values, fmt]) => {
+            const row = document.createElement('div');
+            row.className = 'st-panel-row';
+            row.innerHTML = `<div class="st-panel-label">${label}</div>`;
+            const box = document.createElement('div');
+            box.className = 'st-chips';
+            box.style.margin = '0';
+            if (!values.length) {
+              box.innerHTML = `<span class="field-hint" style="font-size:12px;">${prefix === 'tag:' ? 'Теги добавляются в карточке ученика' : 'Пока не указано ни у кого — задаётся в карточке ученика'}</span>`;
+            }
+            values.forEach((v) => {
+              const key = prefix + v;
+              const c = document.createElement('button');
+              c.className = 'st-chip' + (sel.has(key) ? ' on' : '');
+              c.textContent = (sel.has(key) ? '\u2713 ' : '') + fmt(v);
+              c.onclick = () => { if (sel.has(key)) sel.delete(key); else sel.add(key); renderAllStudents(false); };
+              box.appendChild(c);
+            });
+            row.appendChild(box);
+            panel.appendChild(row);
+          });
+          root.appendChild(panel);
+        }
 
         const list = document.createElement('div');
         list.className = 'st-list';
@@ -3984,7 +4219,8 @@
                 `<div class="st-line">Парный${dur ? ' \u00b7 ' + dur : ''}</div>`;
             } else {
               const bits = [escapeHtml(first.lesson_type)];
-              if (first.price_per_lesson) bits.push(`${Math.round(first.price_per_lesson).toLocaleString('ru-RU')} ${curSym()}/урок`);
+              if (first.price_per_lesson) bits.push(`${Math.round(first.price_per_lesson).toLocaleString('ru-RU')} ${first.currency ? (CURRENCY_SYMBOLS[first.currency] || first.currency) : curSym()}/урок`);
+              if (first.grade) bits.splice(1, 0, /^\d+$/.test(first.grade) ? first.grade + ' кл.' : escapeHtml(first.grade));
               if (dur) bits.push(dur);
               body.innerHTML = `<div class="st-name">${escapeHtml(first.display_name)}${first.level ? ` <span>\u00b7 ${escapeHtml(first.level)}</span>` : ''}</div>` +
                 `<div class="st-line">${bits.join(' \u00b7 ')}</div>`;
@@ -4272,6 +4508,127 @@
     try { localStorage.setItem('navarts_currency', code); } catch (err) {}
   }
   function curSym() { return CURRENCY_SYMBOLS[tutorCurrency] || tutorCurrency; }
+
+  // ===== Прибыль: доход минус налоги и расходы =====
+  const TAX_MODES = [
+    { key: 'none', title: 'Не учитывать', sub: 'Показывать только доход' },
+    { key: 'self_employed', title: 'Самозанятый', sub: 'Налог с дохода, обычно 10%', rate: 10 },
+    { key: 'usn', title: 'ООО / ИП на УСН', sub: 'Налог с выручки, обычно 6%', rate: 6 },
+    { key: 'profit', title: 'ИП / ООО без УСН', sub: 'Налог с прибыли (доход − расходы), плюс взносы', rate: 20 },
+    { key: 'custom_turnover', title: 'Свой процент', sub: 'Любая ставка от дохода', rate: 0 },
+  ];
+
+  function calcProfit(income, tax) {
+    const t = tax || {};
+    const mode = t.mode || 'none';
+    const rate = Number(t.rate || 0) / 100;
+    const expenses = Number(t.expenses_monthly || 0);
+    const fixed = Number(t.fixed_monthly || 0);
+    if (mode === 'none') return null;
+    let taxSum;
+    if (mode === 'profit') taxSum = Math.max(0, income - expenses - fixed) * rate;
+    else taxSum = income * rate;
+    return { tax: taxSum, expenses, fixed, net: income - taxSum - expenses - fixed };
+  }
+
+  function showProfitCalculator(income, taxSettings, onSaved) {
+    lockBodyScroll();
+    const t = Object.assign({ mode: 'none', rate: 0, expenses_monthly: 0, fixed_monthly: 0 }, taxSettings || {});
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center;z-index:60;padding:16px;';
+    const box = document.createElement('div');
+    box.style.cssText = 'background:var(--bg);border-radius:18px;padding:18px;max-width:400px;width:100%;max-height:90vh;overflow-y:auto;';
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+    const close = () => { unlockBodyScroll(); overlay.remove(); };
+    overlay.onclick = (e) => { if (e.target === overlay) close(); };
+
+    function draw() {
+      const res = calcProfit(income, t);
+      const money = (v) => `${dashMoney(v)} ${curSym()}`;
+      box.innerHTML = '<div style="font-size:18px;font-weight:700;margin-bottom:4px;">Доход и прибыль</div>' +
+        `<div class="set-hint">Доход за этот месяц: <b style="color:var(--text);">${money(income)}</b></div>` +
+        '<div class="set-title" style="margin-top:6px;">Как вы работаете</div>';
+      const modes = document.createElement('div');
+      modes.style.cssText = 'display:flex;flex-direction:column;gap:6px;margin-bottom:12px;';
+      TAX_MODES.forEach((m) => {
+        const b = document.createElement('button');
+        b.className = 'set-choice inline' + (t.mode === m.key ? ' on' : '');
+        b.style.cssText = 'justify-content:space-between;text-align:left;width:100%;';
+        b.innerHTML = `<span><b>${m.title}</b><br><span style="font-size:11.5px;font-weight:500;color:var(--text-soft);">${m.sub}</span></span>${t.mode === m.key ? '✓' : ''}`;
+        b.onclick = () => {
+          if (t.mode !== m.key && m.rate !== undefined) t.rate = m.rate;
+          t.mode = m.key;
+          draw();
+        };
+        modes.appendChild(b);
+      });
+      box.appendChild(modes);
+
+      if (t.mode !== 'none') {
+        const field = (label, key, hint) => {
+          const wrap = document.createElement('div');
+          wrap.style.marginBottom = '10px';
+          wrap.innerHTML = `<div class="field-label">${label}</div>`;
+          const inp = document.createElement('input');
+          inp.className = 'field-input';
+          inp.type = 'number';
+          inp.min = '0';
+          inp.step = 'any';
+          inp.value = t[key] || 0;
+          inp.oninput = () => { t[key] = parseFloat(inp.value.replace(',', '.')) || 0; drawResult(); };
+          wrap.appendChild(inp);
+          if (hint) wrap.insertAdjacentHTML('beforeend', `<div class="set-hint" style="margin:4px 0 0;font-size:11.5px;">${hint}</div>`);
+          box.appendChild(wrap);
+        };
+        field(t.mode === 'profit' ? 'Налог с прибыли, %' : 'Налог с дохода, %', 'rate');
+        field('Расходы в месяц', 'expenses_monthly', 'Аренда, реклама, сервисы — вычитаются из дохода.');
+        if (t.mode === 'profit') field('Обязательные взносы в месяц', 'fixed_monthly', 'Например, взносы в ФСЗН и другие фиксированные платежи.');
+      }
+      const result = document.createElement('div');
+      result.id = 'profitResult';
+      box.appendChild(result);
+      box.insertAdjacentHTML('beforeend', '<div class="set-hint" style="margin-top:10px;font-size:11.5px;">Расчёт примерный. Ставки меняются — точные суммы уточняйте у бухгалтера или в налоговой.</div>');
+      const btns = document.createElement('div');
+      btns.style.cssText = 'display:flex;gap:8px;margin-top:6px;';
+      const cancel = document.createElement('button');
+      cancel.className = 'set-btn';
+      cancel.style.flex = '1';
+      cancel.textContent = 'Закрыть';
+      cancel.onclick = close;
+      const save = document.createElement('button');
+      save.className = 'set-btn primary';
+      save.style.flex = '1';
+      save.textContent = 'Сохранить';
+      save.onclick = async () => {
+        save.disabled = true;
+        try {
+          const saved = await apiSend('POST', '/api/teacher/tax-settings', t);
+          close();
+          showToast('Сохранено');
+          onSaved(saved);
+        } catch (err) { save.disabled = false; showToast('Не получилось: ' + err.message); }
+      };
+      btns.appendChild(cancel);
+      btns.appendChild(save);
+      box.appendChild(btns);
+      drawResult();
+
+      function drawResult() {
+        const r = calcProfit(income, t);
+        const el = box.querySelector('#profitResult');
+        if (!el) return;
+        if (!r) { el.innerHTML = ''; return; }
+        el.innerHTML = '<div style="background:var(--bg-soft);border-radius:12px;padding:12px;font-size:13.5px;display:grid;grid-template-columns:1fr auto;row-gap:6px;">' +
+          `<span>Доход</span><b>${money(income)}</b>` +
+          `<span>Налог</span><b style="color:var(--red-dark);">\u2212${money(r.tax)}</b>` +
+          (r.expenses ? `<span>Расходы</span><b style="color:var(--red-dark);">\u2212${money(r.expenses)}</b>` : '') +
+          (r.fixed ? `<span>Взносы</span><b style="color:var(--red-dark);">\u2212${money(r.fixed)}</b>` : '') +
+          `<span style="font-weight:800;">Чистая прибыль</span><b style="font-size:16px;color:var(--accent-dark);">${money(r.net)}</b></div>`;
+      }
+    }
+    draw();
+  }
 
   // ===== Дашборд репетитора (главная) =====
   let dashWeekOffset = 0;
@@ -4651,6 +5008,18 @@
           ? '<span style="opacity:0.8;">Сравнение появится, когда будут оплаты за прошлый месяц</span>'
           : `<span class="badge">${diff >= 0 ? '\u2197 +' : '\u2198 '}${diffPct}%</span><span style="opacity:0.85;">${diff >= 0 ? '+' : '\u2212'}${dashMoney(Math.abs(diff))} ${curSym()} к ${DASH_MONTHS_DAT[prevMonthIdx]}</span>`;
         inc.appendChild(trend);
+        // Чистая прибыль (если выбран налоговый режим) + вход в расчёт.
+        const profit = calcProfit(s.income_this_month, s.tax);
+        const profitBtn = document.createElement('button');
+        profitBtn.className = 'dash-profit';
+        profitBtn.innerHTML = profit
+          ? `Чистыми ≈ <b>${dashMoney(profit.net)} ${curSym()}</b> <span>налог ${dashMoney(profit.tax)} · изменить</span>`
+          : 'Посчитать прибыль с учётом налогов →';
+        profitBtn.onclick = (e) => {
+          e.stopPropagation();
+          showProfitCalculator(s.income_this_month, s.tax, (saved) => { s.tax = saved; render(false); });
+        };
+        inc.appendChild(profitBtn);
         if (hist.length) {
           const bars = document.createElement('div');
           bars.className = 'bars';
@@ -6121,7 +6490,8 @@
     const courseTypeOptions = [
       { key: 'Курс', label: 'Курс' },
       { key: 'Мини-группа', label: 'Мини-группа' },
-      { key: 'Экспресс-курс', label: 'Экспресс' },
+      { key: 'Групповые', label: 'Групповые' },
+      { key: 'Индивидуальные', label: 'Индивид.' },
     ];
     function renderCourseTypeButtons() {
       courseTypeBox.innerHTML = '';
@@ -6329,7 +6699,8 @@
           title, teacher_code: codeInput.value.trim(), rating_enabled: ratingCheckbox.checked,
         });
         closeOverlay();
-        if (tg?.showAlert) tg.showAlert(`Предмет создан. Код учителя: ${result.teacher_code}`);
+        if (tg?.showAlert) tg.showAlert(`Курс создан. Код учителя: ${result.teacher_code}`);
+        else showToast('Курс создан');
         render(false);
       } catch (err) {
         saveBtn.disabled = false;
@@ -6399,7 +6770,8 @@
     const courseTypeOptions = [
       { key: 'Курс', label: 'Курс' },
       { key: 'Мини-группа', label: 'Мини-группа' },
-      { key: 'Экспресс-курс', label: 'Экспресс' },
+      { key: 'Групповые', label: 'Групповые' },
+      { key: 'Индивидуальные', label: 'Индивид.' },
     ];
     const groupPickerWrap = document.createElement('div');
     groupPickerWrap.style.cssText = 'display:none;margin-bottom:14px;';
@@ -6454,8 +6826,8 @@
         btn.onclick = () => {
           selectedCourseType = opt.key;
           renderCourseTypeButtons();
-    if (selectedCourseType === 'Мини-группа') renderGroupPicker();
-          if (selectedCourseType === 'Мини-группа') { renderGroupPicker(); }
+    if (selectedCourseType === 'Мини-группа' || selectedCourseType === 'Групповые') renderGroupPicker();
+          if (selectedCourseType === 'Мини-группа' || selectedCourseType === 'Групповые') { renderGroupPicker(); }
           else { groupPickerWrap.style.display = 'none'; selectedGroupId = null; }
         };
         courseTypeBox.appendChild(btn);
@@ -6619,6 +6991,23 @@
         if (val !== null) saveInfo({ note: val.trim() });
       };
       const editType = () => promptChangeLessonType(c.lesson_type, info.lesson_type_override, (value) => saveInfo({ lesson_type_override: value || '' }));
+      const editGrade = () => {
+        const val = prompt('Класс (например 9, 11, «студент»). Пусто — убрать:', info.grade || '');
+        if (val !== null) saveInfo({ grade: val.trim() });
+      };
+      const editTags = () => {
+        const val = prompt('Теги через запятую (например: ЦТ, олимпиада, выпускной):', (info.tags || []).join(', '));
+        if (val === null) return;
+        saveInfo({ tags: val.split(',').map((t) => t.trim()).filter(Boolean) });
+      };
+      const editCurrency = () => scMenu([
+        { label: `Как в кабинете (${curSym()} ${tutorCurrency})`, onClick: () => saveInfo({ currency: '' }) },
+        ...Object.keys(CURRENCY_SYMBOLS).map((code) => ({
+          label: `${CURRENCY_SYMBOLS[code]} ${code} — ${CURRENCY_NAMES[code]}${info.currency === code ? ' ✓' : ''}`,
+          onClick: () => saveInfo({ currency: code }),
+        })),
+      ]);
+      const stSym = () => (info.currency ? (CURRENCY_SYMBOLS[info.currency] || info.currency) : curSym());
       const editBirthday = () => {
         const input = prompt('Дата рождения в формате ДД.ММ (год не нужен), например 23.09. Пусто — убрать:', '');
         if (input === null) return;
@@ -6663,6 +7052,8 @@
           { label: '🔁 Регулярное занятие', onClick: () => promptAddLessonSeries(refreshThisScreen) },
           { label: '📓 Дневник ДЗ', onClick: () => renderHomeworkDiary(studentId, displayName) },
           { label: '🎂 День рождения', onClick: editBirthday },
+          { label: `💱 Валюта ученика (сейчас ${info.currency || tutorCurrency})`, onClick: editCurrency },
+          { label: '🏷 Теги', onClick: editTags },
           { label: '👥 Тип занятий', onClick: editType },
           { label: info.archived ? '↩️ Вернуть из архива' : '🗄 Отправить в архив', onClick: toggleArchive, danger: !info.archived },
         ]);
@@ -6695,14 +7086,31 @@
         parts.push(chip(`<b>${escapeHtml(c.lesson_type)}</b>`, editType));
         if (c.usual_duration) parts.push(chip(`${c.usual_duration} мин`, () => {}));
         parts.push(info.level ? chip(escapeHtml(info.level), editLevel) : chip('+ уровень', editLevel, true));
+        parts.push(info.grade ? chip(escapeHtml(/^\d+$/.test(info.grade) ? info.grade + ' класс' : info.grade), editGrade) : chip('+ класс', editGrade, true));
         parts.push(info.price_per_lesson
-          ? chip(`<b>${Math.round(info.price_per_lesson).toLocaleString('ru-RU')} ${curSym()}</b>/занятие`, editPrice)
+          ? chip(`<b>${Math.round(info.price_per_lesson).toLocaleString('ru-RU')} ${stSym()}</b>/занятие`, editPrice)
           : chip('+ цена', editPrice, true));
         parts.forEach((p, i) => {
           if (i) line.appendChild(document.createTextNode(' \u00b7 '));
           line.appendChild(p);
         });
         sum.appendChild(line);
+        // Теги учителя — для своих подгрупп и фильтров в списке учеников.
+        const tagsRow = document.createElement('div');
+        tagsRow.className = 'sc-tags';
+        (info.tags || []).forEach((t) => {
+          const tg_ = document.createElement('span');
+          tg_.className = 'sc-tag';
+          tg_.textContent = '#' + t;
+          tg_.onclick = editTags;
+          tagsRow.appendChild(tg_);
+        });
+        const addTag = document.createElement('span');
+        addTag.className = 'sc-tag add';
+        addTag.textContent = (info.tags || []).length ? '+ тег' : '+ теги';
+        addTag.onclick = editTags;
+        tagsRow.appendChild(addTag);
+        sum.appendChild(tagsRow);
         const bd = document.createElement('div');
         bd.className = 'sc-sub';
         if (c.birthday) {
