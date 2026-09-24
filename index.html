@@ -4292,8 +4292,14 @@
     // неопределённость: либо роль ещё не решена вообще (совсем новый
     // человек), либо у человека УЖЕ есть обе роли одновременно (свой
     // кабинет репетитора И доступ как у ученика к чужому курсу). Если
-    // роль одна — выбирать не из чего, сразу идём в неё.
+    // роль одна — выбирать не из чего, сразу идём в неё. Если человек уже
+    // выбирал «я ученик» раньше на этом устройстве (localStorage) — тоже
+    // не спрашиваем заново: иначе любое обновление страницы (не только
+    // самое первое открытие) заново кидало бы на этот экран.
+    let storedRoleChoice = null;
+    try { storedRoleChoice = localStorage.getItem('gryphy_preferred_role'); } catch (err) {}
     const showChooser = !new URLSearchParams(location.search).has('direct')
+      && storedRoleChoice !== 'student'
       && roleInfo && (roleInfo.role === 'guest' || (roleInfo.is_teacher && roleInfo.has_student_access));
     if (showChooser) {
       removeBootLoader();
@@ -4312,6 +4318,17 @@
     }
     if (status && !status.has_access) {
       renderSubscriptionRequiredScreen();
+      return;
+    }
+    // Возвращаемся туда, где человек уже был, вместо того чтобы каждый
+    // раз при обновлении страницы заново показывать список курсов —
+    // ТОЛЬКО если сохранённый курс всё ещё среди доступных (иначе, если
+    // доступ пропал или это другое устройство, просто показываем список).
+    let lastCourseId = null;
+    try { lastCourseId = localStorage.getItem('gryphy_last_course_id'); } catch (err) {}
+    const matchedCourse = lastCourseId ? subjects.find((s) => String(s.id) === lastCourseId) : null;
+    if (matchedCourse) {
+      enterCourse(matchedCourse);
       return;
     }
     renderMyCoursesScreen(subjects);
@@ -4430,6 +4447,7 @@
     document.body.style.background = '';
     currentCourseId = subject.id;
     currentCourseTitle = subject.title;
+    try { localStorage.setItem('gryphy_last_course_id', String(subject.id)); } catch (err) {}
     trainerInitialized = false;
     hwBuiltForCourse = null;
     setAppChromeVisible(true);
@@ -4461,7 +4479,14 @@
       studentBtn.className = 'submit-btn';
       studentBtn.style.cssText = 'margin-bottom:12px;';
       studentBtn.textContent = '🎓 Я ученик';
-      studentBtn.onclick = () => onChooseStudent();
+      studentBtn.onclick = () => {
+        // Запоминаем выбор — иначе при обновлении страницы (а не только
+        // при первом открытии) человека каждый раз снова спрашивали бы
+        // «кто вы», хотя он уже выбрал в этой же сессии/на этом же
+        // устройстве. Экран смены роли в настройках по-прежнему работает.
+        try { localStorage.setItem('gryphy_preferred_role', 'student'); } catch (err) {}
+        onChooseStudent();
+      };
       screen.appendChild(studentBtn);
 
       const teacherBtn = document.createElement('button');
@@ -4469,6 +4494,7 @@
       teacherBtn.style.cssText = 'background:var(--bg-soft);color:var(--text);border:2px solid var(--border);';
       teacherBtn.textContent = '👩‍🏫 Я репетитор';
       teacherBtn.onclick = async () => {
+        try { localStorage.setItem('gryphy_preferred_role', 'teacher'); } catch (err) {}
         // Уже учитель — переходим в существующий кабинет и никогда не
         // предлагаем завести новый, даже если по какой-то причине не
         // пришла ссылка (тогда просто сообщаем об ошибке).
