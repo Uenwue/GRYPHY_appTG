@@ -1016,6 +1016,25 @@
         // этот экран уже не показывают.
         if (!appBooted) {
           appBooted = true;
+
+          // Переход по ссылке из календаря (?startapp=lesson_<id>) — сразу
+          // открываем карточку нужного ученика, минуя обычный выбор роли
+          // и выбор предмета.
+          const startParam = tg?.initDataUnsafe?.start_param || '';
+          if (startParam.startsWith('lesson_')) {
+            const lessonId = startParam.slice('lesson_'.length);
+            try {
+              const info = await apiGet(`/api/teacher/lessons/${lessonId}/resolve`);
+              if (info.subject_id) {
+                currentSubjectId = info.subject_id;
+                const found = subjects.find((s) => s.id === info.subject_id);
+                currentSubjectTitle = found ? found.title : '';
+              }
+              renderStudentSubscriptions(info.telegram_id, info.display_name, null);
+              return;
+            } catch (err) { /* если не получилось — просто открываем приложение как обычно */ }
+          }
+
           const isDirect = new URLSearchParams(location.search).has('direct');
           if (!isDirect && hasStudentAccess && studentAppUrl) {
             setAppChromeVisible(false);
@@ -1444,10 +1463,11 @@
   async function renderSubjectBlocks(isBack) {
     showLoadingMenu();
     try {
-      const [blocks, seqUnlock, ratingSetting] = await Promise.all([
+      const [blocks, seqUnlock, ratingSetting, descSetting] = await Promise.all([
         apiGet(`/api/teacher/subjects/${currentSubjectId}/blocks`),
         apiGet(`/api/teacher/subjects/${currentSubjectId}/sequential-unlock`),
         apiGet(`/api/teacher/subjects/${currentSubjectId}/rating`).catch(() => ({ enabled: false })),
+        apiGet(`/api/teacher/subjects/${currentSubjectId}/description`).catch(() => ({ description: '' })),
       ]);
       swapScreen((screen) => {
         const card = document.createElement('div');
@@ -1606,6 +1626,30 @@
         ratingRow.appendChild(ratingToggle);
         ratingCard.appendChild(ratingRow);
         screen.appendChild(ratingCard);
+
+        const descCard = document.createElement('div');
+        descCard.className = 'form-card';
+        descCard.style.marginTop = '16px';
+        descCard.innerHTML = '<div class="field-label" style="margin-bottom:4px;">Описание курса</div><div class="field-hint" style="margin-bottom:12px;">Показывается ученику на карточке курса в «Мои курсы».</div>';
+        const descInput = document.createElement('textarea');
+        descInput.className = 'field-input';
+        descInput.rows = 3;
+        descInput.placeholder = 'Например: готовим к международным экзаменам с нуля.';
+        descInput.value = descSetting.description || '';
+        descInput.style.cssText = 'margin-bottom:10px;resize:vertical;';
+        descCard.appendChild(descInput);
+        const descSaveBtn = document.createElement('button');
+        descSaveBtn.className = 'save-btn';
+        descSaveBtn.style.marginTop = '0';
+        descSaveBtn.textContent = 'Сохранить описание';
+        descSaveBtn.onclick = async () => {
+          try {
+            await apiSend('PATCH', `/api/teacher/subjects/${currentSubjectId}/description`, { description: descInput.value.trim() });
+            showToast('Сохранено');
+          } catch (err) { showToast('Не получилось: ' + err.message); }
+        };
+        descCard.appendChild(descSaveBtn);
+        screen.appendChild(descCard);
       }, isBack);
     } catch (err) { showErrorMsg(err, isBack); }
   }
