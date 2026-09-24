@@ -469,6 +469,8 @@
   .undo-toast button { background: none; border: none; color: #5CC3DE; font-weight: 800; font-size: 13.5px; cursor: pointer; padding: 4px; }
   .att-badge { font-size: 11px; margin-right: 2px; }
   .board-ev.att-cancel, .sg-ev.att-cancel { opacity: 0.75; background-image: repeating-linear-gradient(135deg, transparent 0 6px, rgba(208,88,78,0.10) 6px 12px); }
+  .trial-tag { font-size: 11px; font-weight: 800; color: #B8661F; background: #FDF0E3; border-radius: 8px; padding: 2px 7px; margin-left: 4px; }
+  .board-ev.is-trial { --ev: #E08A3C !important; }
   .board-more { position: relative; padding-left: 12px; font-size: 13px; font-weight: 700; color: var(--text-soft); }
   .board-more::before { content: ''; position: absolute; left: 5px; top: 2px; bottom: 2px; width: 3px; border-radius: 2px; background: var(--border); }
   .board-foot { display: flex; justify-content: flex-end; margin-top: 12px; }
@@ -1281,7 +1283,7 @@
     document.querySelectorAll('#tbMode button').forEach((b) => b.classList.toggle('on', b.dataset.mode === currentMode));
     nav.innerHTML = '';
     if (currentMode === 'finance') {
-      const activeKey = top === 'personal_settings' ? 'settings' : root;
+      const activeKey = (top === 'personal_settings' || root === 'personal_settings') ? 'settings' : root;
       TOP_NAV_ITEMS.forEach((it) => {
         const b = document.createElement('button');
         b.className = 'tb-link' + (it.key === activeKey ? ' on' : '');
@@ -1358,7 +1360,7 @@
       btn.className = 'side-nav-item' + (item.primary ? '' : ' desktop-only') + (item.mobileOnly ? ' mobile-only' : '');
       const topLevel = stack[stack.length - 1]?.level;
       const isActive = item.action === 'openPersonalSettings'
-        ? topLevel === 'personal_settings'
+        ? (topLevel === 'personal_settings' || rootLevel === 'personal_settings')
         : (topLevel !== 'personal_settings' && rootLevel === item.level && (item.extra?.sectionsKind || undefined) === rootKind);
       if (isActive) btn.classList.add('active');
       btn.title = item.title;
@@ -1837,84 +1839,240 @@
   // «Время для переносов»: учитель заранее указывает свободные окна
   // (день недели + с/до). Ученик при переносе из напоминания видит только
   // свободное время из этих окон, без уже занятых уроков.
-  function buildAvailabilityCard(slots) {
-    const card = settingsCard('Время для переносов и записи');
-    card.insertAdjacentHTML('beforeend', '<div class="set-hint">Ваше свободное время на каждую неделю. Когда ученик нажимает «Перенести» в напоминании, он выбирает только из этого времени — без уже занятых уроков, на 2 недели вперёд. Эти же окна видны при самозаписи.</div>');
-    const list = document.createElement('div');
-    list.style.cssText = 'display:flex;flex-direction:column;gap:6px;margin-bottom:10px;';
-    const reload = async () => draw(await apiGet('/api/teacher/availability'));
-    function draw(items) {
-      list.innerHTML = '';
-      if (!items.length) { list.innerHTML = '<div class="set-hint" style="margin:0;">Пока нет свободного времени.</div>'; return; }
-      const byDay = {};
-      items.forEach((x) => { (byDay[x.weekday] = byDay[x.weekday] || []).push(x); });
-      Object.keys(byDay).sort().forEach((wd) => {
-        const row = document.createElement('div');
-        row.style.cssText = 'display:flex;align-items:flex-start;gap:10px;padding:8px 10px;border:1px solid var(--border);border-radius:12px;';
-        row.innerHTML = `<b style="width:28px;padding-top:4px;">${WEEKDAY_SHORT[wd]}</b>`;
-        const chips = document.createElement('div');
-        chips.style.cssText = 'display:flex;flex-wrap:wrap;gap:6px;flex:1;';
-        byDay[wd].forEach((x) => {
-          const c = document.createElement('button');
-          c.className = 'set-choice inline';
-          c.style.padding = '5px 9px';
-          c.title = 'Нажмите, чтобы удалить';
-          c.textContent = `${x.time.slice(0, 5)} \u00b7 ${x.duration_minutes}м \u2715`;
-          c.onclick = async () => {
-            try { await apiSend('DELETE', `/api/teacher/availability/${x.id}`); reload(); }
-            catch (err) { showToast('Не получилось: ' + err.message); }
-          };
-          chips.appendChild(c);
-        });
-        row.appendChild(chips);
-        list.appendChild(row);
-      });
-    }
-    draw(slots);
-    card.appendChild(list);
-    const form = document.createElement('div');
-    form.className = 'sched-grid';
-    form.style.gridTemplateColumns = '1fr 1fr 1fr';
-    form.innerHTML = '<div class="field-label">День</div><div class="field-label">С</div><div class="field-label">До</div>';
-    const day = document.createElement('select');
-    day.className = 'field-input';
-    day.innerHTML = WEEKDAY_SHORT.map((w, i) => `<option value="${i}">${w}</option>`).join('');
-    const from = document.createElement('input');
-    from.type = 'time'; from.className = 'field-input'; from.value = '10:00';
-    const to = document.createElement('input');
-    to.type = 'time'; to.className = 'field-input'; to.value = '14:00';
-    form.appendChild(day); form.appendChild(from); form.appendChild(to);
-    card.appendChild(form);
-    const durRow = document.createElement('div');
-    durRow.style.cssText = 'display:flex;align-items:center;gap:8px;margin-top:8px;';
-    durRow.innerHTML = '<span class="set-hint" style="margin:0;flex:1;">Длительность одного занятия, мин</span>';
-    const dur = document.createElement('input');
-    dur.type = 'number'; dur.min = '15'; dur.step = '5'; dur.value = '60'; dur.className = 'field-input'; dur.style.width = '90px';
-    durRow.appendChild(dur);
-    card.appendChild(durRow);
-    const add = document.createElement('button');
-    add.className = 'set-btn primary';
-    add.style.cssText = 'width:100%;margin-top:8px;';
-    add.textContent = '+ Добавить время';
-    add.onclick = async () => {
-      const toMin = (t) => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
-      const d = Math.max(15, parseInt(dur.value, 10) || 60);
-      const a = toMin(from.value || '0:00'), b = toMin(to.value || '0:00');
-      if (b - a < d) { showToast('Промежуток короче одного занятия'); return; }
-      add.disabled = true;
-      try {
-        // Промежуток «с–до» нарезается на занятия нужной длительности.
-        for (let t = a; t + d <= b; t += d) {
-          const hh = String(Math.floor(t / 60)).padStart(2, '0'), mm = String(t % 60).padStart(2, '0');
-          await apiSend('POST', '/api/teacher/availability', { weekday: parseInt(day.value, 10), time: `${hh}:${mm}`, duration_minutes: d });
-        }
-        showToast('Время добавлено');
-        reload();
-      } catch (err) { showToast('Не получилось: ' + err.message); }
-      add.disabled = false;
-    };
-    card.appendChild(add);
+  // Кнопка в настройках → отдельная страница «Свободное время».
+  function buildAvailabilityCard() {
+    const card = settingsCard('Свободное время');
+    card.insertAdjacentHTML('beforeend', '<div class="set-hint">Промежутки, когда вы свободны (например 10–15 и 18–21), длительности занятий и перерывы. Ученик выбирает время отсюда при записи и переносе.</div>');
+    const b = document.createElement('button');
+    b.className = 'set-btn primary';
+    b.style.width = '100%';
+    b.textContent = 'Настроить свободное время \u2192';
+    b.onclick = () => { stack = [{ level: 'personal_settings', title: 'Настройки' }, { level: 'availability', title: 'Свободное время' }]; render(false); };
+    card.appendChild(b);
     return card;
+  }
+
+  async function renderAvailabilityPage(isBack) {
+    showLoadingMenu();
+    let data = await apiGet('/api/teacher/avail');
+    const pad2 = (n) => String(n).padStart(2, '0');
+    const fmtDate = (iso) => { const [y, m, d] = iso.split('-').map(Number); return `${d} ${DASH_MONTHS_SHORT[m - 1]}${y !== new Date().getFullYear() ? ' ' + y : ''}`; };
+    const saveSettings = async (patch) => {
+      data = await apiSend('POST', '/api/teacher/avail/settings', Object.assign({}, data.settings, patch));
+      draw();
+    };
+    const addWindow = async (body) => { data = await apiSend('POST', '/api/teacher/avail/windows', body); draw(); };
+    const delWindow = async (id) => { data = await apiSend('DELETE', `/api/teacher/avail/windows/${id}`); draw(); };
+
+    function timeRangeDialog(title, onSave, withDate) {
+      lockBodyScroll();
+      const ov = document.createElement('div');
+      ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center;z-index:60;padding:20px;';
+      const today = new Date();
+      ov.innerHTML = '<div style="background:var(--bg);border-radius:18px;padding:18px;max-width:340px;width:100%;">' +
+        `<div style="font-size:17px;font-weight:700;margin-bottom:12px;">${title}</div>` +
+        (withDate ? `<div class="field-label">Дата</div><input type="date" class="field-input" id="twDate" value="${today.getFullYear()}-${pad2(today.getMonth() + 1)}-${pad2(today.getDate())}" style="margin-bottom:10px;">` +
+          '<div class="sched-seg" id="twMode" style="margin-bottom:10px;"><button class="on" data-m="time">Свободна</button><button data-m="off">Выходной</button></div>' : '') +
+        '<div id="twTimes" class="sched-grid" style="grid-template-columns:1fr 1fr;"><div class="field-label">С</div><div class="field-label">До</div>' +
+        '<input type="time" class="field-input" id="twFrom" value="10:00"><input type="time" class="field-input" id="twTo" value="15:00"></div>' +
+        '<div style="display:flex;gap:8px;margin-top:14px;"><button class="set-btn" id="twCancel" style="flex:1;">Отмена</button><button class="set-btn primary" id="twOk" style="flex:1;">Добавить</button></div></div>';
+      document.body.appendChild(ov);
+      const close = () => { unlockBodyScroll(); ov.remove(); };
+      let mode = 'time';
+      ov.querySelectorAll('#twMode button').forEach((b) => {
+        b.onclick = () => {
+          mode = b.dataset.m;
+          ov.querySelectorAll('#twMode button').forEach((x) => x.classList.toggle('on', x === b));
+          ov.querySelector('#twTimes').style.display = mode === 'off' ? 'none' : '';
+        };
+      });
+      ov.querySelector('#twCancel').onclick = close;
+      ov.querySelector('#twOk').onclick = async () => {
+        const from = ov.querySelector('#twFrom').value, to = ov.querySelector('#twTo').value;
+        if (mode !== 'off' && (!from || !to || to <= from)) { showToast('Конец должен быть позже начала'); return; }
+        try {
+          await onSave({ from, to, date: withDate ? ov.querySelector('#twDate').value : null, off: mode === 'off' });
+          close();
+        } catch (err) { showToast('Не получилось: ' + err.message); }
+      };
+    }
+
+    let previewDate = (() => { const t = new Date(); t.setDate(t.getDate() + 1); return `${t.getFullYear()}-${pad2(t.getMonth() + 1)}-${pad2(t.getDate())}`; })();
+    let previewDur = null;
+    let screenEl = null;
+
+    function chip(text, onClick, on) {
+      const c = document.createElement('button');
+      c.className = 'set-choice inline' + (on ? ' on' : '');
+      c.style.padding = '6px 10px';
+      c.textContent = text;
+      c.onclick = onClick;
+      return c;
+    }
+
+    function draw() {
+      if (!screenEl) return;
+      screenEl.innerHTML = '';
+      const h = document.createElement('div');
+      h.className = 'set-hint';
+      h.style.margin = '0 2px 12px';
+      h.textContent = 'Ученик выбирает длительность и видит окна вида «10:00 – 11:00». Окна идут подряд с начала промежутка и сдвигаются под уже занятые уроки и перерывы.';
+      screenEl.appendChild(h);
+      const settings = data.settings || {};
+      const weekly = data.windows.filter((w) => !w.date);
+      const dated = data.windows.filter((w) => w.date);
+
+      // 1. Дни недели
+      const wc = settingsCard('Каждую неделю');
+      WEEKDAY_SHORT.forEach((wd, i) => {
+        const row = document.createElement('div');
+        row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);';
+        row.innerHTML = `<b style="width:28px;">${wd}</b>`;
+        const box = document.createElement('div');
+        box.style.cssText = 'display:flex;flex-wrap:wrap;gap:6px;flex:1;';
+        const mine = weekly.filter((w) => w.weekday === i);
+        if (!mine.length) box.innerHTML = '<span class="set-hint" style="margin:0;">не работаю</span>';
+        mine.forEach((w) => box.appendChild(chip(`${w.start_time}\u2013${w.end_time} \u2715`, () => delWindow(w.id))));
+        row.appendChild(box);
+        const add = document.createElement('button');
+        add.className = 'dash-plus';
+        add.textContent = '+';
+        add.title = 'Добавить промежуток';
+        add.style.cssText = 'background:var(--blue-tint);color:var(--accent-dark);width:28px;height:28px;line-height:28px;font-size:18px;';
+        add.onclick = () => timeRangeDialog(`${wd}: свободное время`, (r) => addWindow({ weekday: i, start_time: r.from, end_time: r.to }));
+        row.appendChild(add);
+        wc.appendChild(row);
+      });
+      screenEl.appendChild(wc);
+
+      // 2. Конкретные даты
+      const dc = settingsCard('На конкретные даты');
+      dc.insertAdjacentHTML('beforeend', '<div class="set-hint">Заменяют обычный день недели на эту дату: другое время или выходной.</div>');
+      const byDate = {};
+      dated.forEach((w) => { (byDate[w.date] = byDate[w.date] || []).push(w); });
+      Object.keys(byDate).sort().forEach((d) => {
+        const row = document.createElement('div');
+        row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);';
+        row.innerHTML = `<b style="width:70px;font-size:13px;">${fmtDate(d)}</b>`;
+        const box = document.createElement('div');
+        box.style.cssText = 'display:flex;flex-wrap:wrap;gap:6px;flex:1;';
+        byDate[d].forEach((w) => box.appendChild(chip(w.is_off ? 'выходной \u2715' : `${w.start_time}\u2013${w.end_time} \u2715`, () => delWindow(w.id))));
+        row.appendChild(box);
+        dc.appendChild(row);
+      });
+      const addDate = document.createElement('button');
+      addDate.className = 'set-btn';
+      addDate.style.cssText = 'width:100%;margin-top:10px;';
+      addDate.textContent = '+ Дата';
+      addDate.onclick = () => timeRangeDialog('Особая дата', (r) => addWindow(r.off ? { date: r.date, is_off: true } : { date: r.date, start_time: r.from, end_time: r.to }), true);
+      dc.appendChild(addDate);
+      screenEl.appendChild(dc);
+
+      // 3. Длительности
+      const lc = settingsCard('Длительность занятий');
+      lc.insertAdjacentHTML('beforeend', '<div class="set-hint">Что ученик может выбрать при записи.</div>');
+      const durs = new Set(settings.durations || [60]);
+      const drow = document.createElement('div');
+      drow.style.cssText = 'display:flex;flex-wrap:wrap;gap:6px;';
+      [...new Set([30, 45, 60, 75, 90, 120, ...durs])].sort((a, b) => a - b).forEach((m) => {
+        drow.appendChild(chip(m < 60 ? `${m} мин` : (m % 60 ? `${Math.floor(m / 60)} ч ${m % 60} мин` : `${m / 60} ч`), () => {
+          if (durs.has(m)) { if (durs.size === 1) return; durs.delete(m); } else durs.add(m);
+          saveSettings({ durations: [...durs] });
+        }, durs.has(m)));
+      });
+      const custom = chip('+ своя', () => {
+        const v = parseInt(prompt('Длительность в минутах:', '50'), 10);
+        if (v >= 10 && v <= 300) { durs.add(v); saveSettings({ durations: [...durs] }); }
+      });
+      drow.appendChild(custom);
+      lc.appendChild(drow);
+      screenEl.appendChild(lc);
+
+      // 3б. Пробное занятие
+      const tc = settingsCard('Пробное занятие');
+      tc.insertAdjacentHTML('beforeend', '<div class="set-hint">Новые ученики из каталога смогут сами записаться на пробное в ваше свободное время. Заявка придёт вам в бот и на главную («Записи на занятия»).</div>');
+      const trow = document.createElement('div');
+      trow.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:10px;';
+      trow.innerHTML = '<span style="font-size:14px;font-weight:600;">Принимать записи на пробное</span>';
+      trow.appendChild(buildSettingsToggle(!!settings.trial_enabled, (v) => saveSettings({ trial_enabled: v })));
+      tc.appendChild(trow);
+      if (settings.trial_enabled) {
+        const tgrid = document.createElement('div');
+        tgrid.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px;';
+        tgrid.innerHTML = '<div><div class="field-label">Длительность, мин</div><input type="number" min="10" step="5" class="field-input" id="trDur"></div>' +
+          `<div><div class="field-label">Цена, ${curSym()} (0 — бесплатно)</div><input type="number" min="0" step="any" class="field-input" id="trPrice"></div>`;
+        tgrid.querySelector('#trDur').value = settings.trial_duration || 30;
+        tgrid.querySelector('#trPrice').value = settings.trial_price || 0;
+        tgrid.querySelector('#trDur').onchange = (e) => saveSettings({ trial_duration: Math.max(10, parseInt(e.target.value, 10) || 30) });
+        tgrid.querySelector('#trPrice').onchange = (e) => saveSettings({ trial_price: Math.max(0, parseFloat(String(e.target.value).replace(',', '.')) || 0) });
+        tc.appendChild(tgrid);
+      }
+      screenEl.appendChild(tc);
+
+      // 4. Перерывы
+      const bc = settingsCard('Перерывы');
+      const n = settings.break_after_n || 0;
+      const seg = document.createElement('div');
+      seg.className = 'sched-seg';
+      [['none', 'Без перерывов'], ['after', 'После N занятий']].forEach(([k, l]) => {
+        const b = document.createElement('button');
+        b.className = (k === 'none' ? !n : !!n) ? 'on' : '';
+        b.textContent = l;
+        b.onclick = () => saveSettings(k === 'none' ? { break_after_n: 0, break_minutes: 0 } : { break_after_n: n || 1, break_minutes: settings.break_minutes || 10 });
+        seg.appendChild(b);
+      });
+      bc.appendChild(seg);
+      if (n) {
+        const r = document.createElement('div');
+        r.style.cssText = 'display:flex;align-items:center;gap:8px;margin-top:10px;font-size:13.5px;flex-wrap:wrap;';
+        r.innerHTML = 'После <input type="number" min="1" class="field-input" id="brN" style="width:64px;"> занятий подряд — перерыв <input type="number" min="0" step="5" class="field-input" id="brM" style="width:74px;"> мин';
+        r.querySelector('#brN').value = n;
+        r.querySelector('#brM').value = settings.break_minutes || 0;
+        r.querySelector('#brN').onchange = (e) => saveSettings({ break_after_n: Math.max(1, parseInt(e.target.value, 10) || 1) });
+        r.querySelector('#brM').onchange = (e) => saveSettings({ break_minutes: Math.max(0, parseInt(e.target.value, 10) || 0) });
+        bc.appendChild(r);
+      }
+      bc.insertAdjacentHTML('beforeend', '<div class="set-title" style="margin-top:14px;font-size:11px;color:var(--text-soft);">В определённое время (каждый день)</div>');
+      const fb = document.createElement('div');
+      fb.style.cssText = 'display:flex;flex-wrap:wrap;gap:6px;';
+      (settings.fixed_breaks || []).forEach((x, idx) => fb.appendChild(chip(`${x.start}\u2013${x.end} \u2715`, () => {
+        const list = [...settings.fixed_breaks]; list.splice(idx, 1); saveSettings({ fixed_breaks: list });
+      })));
+      fb.appendChild(chip('+ перерыв', () => timeRangeDialog('Перерыв каждый день', (r) => saveSettings({ fixed_breaks: [...(settings.fixed_breaks || []), { start: r.from, end: r.to }] }))));
+      bc.appendChild(fb);
+      screenEl.appendChild(bc);
+
+      // 5. Как увидит ученик
+      const pc = settingsCard('Как это увидит ученик');
+      const prow = document.createElement('div');
+      prow.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;';
+      const pd = document.createElement('input');
+      pd.type = 'date'; pd.className = 'field-input'; pd.value = previewDate;
+      const ps = document.createElement('select');
+      ps.className = 'field-input';
+      (settings.durations || [60]).forEach((m) => { ps.insertAdjacentHTML('beforeend', `<option value="${m}">${m} мин</option>`); });
+      if (!previewDur || !(settings.durations || []).includes(previewDur)) previewDur = (settings.durations || [60])[0];
+      ps.value = previewDur;
+      prow.appendChild(pd); prow.appendChild(ps);
+      pc.appendChild(prow);
+      const out = document.createElement('div');
+      out.style.cssText = 'display:flex;flex-wrap:wrap;gap:6px;';
+      pc.appendChild(out);
+      const loadPreview = async () => {
+        out.innerHTML = '<span class="set-hint" style="margin:0;">…</span>';
+        try {
+          const slots = await apiGet(`/api/teacher/avail/preview?date=${previewDate}&duration=${previewDur}`);
+          out.innerHTML = slots.length ? '' : '<span class="set-hint" style="margin:0;">В этот день свободных окон нет.</span>';
+          slots.forEach((x) => out.insertAdjacentHTML('beforeend', `<span class="set-choice inline" style="padding:6px 10px;cursor:default;">${x.start} \u2013 ${x.end}</span>`));
+        } catch (err) { out.innerHTML = ''; }
+      };
+      pd.onchange = () => { previewDate = pd.value; loadPreview(); };
+      ps.onchange = () => { previewDur = parseInt(ps.value, 10); loadPreview(); };
+      loadPreview();
+      screenEl.appendChild(pc);
+    }
+
+    swapScreen((screen) => { screenEl = screen; draw(); }, isBack);
   }
 
   // Белая карточка-блок в настройках (как карточки на «Моих курсах»).
@@ -1989,8 +2147,8 @@
       }
       screen.appendChild(calCard);
 
-      // --- Время для переносов (свободные окна) ---
-      screen.appendChild(buildAvailabilityCard(avail || []));
+      // --- Свободное время (отдельная страница) ---
+      screen.appendChild(buildAvailabilityCard());
 
       // --- Валюта ---
       const curCard = settingsCard('Валюта оплат');
@@ -2003,13 +2161,19 @@
         b.className = 'set-choice inline' + (code === tutorCurrency ? ' on' : '');
         b.title = CURRENCY_NAMES[code] || code;
         b.textContent = `${CURRENCY_SYMBOLS[code]} ${code}`;
-        b.onclick = async () => {
-          try {
-            const res = await apiSend('POST', '/api/teacher/currency', { currency: code });
+        b.onclick = () => {
+          if (code === tutorCurrency) return;
+          const apply = async (mode) => {
+            const res = await apiSend('POST', '/api/teacher/currency', { currency: code, mode });
             setTutorCurrency(res.currency || code);
             showToast('Валюта: ' + (CURRENCY_NAMES[code] || code));
             renderPersonalSettingsScreen(false);
-          } catch (err) { showToast('Не получилось: ' + err.message); }
+          };
+          // Смена валюты: что делать с прошлыми доходами, оплатами и ценами?
+          scMenu([
+            { label: `🔄 Пересчитать прошлое в ${code} по курсу НБ РБ`, onClick: () => apply('convert').catch((err) => showToast(err.message)) },
+            { label: `📌 Оставить прошлое в ${tutorCurrency}, новое — в ${code}`, onClick: () => apply('keep').catch((err) => showToast(err.message)) },
+          ]);
         };
         curRow.appendChild(b);
       });
@@ -2113,6 +2277,16 @@
     const current = stack[stack.length - 1];
     document.body.classList.toggle('dash-wide', current.level === 'dashboard' || current.level === 'schedule_grid');
 
+    if (current.level === 'availability') {
+      try { await renderAvailabilityPage(isBack); }
+      catch (err) { showErrorMsg(err, isBack); }
+      return;
+    }
+    if (current.level === 'income') {
+      try { await renderIncomePage(isBack); }
+      catch (err) { showErrorMsg(err, isBack); }
+      return;
+    }
     if (current.level === 'courses_list') {
       try { await renderCoursesList(isBack); }
       catch (err) { showErrorMsg(err, isBack); }
@@ -3853,7 +4027,7 @@
         const hint = document.createElement('p');
         hint.className = 'field-hint';
         hint.style.marginBottom = '14px';
-        hint.textContent = 'Учёт того, кто должен и кто оплатил — отмечается вручную.';
+        hint.textContent = 'Кто должен и кто оплатил. Ученикам приходит напоминание об оплате с кнопкой «📎 Отправить чек» — чек придёт вам в бот, там же его можно подтвердить.';
         screen.appendChild(hint);
 
         const addBtn = document.createElement('button');
@@ -3909,7 +4083,8 @@
       paid: 'background:#E3F9E5;color:var(--green-dark);',
       cancelled: 'background:var(--bg-soft);color:var(--text-soft);',
     };
-    const label = p.status === 'owed' ? (p.is_overdue ? 'Просрочено' : 'Должен') : (p.status === 'paid' ? 'Оплачено' : 'Отменено');
+    let label = p.status === 'owed' ? (p.is_overdue ? 'Просрочено' : 'Должен') : (p.status === 'paid' ? 'Оплачено' : 'Отменено');
+    if (p.status === 'owed' && p.receipt_status === 'pending') label = '🧾 Чек на проверке';
     const badge = document.createElement('span');
     badge.style.cssText = 'padding:4px 9px;border-radius:8px;font-size:11px;font-weight:800;flex-shrink:0;' + (badgeStyles[p.status] || '');
     badge.textContent = label;
@@ -3923,10 +4098,17 @@
     const overlay = document.createElement('div');
     overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center;z-index:60;padding:20px;';
     const name = p.first_name || (p.username ? '@' + p.username : 'id' + p.telegram_id);
-    overlay.innerHTML = '<div style="background:var(--bg);border-radius:16px;padding:18px;max-width:340px;width:100%;">' +
+    overlay.innerHTML = '<div style="background:var(--bg);border-radius:16px;padding:18px;max-width:360px;width:100%;max-height:90vh;overflow-y:auto;">' +
       `<div style="font-weight:700;margin-bottom:14px;">${escapeHtml(name)} — ${p.amount} ${escapeHtml(p.currency)}</div>` +
       '<div style="display:flex;flex-direction:column;gap:8px;">' +
-      (p.status === 'owed' ? '<button class="save-btn" id="pMarkPaid" style="margin-top:0;">✅ Отметить оплаченным</button>' : '') +
+      (p.receipt_file_id ? `<div id="pReceiptBox" style="background:var(--bg-soft);border-radius:12px;padding:10px;margin-bottom:4px;">` +
+        `<div style="font-size:13px;font-weight:700;margin-bottom:6px;">🧾 Чек ${p.receipt_status === 'pending' ? '— ждёт проверки' : p.receipt_status === 'approved' ? '— подтверждён' : p.receipt_status === 'rejected' ? '— отклонён' : ''}</div>` +
+        (p.receipt_kind === 'photo'
+          ? `<img src="${API_BASE_URL}/api/image/${encodeURIComponent(p.receipt_file_id)}" alt="Чек" style="width:100%;max-height:320px;object-fit:contain;border-radius:8px;background:var(--bg);">`
+          : `<a href="${API_BASE_URL}/api/image/${encodeURIComponent(p.receipt_file_id)}" target="_blank" style="font-size:13px;font-weight:700;color:var(--accent-dark);">Открыть файл чека</a>`) +
+        '</div>' : '') +
+      (p.status === 'owed' ? `<button class="save-btn" id="pMarkPaid" style="margin-top:0;">✅ ${p.receipt_status === 'pending' ? 'Подтвердить оплату по чеку' : 'Отметить оплаченным'}</button>` : '') +
+      (p.status === 'owed' && p.telegram_id > 0 ? '<button class="back-btn" id="pRemind">🔔 Напомнить об оплате (попросить чек)</button>' : '') +
       (p.status === 'owed' ? '<button class="back-btn" id="pCancelPay">🚫 Отменить запись</button>' : '') +
       '<button class="back-btn" id="pDeletePay" style="color:var(--red-dark);">🗑 Удалить запись</button>' +
       '<button class="back-btn" id="pClosePay">Закрыть</button>' +
@@ -3939,6 +4121,15 @@
       await apiSend('POST', `/api/teacher/payments/${p.payment_id}/mark-paid`, {});
       closeOverlay();
       render(false);
+    };
+    const remindBtn = overlay.querySelector('#pRemind');
+    if (remindBtn) remindBtn.onclick = async () => {
+      remindBtn.disabled = true;
+      try {
+        await apiSend('POST', `/api/teacher/payments/${p.payment_id}/remind`, {});
+        showToast('Напоминание отправлено — ученик сможет прислать чек в боте');
+        closeOverlay();
+      } catch (err) { remindBtn.disabled = false; showToast(err.message || 'Не получилось'); }
     };
     const cancelBtn = overlay.querySelector('#pCancelPay');
     if (cancelBtn) cancelBtn.onclick = async () => {
@@ -4248,8 +4439,9 @@
     const overlay = document.createElement('div');
     overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center;z-index:60;padding:20px;';
     overlay.innerHTML = '<div style="background:var(--bg);border-radius:18px;padding:18px;max-width:360px;width:100%;">' +
-      '<div style="font-size:18px;font-weight:700;margin-bottom:4px;">👤 Новый ученик</div>' +
-      '<div class="set-hint">Telegram id, @ник или телефон. Ученик должен хотя бы раз написать боту.</div>' +
+      '<div style="font-size:18px;font-weight:700;margin-bottom:10px;">👤 Новый ученик</div>' +
+      '<div class="sched-seg" id="aiMode" style="margin-bottom:10px;"><button class="on" data-m="tg">Через Telegram</button><button data-m="off">Без Telegram</button></div>' +
+      '<div class="set-hint" id="aiHint">Telegram id, @ник или телефон. Ученик должен хотя бы раз написать боту.</div>' +
       '<input class="field-input" id="aiQuery" placeholder="id, @ник или телефон" style="margin-bottom:8px;">' +
       '<div id="aiErr" style="color:var(--red-dark);font-size:12.5px;font-weight:700;margin-bottom:8px;display:none;"></div>' +
       '<div style="display:flex;gap:8px;"><button class="set-btn" id="aiCancel" style="flex:1;">Отмена</button>' +
@@ -4258,8 +4450,30 @@
     const close = () => { unlockBodyScroll(); overlay.remove(); };
     overlay.querySelector('#aiCancel').onclick = close;
     const err = overlay.querySelector('#aiErr');
+    // «Без Telegram» — только учёт у учителя (уроки, оплаты, доход); позже
+    // в карточке можно привязать Telegram, если ученик захочет уведомления.
+    let mode = 'tg';
+    overlay.querySelectorAll('#aiMode button').forEach((b) => {
+      b.onclick = () => {
+        mode = b.dataset.m;
+        overlay.querySelectorAll('#aiMode button').forEach((x) => x.classList.toggle('on', x === b));
+        overlay.querySelector('#aiHint').textContent = mode === 'tg'
+          ? 'Telegram id, @ник или телефон. Ученик должен хотя бы раз написать боту.'
+          : 'Просто имя — для своего учёта уроков и оплат. Уведомления такой ученик не получает; Telegram можно привязать позже в карточке.';
+        overlay.querySelector('#aiQuery').placeholder = mode === 'tg' ? 'id, @ник или телефон' : 'Имя ученика';
+      };
+    });
     overlay.querySelector('#aiNext').onclick = async () => {
       const q = overlay.querySelector('#aiQuery').value.trim();
+      if (mode === 'off') {
+        if (!q) { err.textContent = 'Введите имя.'; err.style.display = 'block'; return; }
+        try {
+          const res = await apiSend('POST', '/api/teacher/offline-students', { name: q });
+          close();
+          promptScheduleEditor({ kind: 'student', id: res.telegram_id, name: q, subjectId: currentSubjectId }, onDone);
+        } catch (e) { err.textContent = e.message; err.style.display = 'block'; }
+        return;
+      }
       if (!q) { err.textContent = 'Введите id, @ник или телефон.'; err.style.display = 'block'; return; }
       try {
         const info = await apiGet(`/api/teacher/lookup-student?query=${encodeURIComponent(q)}`);
@@ -4657,7 +4871,7 @@
         add.textContent = '+ Урок';
         add.onclick = () => scMenu([
           { label: '➕ Разовый урок', onClick: () => promptAddLesson(() => renderScheduleGrid(false)) },
-          { label: '🔁 Регулярное занятие', onClick: () => promptAddLessonSeries(() => renderScheduleGrid(false)) },
+          { label: '🔁 Регулярные занятия (дни, время, срок)', onClick: () => promptPickStudentThenSchedule(() => renderScheduleGrid(false)) },
         ]);
         top.appendChild(add);
         root.appendChild(top);
@@ -4767,7 +4981,8 @@
             ev.title = `${l.scheduled_at.slice(11, 16)}\u2013${endStr} \u00b7 ${who}`;
             if (l.note) ev.title += '\n📝 ' + l.note;
             ev.innerHTML = `<div class="t">${l.scheduled_at.slice(11, 16)}<span class="end"> \u2014 ${endStr}</span>${l.note ? ' 📝' : ''}</div>` +
-              `<div class="n">${attendanceBadge(l)}${escapeHtml(who)}</div><div class="d">${l.duration_minutes || 60} мин</div>`;
+              `<div class="n">${attendanceBadge(l)}${l.is_trial ? '🎁 ' : ''}${escapeHtml(who)}</div><div class="d">${l.is_trial ? 'пробное \u00b7 ' : ''}${l.duration_minutes || 60} мин</div>`;
+            if (l.is_trial && !statusClass(l.status)) { ev.style.setProperty('--ev', '#E08A3C'); ev.style.setProperty('--ev-tint', '#FDF0E3'); }
             if (l.attendance === 'cancel_requested') ev.classList.add('att-cancel');
             ev.onclick = () => {
               if (!l.members) { promptLessonActions(l, () => renderScheduleGrid(false)); return; }
@@ -5090,7 +5305,8 @@
       ev.style.setProperty('--ev-tint', tint);
       const end = endHm(l);
       if (withCheck && nowHm && end <= nowHm) ev.classList.add('past');
-      ev.innerHTML = `<div class="txt"><div class="nm">${escapeHtml(l.student_name)} ${attendanceBadge(l)}</div><div class="tm">${hm(l.scheduled_at)} \u2014 ${end}${l.note ? ' 📝' : ''}</div></div>`;
+      if (l.is_trial) ev.classList.add('is-trial');
+      ev.innerHTML = `<div class="txt"><div class="nm">${l.is_trial ? '🎁 ' : ''}${escapeHtml(l.student_name)} ${attendanceBadge(l)}</div><div class="tm">${hm(l.scheduled_at)} \u2014 ${end}${l.note ? ' 📝' : ''}</div></div>`;
       if (l.attendance === 'cancel_requested') ev.classList.add('att-cancel');
       ev.onclick = () => promptLessonActions(Object.assign({ partner_name: null }, l), () => render(false));
       if (withCheck) {
@@ -5311,6 +5527,117 @@
     document.body.appendChild(overlay);
   }
 
+  // ===== Страница «Доход» (из «Подробнее» на главной) =====
+  async function renderIncomePage(isBack) {
+    showLoadingMenu();
+    const d = await apiGet('/api/teacher/income');
+    if (d.currency) setTutorCurrency(d.currency);
+    const tax = Object.assign({ mode: 'none', rate: 0, expenses_monthly: 0, fixed_monthly: 0 }, d.tax || {});
+    const money = (v, cur) => `${dashMoney(v)} ${cur ? (CURRENCY_SYMBOLS[cur] || cur) : curSym()}`;
+    swapScreen((screen) => {
+      const root = document.createElement('div');
+      root.className = 'dash';
+      screen.appendChild(root);
+      const months = d.months || [];
+      const cur = months[0] || { total: 0, by_currency: {} };
+
+      const top = document.createElement('div');
+      top.className = 'dash-card dash-income';
+      const monthIdx = Number((cur.month || '0000-01').slice(5, 7)) - 1;
+      top.innerHTML = `<div class="top"><span>Доход \u00b7 ${DASH_MONTHS_NOM[monthIdx]}</span></div><div class="sum">${dashMoney(cur.total)} <small>${curSym()}</small></div>`;
+      const other = Object.entries(cur.by_currency || {}).filter(([c]) => c !== tutorCurrency);
+      if (other.length) top.insertAdjacentHTML('beforeend', `<div class="trend">в т.ч. ${other.map(([c, v]) => money(v, c)).join(' + ')} (по курсу НБ РБ)</div>`);
+      const profit = calcProfit(cur.total, tax);
+      if (profit) top.insertAdjacentHTML('beforeend', `<div class="trend">Чистыми \u2248 <b style="font-size:16px;">${money(profit.net)}</b> \u00b7 налог ${money(profit.tax)}</div>`);
+      root.appendChild(top);
+      root.insertAdjacentHTML('beforeend', '<div class="set-hint" style="margin:10px 2px 14px;">Доход считается по проведённым урокам (цена из карточки ученика или абонемента) и по отмеченным оплатам — по каждому ученику берётся большее, чтобы ничего не посчиталось дважды.</div>');
+
+      // По месяцам — только когда есть доход в прошлых месяцах (есть с чем сравнить).
+      const hasHistory = months.slice(1).some((x) => x.total > 0);
+      const mc = settingsCard('По месяцам');
+      if (!hasHistory) mc.style.display = 'none';
+      const max = Math.max(1, ...months.map((x) => x.total));
+      months.forEach((x) => {
+        const mi = Number(x.month.slice(5, 7)) - 1;
+        const row = document.createElement('div');
+        row.style.cssText = 'display:grid;grid-template-columns:110px 1fr auto;gap:10px;align-items:center;padding:5px 0;font-size:13.5px;';
+        const extra = Object.entries(x.by_currency || {}).filter(([c]) => c !== tutorCurrency);
+        row.innerHTML = `<span>${DASH_MONTHS_NOM[mi]} ${x.month.slice(0, 4) !== String(new Date().getFullYear()) ? x.month.slice(0, 4) : ''}</span>` +
+          `<span style="height:8px;border-radius:4px;background:var(--bg-soft);overflow:hidden;"><span style="display:block;height:100%;width:${Math.round(x.total / max * 100)}%;background:var(--accent);border-radius:4px;"></span></span>` +
+          `<b>${money(x.total)}</b>` +
+          (extra.length ? `<span></span><span class="set-hint" style="margin:0;grid-column:2/4;font-size:11.5px;">из них ${extra.map(([c, v]) => money(v, c)).join(', ')}</span>` : '');
+        mc.appendChild(row);
+      });
+      root.appendChild(mc);
+
+      const pay = document.createElement('button');
+      pay.className = 'set-btn';
+      pay.style.cssText = 'width:100%;margin-bottom:12px;';
+      pay.textContent = 'Все оплаты и долги \u2192';
+      pay.onclick = () => { stack.push({ level: 'payments', title: 'Оплаты' }); render(false); };
+      root.appendChild(pay);
+
+      // Налоги и прибыль
+      const tc = settingsCard('Налоги и прибыль');
+      const modes = document.createElement('div');
+      modes.style.cssText = 'display:flex;flex-direction:column;gap:6px;margin-bottom:10px;';
+      const fields = document.createElement('div');
+      const result = document.createElement('div');
+      const drawResult = () => {
+        const r = calcProfit(cur.total, tax);
+        result.innerHTML = !r ? '' : '<div style="background:var(--bg-soft);border-radius:12px;padding:12px;font-size:13.5px;display:grid;grid-template-columns:1fr auto;row-gap:6px;margin-top:6px;">' +
+          `<span>Доход</span><b>${money(cur.total)}</b><span>Налог</span><b style="color:var(--red-dark);">\u2212${money(r.tax)}</b>` +
+          (r.expenses ? `<span>Расходы</span><b style="color:var(--red-dark);">\u2212${money(r.expenses)}</b>` : '') +
+          (r.fixed ? `<span>Взносы</span><b style="color:var(--red-dark);">\u2212${money(r.fixed)}</b>` : '') +
+          `<span style="font-weight:800;">Чистая прибыль</span><b style="font-size:16px;color:var(--accent-dark);">${money(r.net)}</b></div>`;
+      };
+      const drawFields = () => {
+        fields.innerHTML = '';
+        if (tax.mode === 'none') { drawResult(); return; }
+        const field = (label, key, hint) => {
+          const w = document.createElement('div');
+          w.style.marginBottom = '10px';
+          w.innerHTML = `<div class="field-label">${label}</div>`;
+          const inp = document.createElement('input');
+          inp.className = 'field-input'; inp.type = 'number'; inp.min = '0'; inp.step = 'any'; inp.value = tax[key] || 0;
+          inp.oninput = () => { tax[key] = parseFloat(String(inp.value).replace(',', '.')) || 0; drawResult(); };
+          w.appendChild(inp);
+          if (hint) w.insertAdjacentHTML('beforeend', `<div class="set-hint" style="margin:4px 0 0;font-size:11.5px;">${hint}</div>`);
+          fields.appendChild(w);
+        };
+        field(tax.mode === 'profit' ? 'Налог с прибыли, %' : 'Налог с дохода, %', 'rate');
+        field('Расходы в месяц', 'expenses_monthly', 'Аренда, реклама, сервисы — вычитаются из дохода.');
+        if (tax.mode === 'profit') field('Обязательные взносы в месяц', 'fixed_monthly', 'Например, взносы в ФСЗН и другие фиксированные платежи.');
+        drawResult();
+      };
+      const drawModes = () => {
+        modes.innerHTML = '';
+        TAX_MODES.forEach((m) => {
+          const b = document.createElement('button');
+          b.className = 'set-choice inline' + (tax.mode === m.key ? ' on' : '');
+          b.style.cssText = 'justify-content:space-between;text-align:left;width:100%;';
+          b.innerHTML = `<span><b>${m.title}</b><br><span style="font-size:11.5px;font-weight:500;color:var(--text-soft);">${m.sub}</span></span>${tax.mode === m.key ? '✓' : ''}`;
+          b.onclick = () => { if (tax.mode !== m.key && m.rate !== undefined) tax.rate = m.rate; tax.mode = m.key; drawModes(); drawFields(); };
+          modes.appendChild(b);
+        });
+      };
+      drawModes(); drawFields();
+      tc.appendChild(modes); tc.appendChild(fields); tc.appendChild(result);
+      const save = document.createElement('button');
+      save.className = 'set-btn primary';
+      save.style.cssText = 'width:100%;margin-top:10px;';
+      save.textContent = 'Сохранить';
+      save.onclick = async () => {
+        save.disabled = true;
+        try { await apiSend('POST', '/api/teacher/tax-settings', tax); showToast('Сохранено'); render(false); }
+        catch (err) { save.disabled = false; showToast('Не получилось: ' + err.message); }
+      };
+      tc.appendChild(save);
+      tc.insertAdjacentHTML('beforeend', '<div class="set-hint" style="margin:10px 0 0;font-size:11.5px;">Расчёт примерный. Ставки меняются — точные суммы уточняйте у бухгалтера или в налоговой.</div>');
+      root.appendChild(tc);
+    }, isBack);
+  }
+
   async function renderDashboard(isBack) {
     showLoadingMenu();
     try {
@@ -5352,7 +5679,7 @@
         const more = document.createElement('button');
         more.className = 'more';
         more.textContent = 'Подробнее \u2192';
-        more.onclick = () => showProfitCalculator(s.income_this_month, s.tax, (saved) => { s.tax = saved; render(false); }, s);
+        more.onclick = () => { stack = [{ level: 'dashboard', title: 'Главная' }, { level: 'income', title: 'Доход' }]; render(false); };
         top.appendChild(more);
         inc.appendChild(top);
         const sum = document.createElement('div');
@@ -5361,12 +5688,15 @@
         inc.appendChild(sum);
         const trend = document.createElement('div');
         trend.className = 'trend';
-        trend.innerHTML = diffPct === null
-          ? '<span style="opacity:0.8;">Сравнение появится, когда будут оплаты за прошлый месяц</span>'
-          : `<span class="badge">${diff >= 0 ? '\u2197 +' : '\u2198 '}${diffPct}%</span><span style="opacity:0.85;">${diff >= 0 ? '+' : '\u2212'}${dashMoney(Math.abs(diff))} ${curSym()} к ${DASH_MONTHS_DAT[prevMonthIdx]}</span>`;
-        inc.appendChild(trend);
+        // Сравнение и полоски прошлых месяцев — только когда есть с чем
+        // сравнивать (был доход в прошлом месяце). Пока нет — не показываем.
+        const hasComparison = diffPct !== null;
+        if (hasComparison) {
+          trend.innerHTML = `<span class="badge">${diff >= 0 ? '\u2197 +' : '\u2198 '}${diffPct}%</span><span style="opacity:0.85;">${diff >= 0 ? '+' : '\u2212'}${dashMoney(Math.abs(diff))} ${curSym()} к ${DASH_MONTHS_DAT[prevMonthIdx]}</span>`;
+          inc.appendChild(trend);
+        }
 
-        if (hist.length) {
+        if (hasComparison && hist.some((x) => x.amount > 0)) {
           const bars = document.createElement('div');
           bars.className = 'bars';
           const maxV = Math.max(1, s.income_this_month, ...hist.map((x) => x.amount));
@@ -5398,7 +5728,7 @@
             const d = r.requested_at || '';
             const [, m, dd] = d.slice(0, 10).split('-');
             reqCard.insertAdjacentHTML('beforeend',
-              `<div class="dash-row"><span class="name">${escapeHtml(r.student_name)}</span><span class="muted">${dd ? `${Number(dd)} ${DASH_MONTHS_SHORT[Number(m) - 1]} ${d.slice(11, 16)}` : ''}</span></div>`);
+              `<div class="dash-row"><span class="name">${r.is_trial ? '🎁 ' : ''}${escapeHtml(r.student_name)}</span><span class="muted">${dd ? `${Number(dd)} ${DASH_MONTHS_SHORT[Number(m) - 1]} ${d.slice(11, 16)}` : ''}</span></div>`);
           });
         }
         grid.appendChild(reqCard);
@@ -5526,7 +5856,7 @@
         addSeriesBtn.className = 'add-row-btn';
         addSeriesBtn.style.flex = '1';
         addSeriesBtn.textContent = '🔁 Регулярный';
-        addSeriesBtn.onclick = () => promptAddLessonSeries(() => render(false));
+        addSeriesBtn.onclick = () => promptPickStudentThenSchedule(() => render(false));
         btnRow.appendChild(addSeriesBtn);
         screen.appendChild(btnRow);
 
@@ -5626,7 +5956,7 @@
     const dateLabel = new Date(y, m - 1, d).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
     const info = document.createElement('div');
     info.style.cssText = 'flex:1;min-width:0;';
-    info.innerHTML = `<div class="row-title">${escapeHtml(r.student_name)}</div>` +
+    info.innerHTML = `<div class="row-title">${escapeHtml(r.student_name)}${r.is_trial ? ' <span class="trial-tag">🎁 пробное</span>' : ''}</div>` +
       `<div class="field-hint" style="margin-top:2px;">${dateLabel}, ${timeStr} \u00b7 ${r.duration_minutes} мин</div>`;
     row.appendChild(info);
     const actions = document.createElement('div');
@@ -5761,6 +6091,7 @@
     const isActive = l.status === 'scheduled';
     overlay.innerHTML = '<div style="background:var(--bg);border-radius:16px;padding:18px;max-width:340px;width:100%;max-height:90vh;overflow-y:auto;">' +
       `<div style="font-weight:700;margin-bottom:14px;">${escapeHtml(who)} — ${l.scheduled_at.slice(0, 16).replace('T', ' ')}</div>` +
+      (l.is_trial ? '<div style="background:#FDF0E3;color:#B8661F;border-radius:10px;padding:8px 10px;margin-bottom:12px;font-size:13px;font-weight:700;">🎁 Пробное занятие — не списывается с абонемента</div>' : '') +
       (ATTENDANCE[l.attendance] ? `<div style="background:var(--bg-soft);border-radius:10px;padding:8px 10px;margin-bottom:12px;font-size:13px;font-weight:700;color:${ATTENDANCE[l.attendance].color};">${ATTENDANCE[l.attendance].icon} Ученик ${ATTENDANCE[l.attendance].text}${l.attendance === 'cancel_requested' ? ' — отмените урок со списанием или без' : ''}</div>` : '') +
       // Заметка к занятию — видна только репетитору.
       '<div class="field-label" style="margin-bottom:6px;">📝 Заметка к занятию</div>' +
@@ -5776,6 +6107,7 @@
       (l.status === 'rescheduled' ? '<div class="set-hint" style="margin:0;">Этот урок перенесён — все действия доступны у урока на новом времени.</div><button class="save-btn" id="lMovedTo" style="margin-top:0;">➡️ Открыть урок на новом времени</button>' : '') +
       (['conducted', 'cancelled_charged', 'cancelled_no_charge'].includes(l.status)
         ? `<div class="set-hint" style="margin:0;">Статус: ${{ conducted: 'проведён', cancelled_charged: 'отменён со списанием', cancelled_no_charge: 'отменён без списания' }[l.status]}</div><button class="back-btn" id="lReopen">↩️ Вернуть в запланированные</button>` : '') +
+      (isActive ? `<button class="back-btn" id="lTrial">${l.is_trial ? '🎁 Убрать отметку «пробное»' : '🎁 Сделать пробным'}</button>` : '') +
       '<button class="back-btn" id="lDelete" style="color:var(--red-dark);">🗑 Удалить запись</button>' +
       '<button class="back-btn" id="lClose">Закрыть</button>' +
       '</div></div>';
@@ -5784,6 +6116,15 @@
     const liveBtn = overlay.querySelector('#lLiveSession');
     if (liveBtn) liveBtn.onclick = () => { closeOverlay(); openLiveSession(l.id); };
     overlay.querySelector('#lClose').onclick = closeOverlay;
+    const trialBtn = overlay.querySelector('#lTrial');
+    if (trialBtn) trialBtn.onclick = async () => {
+      try {
+        await apiSend('POST', `/api/teacher/lessons/${l.id}/trial`, { is_trial: !l.is_trial });
+        showToast(l.is_trial ? 'Отметка «пробное» снята' : 'Отмечено как пробное');
+        closeOverlay();
+        onDone();
+      } catch (err) { showToast('Не получилось: ' + err.message); }
+    };
     const movedBtn = overlay.querySelector('#lMovedTo');
     if (movedBtn) movedBtn.onclick = async () => {
       try {
@@ -6111,6 +6452,7 @@
       '<input class="field-input" id="lsTime" type="time" style="margin-bottom:10px;">' +
       '<div class="field-label">Длительность (минут)</div>' +
       '<input class="field-input" id="lsDuration" type="number" value="60" min="10" step="5" style="margin-bottom:10px;">' +
+      '<label style="display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600;margin-bottom:12px;cursor:pointer;"><input type="checkbox" id="lsTrial" style="width:18px;height:18px;"> 🎁 Пробное занятие</label>' +
       '<div id="lsPackageWrap" style="display:none;margin-bottom:14px;">' +
       '<div class="field-label">Списывать с абонемента</div>' +
       '<select class="field-input" id="lsPackage"></select>' +
@@ -6150,6 +6492,7 @@
           scheduled_at: `${dateInput.value} ${timeInput.value}:00`,
           duration_minutes: parseInt(durationInput.value, 10) || 60,
           package_id: packageSelect.value || null,
+          is_trial: !!(overlay.querySelector('#lsTrial') || {}).checked,
         });
         closeOverlay();
         onDone();
@@ -6160,6 +6503,56 @@
         errBox.style.display = 'block';
       }
     };
+  }
+
+  // Регулярное занятие: выбрать ученика (или добавить нового) — и сразу
+  // редактор расписания: несколько дней, своё время и длительность на каждый.
+  async function promptPickStudentThenSchedule(onDone) {
+    let students = [];
+    try { students = (await apiGet('/api/teacher/all-students')).filter((x) => !x.archived); } catch (err) {}
+    lockBodyScroll();
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center;z-index:60;padding:20px;';
+    const box = document.createElement('div');
+    box.style.cssText = 'background:var(--bg);border-radius:18px;padding:18px;max-width:380px;width:100%;max-height:85vh;display:flex;flex-direction:column;';
+    box.innerHTML = '<div style="font-size:18px;font-weight:700;margin-bottom:10px;">🗓 Для кого расписание?</div>';
+    const search = document.createElement('input');
+    search.className = 'field-input';
+    search.placeholder = 'Найти ученика';
+    search.style.marginBottom = '8px';
+    box.appendChild(search);
+    const list = document.createElement('div');
+    list.style.cssText = 'overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:6px;min-height:80px;';
+    box.appendChild(list);
+    const close = () => { unlockBodyScroll(); overlay.remove(); };
+    const draw = () => {
+      const q = search.value.trim().toLowerCase();
+      list.innerHTML = '';
+      students.filter((x) => !q || x.display_name.toLowerCase().includes(q)).forEach((x) => {
+        const b = document.createElement('button');
+        b.className = 'set-btn';
+        b.style.cssText = 'text-align:left;';
+        b.textContent = x.display_name + (x.telegram_id < 0 ? ' \u00b7 без Telegram' : '');
+        b.onclick = () => { close(); promptScheduleEditor({ kind: 'student', id: x.telegram_id, name: x.display_name, subjectId: currentSubjectId }, onDone); };
+        list.appendChild(b);
+      });
+      if (!list.children.length) list.innerHTML = '<div class="set-hint">Никого не нашлось.</div>';
+    };
+    search.oninput = draw;
+    draw();
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;gap:8px;margin-top:10px;';
+    const cancel = document.createElement('button');
+    cancel.className = 'set-btn'; cancel.style.flex = '1'; cancel.textContent = 'Отмена'; cancel.onclick = close;
+    const add = document.createElement('button');
+    add.className = 'set-btn primary'; add.style.flex = '1'; add.textContent = '+ Новый ученик';
+    add.onclick = () => { close(); promptAddIndividualStudent(onDone); };
+    row.appendChild(cancel); row.appendChild(add);
+    box.appendChild(row);
+    overlay.appendChild(box);
+    overlay.onclick = (e) => { if (e.target === overlay) close(); };
+    document.body.appendChild(overlay);
+    setTimeout(() => search.focus(), 50);
   }
 
   function promptAddLessonSeries(onDone) {
@@ -7683,6 +8076,24 @@
         head.appendChild(menuBtn);
         root.appendChild(head);
 
+        if (studentId < 0) {
+          const off = document.createElement('div');
+          off.className = 'sc-card';
+          off.style.cssText = 'margin-bottom:12px;display:flex;align-items:center;gap:10px;';
+          off.innerHTML = '<div style="flex:1;font-size:13.5px;"><b>Без Telegram</b> · только ваш учёт. Напоминания и приложение ученику недоступны.</div>';
+          const link = document.createElement('button');
+          link.className = 'set-btn primary';
+          link.textContent = 'Привязать Telegram';
+          link.onclick = () => {
+            const q = prompt('Telegram id, @ник или телефон ученика (он должен хотя бы раз написать боту /start):', '');
+            if (!q) return;
+            apiSend('POST', `/api/teacher/students/${studentId}/link`, { query: q.trim() })
+              .then((res) => { showToast('Telegram привязан — все уроки и оплаты перенесены'); renderStudentSubscriptions(res.telegram_id, displayName, groupTitle); })
+              .catch((e) => showToast(e.message || 'Не получилось'));
+          };
+          off.appendChild(link);
+          root.appendChild(off);
+        }
         const layout = document.createElement('div');
         layout.className = 'sc-layout';
         const main = document.createElement('div');
