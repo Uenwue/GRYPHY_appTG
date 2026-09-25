@@ -1,6 +1,67 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
+<script>
+  // Цвет оформления (акцент): выбирается в настройках, общий для кабинета
+  // учителя и приложения ученика. От него считаются тёмный оттенок, светлая
+  // подложка и фон страницы (в светлой и тёмной теме).
+  window.ACCENT_COLORS = ['#238BA7', '#4C7BD9', '#8A63D2', '#D2638F', '#E07A3F', '#3E9E6A', '#C9A227', '#5B6573'];
+  window.applyAccent = function (hex) {
+    var root = document.documentElement.style;
+    var names = ['--th-accent', '--th-accent-dark', '--th-accent-rgb', '--th-tint', '--th-page', '--th-page-dark'];
+    window.__accent = (hex && /^#[0-9a-f]{6}$/i.test(hex)) ? hex.toUpperCase() : '#238BA7';
+    if (window.tintLogos && document.readyState !== 'loading') window.tintLogos();
+    if (window.__accent === '#238BA7') {
+      names.forEach(function (n) { root.removeProperty(n); });
+      return;
+    }
+    var r = parseInt(hex.slice(1, 3), 16), g = parseInt(hex.slice(3, 5), 16), b = parseInt(hex.slice(5, 7), 16);
+    var mix = function (bg, k) {
+      return '#' + [r, g, b].map(function (c, i) { return Math.round(bg[i] + (c - bg[i]) * k).toString(16).padStart(2, '0'); }).join('');
+    };
+    root.setProperty('--th-accent', hex);
+    root.setProperty('--th-accent-dark', mix([0, 0, 0], 0.78));
+    root.setProperty('--th-accent-rgb', r + ',' + g + ',' + b);
+    root.setProperty('--th-tint', mix([255, 255, 255], 0.13));
+    root.setProperty('--th-page', mix([255, 255, 255], 0.06));
+    root.setProperty('--th-page-dark', mix([20, 24, 31], 0.07));
+  };
+  // Логотип перекрашивается в цвет оформления (буква N — прозрачная, поэтому
+  // достаточно залить непрозрачные пиксели новым цветом).
+  window.__logoCache = {};
+  window.tintLogo = function (img) {
+    if (!img) return;
+    var orig = img.dataset.orig || img.getAttribute('src');
+    if (!orig) return;
+    img.dataset.orig = orig;
+    img.setAttribute('data-accent-logo', '1');
+    var col = window.__accent || '#238BA7';
+    if (col === '#238BA7') { if (img.getAttribute('src') !== orig) img.src = orig; return; }
+    var key = col + '|' + orig.length + '|' + orig.slice(-40);
+    if (window.__logoCache[key]) { img.src = window.__logoCache[key]; return; }
+    var src = new Image();
+    src.onload = function () {
+      try {
+        var cv = document.createElement('canvas');
+        cv.width = src.naturalWidth; cv.height = src.naturalHeight;
+        var cx = cv.getContext('2d');
+        cx.drawImage(src, 0, 0);
+        cx.globalCompositeOperation = 'source-in';
+        cx.fillStyle = col;
+        cx.fillRect(0, 0, cv.width, cv.height);
+        window.__logoCache[key] = cv.toDataURL('image/png');
+        if ((window.__accent || '#238BA7') === col) img.src = window.__logoCache[key];
+      } catch (e) {}
+    };
+    src.src = orig;
+  };
+  window.tintLogos = function () {
+    document.querySelectorAll('img[data-accent-logo], img.tb-logo-img').forEach(window.tintLogo);
+  };
+  document.addEventListener('DOMContentLoaded', function () { window.tintLogos(); });
+  try { window.applyAccent(localStorage.getItem('miniapp-accent')); } catch (e) {}
+</script>
+
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
 <title>Navats — кабинет преподавателя</title>
@@ -80,43 +141,44 @@
     --green: #58CC02;
     --green-dark: #58A700;
     --green-tint: #D7FFB8;
-    --blue: #238BA7;
-    --blue-dark: #1B6F86;
-    --blue-tint: #E3F4F8;
+    --blue: var(--accent);
+    --blue-dark: var(--accent-dark);
+    --blue-tint: var(--th-tint, #E3F4F8);
     --red: #FF4B4B;
     --red-dark: #EA2B2B;
     --red-tint: #FFDFE0;
     --yellow: #FFC800;
     --yellow-tint: #FFF1C2;
     --bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
-    --accent: #238BA7;
-    --accent-dark: #1B6F86;
-    --page-bg: #F1FBFE;
+    --accent: var(--th-accent, #238BA7);
+    --accent-dark: var(--th-accent-dark, #1B6F86);
+    --accent-rgb: var(--th-accent-rgb, 35, 139, 167);
+    --page-bg: var(--th-page, #F1FBFE);
   }
 
   @media (prefers-color-scheme: dark) {
     html:not([data-theme="light"]) {
       --bg: #1B2029;
-      --page-bg: #14181F;
+      --page-bg: var(--th-page-dark, #14181F);
       --bg-soft: #262D3A;
       --border: #3A4252;
       --text: #F1F3F6;
       --text-soft: #A6AFC0;
       --green-tint: rgba(88, 204, 2, 0.16);
-      --blue-tint: rgba(35, 139, 167, 0.18);
+      --blue-tint: rgba(var(--accent-rgb), 0.18);
       --red-tint: rgba(255, 75, 75, 0.16);
       --yellow-tint: rgba(255, 200, 0, 0.16);
     }
   }
   html[data-theme="dark"] {
     --bg: #1B2029;
-    --page-bg: #14181F;
+    --page-bg: var(--th-page-dark, #14181F);
     --bg-soft: #262D3A;
     --border: #3A4252;
     --text: #F1F3F6;
     --text-soft: #A6AFC0;
     --green-tint: rgba(88, 204, 2, 0.16);
-    --blue-tint: rgba(35, 139, 167, 0.18);
+    --blue-tint: rgba(var(--accent-rgb), 0.18);
     --red-tint: rgba(255, 75, 75, 0.16);
     --yellow-tint: rgba(255, 200, 0, 0.16);
   }
@@ -183,8 +245,8 @@
     content: ''; position: absolute; top: -6px; left: 50%; transform: translateX(-50%);
     width: 32px; height: 3px; border-radius: 3px; background: var(--accent);
   }
-  body.is-admin .side-nav-item.active { color: #1B6F86; }
-  body.is-admin .side-nav-item.active::before { background: #1B6F86; }
+  body.is-admin .side-nav-item.active { color: var(--accent-dark); }
+  body.is-admin .side-nav-item.active::before { background: var(--accent-dark); }
   .side-nav-item .nav-badge {
     position: absolute; top: 2px; right: 8px; background: var(--red-dark);
     color: white; border-radius: 8px; padding: 0 4px; font-size: 9px; font-weight: 800; line-height: 14px;
@@ -208,7 +270,7 @@
       content: ''; position: absolute; left: -8px; top: 8px; bottom: 8px; width: 4px;
       border-radius: 2px; background: var(--accent);
     }
-    body.is-admin .side-nav-item.active::before { background: #1B6F86; }
+    body.is-admin .side-nav-item.active::before { background: var(--accent-dark); }
     .side-nav-item.desktop-only { display: flex; }
     .side-nav-more { display: none !important; }
     body.has-side-nav .wrap { padding-bottom: 0; padding-left: 104px; max-width: 640px; }
@@ -222,7 +284,7 @@
     }
     .side-nav-item:hover { background: var(--bg-soft); }
     .side-nav-item.active { background: var(--blue-tint, #E3F4F8); }
-    body.is-admin .side-nav-item.active { background: rgba(35, 139, 167, 0.14); }
+    body.is-admin .side-nav-item.active { background: rgba(var(--accent-rgb), 0.14); }
     .side-nav-item.active::before { left: 0; width: 4px; }
     .side-nav-item svg { width: 24px; height: 24px; flex-shrink: 0; }
     .side-nav-label {
@@ -246,13 +308,13 @@
 
 
   /* ===== Список учеников ===== */
-  .st { --d-accent: #238BA7; --d-accent-dark: #1B6F86; --d-tint: #E3F4F8; }
-  html[data-theme="dark"] .st { --d-tint: rgba(35,139,167,0.18); }
-  @media (prefers-color-scheme: dark) { html:not([data-theme="light"]) .st { --d-tint: rgba(35,139,167,0.18); } }
+  .st { --d-accent: var(--accent); --d-accent-dark: var(--accent-dark); --d-tint: var(--blue-tint); }
+  html[data-theme="dark"] .st { --d-tint: rgba(var(--accent-rgb), 0.18); }
+  @media (prefers-color-scheme: dark) { html:not([data-theme="light"]) .st { --d-tint: rgba(var(--accent-rgb), 0.18); } }
   .st-top { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
   .st-title { font-size: 26px; font-weight: 700; margin-right: auto; }
   .st-btn { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--border); background: var(--bg); color: var(--text); border-radius: 14px; padding: 10px 14px; font-size: 14px; font-weight: 700; cursor: pointer; }
-  .st-btn.primary { background: var(--d-accent); border-color: var(--d-accent); color: #fff; box-shadow: 0 4px 14px rgba(35,139,167,0.3); }
+  .st-btn.primary { background: var(--d-accent); border-color: var(--d-accent); color: #fff; box-shadow: 0 4px 14px rgba(var(--accent-rgb), 0.3); }
   .st-search { position: relative; margin-bottom: 12px; }
   .st-search input { width: 100%; padding: 13px 14px 13px 40px; border: 1px solid var(--border); border-radius: 14px; background: var(--bg); color: var(--text); font-size: 15px; outline: none; box-sizing: border-box; }
   .st-search input:focus { border-color: var(--d-accent); }
@@ -296,9 +358,9 @@
     .st-next { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   }
   /* ===== Расписание (сетка по часам) ===== */
-  .sg { --d-accent: #238BA7; --d-accent-dark: #1B6F86; --d-tint: #E3F4F8; --hour: 56px; --timecol: 44px; }
-  html[data-theme="dark"] .sg { --d-tint: rgba(35,139,167,0.18); }
-  @media (prefers-color-scheme: dark) { html:not([data-theme="light"]) .sg { --d-tint: rgba(35,139,167,0.18); } }
+  .sg { --d-accent: var(--accent); --d-accent-dark: var(--accent-dark); --d-tint: var(--blue-tint); --hour: 56px; --timecol: 44px; }
+  html[data-theme="dark"] .sg { --d-tint: rgba(var(--accent-rgb), 0.18); }
+  @media (prefers-color-scheme: dark) { html:not([data-theme="light"]) .sg { --d-tint: rgba(var(--accent-rgb), 0.18); } }
   .sg-top { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }
   .sg-title { font-size: 24px; font-weight: 700; margin-right: auto; }
   .sg-week { display: flex; align-items: center; gap: 4px; border: 1px solid var(--border); background: var(--bg); border-radius: 14px; padding: 4px; }
@@ -307,7 +369,7 @@
   .sg-week-label { font-size: 13px; font-weight: 700; text-align: center; min-width: 120px; line-height: 1.2; }
   .sg-week-label small { display: block; font-size: 11px; font-weight: 600; color: var(--text-soft); }
   .sg-today-btn { border: 1px solid var(--border); background: var(--bg); border-radius: 12px; padding: 8px 12px; font-size: 13px; font-weight: 700; color: var(--text); cursor: pointer; }
-  .sg-add { border: none; background: var(--d-accent); color: #fff; border-radius: 14px; padding: 10px 16px; font-size: 14px; font-weight: 700; cursor: pointer; box-shadow: 0 4px 14px rgba(35,139,167,0.3); }
+  .sg-add { border: none; background: var(--d-accent); color: #fff; border-radius: 14px; padding: 10px 16px; font-size: 14px; font-weight: 700; cursor: pointer; box-shadow: 0 4px 14px rgba(var(--accent-rgb), 0.3); }
   .sg-legend { display: flex; gap: 12px; flex-wrap: wrap; font-size: 11.5px; color: var(--text-soft); margin: 0 0 10px; }
   .sg-legend span { display: inline-flex; align-items: center; gap: 5px; }
   .sg-legend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; }
@@ -327,7 +389,7 @@
   .sg-col.today { background-color: color-mix(in srgb, var(--d-tint) 55%, transparent); }
   .sg-col.weekend { background-color: color-mix(in srgb, var(--bg-soft) 70%, transparent); }
   .sg-ev {
-    --ev: #238BA7; --ev-tint: #E3F4F8;
+    --ev: var(--accent); --ev-tint: var(--blue-tint);
     position: absolute; left: 2px; right: 2px; border-radius: 8px; padding: 3px 5px 3px 7px; overflow: hidden; cursor: pointer;
     background: var(--ev-tint); background: color-mix(in srgb, var(--ev) 15%, var(--bg));
     border-left: 3px solid var(--ev); font-size: 11px; line-height: 1.25; z-index: 1;
@@ -368,9 +430,9 @@
   }
   @media (min-width: 640px) { .sg-ev .d { display: none; } }
   /* ===== Карточка ученика ===== */
-  .sc { --d-accent: #238BA7; --d-accent-dark: #1B6F86; --d-tint: #E3F4F8; }
-  html[data-theme="dark"] .sc { --d-tint: rgba(35,139,167,0.18); }
-  @media (prefers-color-scheme: dark) { html:not([data-theme="light"]) .sc { --d-tint: rgba(35,139,167,0.18); } }
+  .sc { --d-accent: var(--accent); --d-accent-dark: var(--accent-dark); --d-tint: var(--blue-tint); }
+  html[data-theme="dark"] .sc { --d-tint: rgba(var(--accent-rgb), 0.18); }
+  @media (prefers-color-scheme: dark) { html:not([data-theme="light"]) .sc { --d-tint: rgba(var(--accent-rgb), 0.18); } }
   .sc-head { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
   .sc-name { flex: 1; min-width: 0; font-size: 22px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .sc-menu-btn { width: 38px; height: 38px; border-radius: 12px; border: 1px solid var(--border); background: var(--bg); color: var(--text); font-size: 18px; font-weight: 800; cursor: pointer; flex-shrink: 0; }
@@ -439,7 +501,7 @@
   .board-empty { font-size: 16px; font-weight: 600; color: var(--text-soft); line-height: 1.3; }
   .board-empty.small { font-size: 13px; font-weight: 600; }
   .board-ev {
-    --ev: #238BA7; --ev-tint: #E3F4F8;
+    --ev: var(--accent); --ev-tint: var(--blue-tint);
     position: relative; display: flex; align-items: center; gap: 8px;
     background: var(--ev-tint); background: color-mix(in srgb, var(--ev) 13%, var(--bg));
     border-radius: 10px; padding: 7px 8px 7px 12px; cursor: pointer; overflow: hidden;
@@ -477,9 +539,9 @@
   .board-foot button { background: none; border: none; color: var(--d-accent); font-size: 12.5px; font-weight: 700; cursor: pointer; padding: 0; }
   .board-hint { font-size: 11px; color: var(--text-soft); margin-top: 2px; }
   /* ===== Дашборд (главная репетитора) — фирменный бирюзовый ===== */
-  .dash { --d-accent: #238BA7; --d-accent-dark: #1B6F86; --d-tint: #E3F4F8; }
-  html[data-theme="dark"] .dash { --d-tint: rgba(35,139,167,0.18); }
-  @media (prefers-color-scheme: dark) { html:not([data-theme="light"]) .dash { --d-tint: rgba(35,139,167,0.18); } }
+  .dash { --d-accent: var(--accent); --d-accent-dark: var(--accent-dark); --d-tint: var(--blue-tint); }
+  html[data-theme="dark"] .dash { --d-tint: rgba(var(--accent-rgb), 0.18); }
+  @media (prefers-color-scheme: dark) { html:not([data-theme="light"]) .dash { --d-tint: rgba(var(--accent-rgb), 0.18); } }
   .dash-date { font-size: 11.5px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-soft); margin: 0 0 12px; }
   .dash-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
   .dash-card {
@@ -519,7 +581,7 @@
   .dash-lesson .dur { color: var(--text-soft); font-size: 12px; }
   .dash-lesson.done { opacity: 0.55; }
 
-  .dash-income { background: var(--d-accent); color: #fff; border: none; box-shadow: 0 6px 20px rgba(35,139,167,0.25); }
+  .dash-income { background: var(--d-accent); color: #fff; border: none; box-shadow: 0 6px 20px rgba(var(--accent-rgb), 0.25); }
   .dash-income .top { display: flex; justify-content: space-between; align-items: center; font-size: 11.5px; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase; opacity: 0.9; }
   .dash-income .more { background: none; border: none; color: #fff; font-size: 12.5px; font-weight: 700; cursor: pointer; padding: 0; text-transform: none; letter-spacing: 0; }
   .dash-income .sum { font-size: 40px; font-weight: 700; line-height: 1.1; margin: 8px 0 10px; }
@@ -585,17 +647,17 @@
   }
   .tb-inner { max-width: 1320px; margin: 0 auto; height: 60px; padding: 0 16px; display: flex; align-items: center; gap: 14px; box-sizing: border-box; }
   .tb-brand { display: flex; align-items: center; gap: 10px; border: none; background: none; padding: 0; cursor: pointer; flex-shrink: 0; }
-  .tb-logo { width: 36px; height: 36px; border-radius: 10px; background: #238BA7; display: flex; align-items: center; justify-content: center; }
-  body.is-admin .tb-logo { background: linear-gradient(135deg, #238BA7, #1B6F86); }
+  .tb-logo { width: 36px; height: 36px; border-radius: 10px; background: var(--accent); display: flex; align-items: center; justify-content: center; }
+  body.is-admin .tb-logo { background: linear-gradient(135deg, var(--accent), var(--accent-dark)); }
   .tb-logo svg { width: 22px; height: 22px; }
-  .tb-name { font-size: 19px; font-weight: 700; color: #1B6F86; letter-spacing: 0.01em; }
+  .tb-name { font-size: 19px; font-weight: 700; color: var(--accent-dark); letter-spacing: 0.01em; }
   html[data-theme="dark"] .tb-name { color: #5CC3DE; }
   @media (prefers-color-scheme: dark) { html:not([data-theme="light"]) .tb-name { color: #5CC3DE; } }
   .tb-logo-img { height: 34px; width: auto; display: block; }
   @media (max-width: 767px) { .tb-logo-img { height: 30px; } }
   .tb-mode { display: flex; background: var(--bg-soft); border: 1px solid var(--border); border-radius: 12px; padding: 3px; flex-shrink: 0; }
   .tb-mode button { border: none; background: none; border-radius: 9px; padding: 7px 12px; font-size: 12.5px; font-weight: 700; color: var(--text-soft); cursor: pointer; white-space: nowrap; }
-  .tb-mode button.on { background: #238BA7; color: #fff; box-shadow: 0 2px 6px rgba(35,139,167,0.3); }
+  .tb-mode button.on { background: var(--accent); color: #fff; box-shadow: 0 2px 6px rgba(var(--accent-rgb), 0.3); }
   .tb-course { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--border); background: var(--bg); border-radius: 10px; padding: 6px 10px; margin: auto 6px auto 0; font-size: 12.5px; font-weight: 700; color: var(--text); cursor: pointer; white-space: nowrap; max-width: 200px; overflow: hidden; text-overflow: ellipsis; flex-shrink: 0; }
   @media (max-width: 767px) {
     .tb-inner { gap: 8px; padding: 0 12px; }
@@ -623,15 +685,15 @@
     border-bottom: 2px solid transparent; border-top: 2px solid transparent;
   }
   .tb-link:hover { color: var(--text); }
-  .tb-link.on { color: var(--text); border-bottom-color: #238BA7; }
+  .tb-link.on { color: var(--text); border-bottom-color: var(--accent); }
   .tb-right { margin-left: auto; display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
   .tb-support {
     display: inline-flex; align-items: center; gap: 7px; border: 1px solid var(--border); border-radius: 20px;
-    background: #E3F4F8; color: #1B6F86; padding: 8px 14px; cursor: pointer;
+    background: var(--blue-tint); color: var(--accent-dark); padding: 8px 14px; cursor: pointer;
     font-size: 12px; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase;
   }
-  html[data-theme="dark"] .tb-support { background: rgba(35,139,167,0.18); color: #5CC3DE; }
-  @media (prefers-color-scheme: dark) { html:not([data-theme="light"]) .tb-support { background: rgba(35,139,167,0.18); color: #5CC3DE; } }
+  html[data-theme="dark"] .tb-support { background: rgba(var(--accent-rgb), 0.18); color: #5CC3DE; }
+  @media (prefers-color-scheme: dark) { html:not([data-theme="light"]) .tb-support { background: rgba(var(--accent-rgb), 0.18); color: #5CC3DE; } }
   .tb-support svg { width: 16px; height: 16px; }
   .tb-icon { width: 36px; height: 36px; margin-left: 0; }
   body:not(.mode-finance) .tb-support span { display: none; }
@@ -910,6 +972,27 @@
   }
   .delete-btn:active { transform: translateY(3px); border-bottom-width: 0; }
 
+  /* --- Карточка курса (одинаковая у учителя и у ученика) --- */
+  .course-sheet { background: var(--bg); border-radius: 24px; padding: 16px; display: flex; flex-direction: column; gap: 14px; }
+  .course-card { background: var(--bg); border: 1px solid var(--border); border-radius: 18px; padding: 16px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); cursor: pointer; overflow: hidden; }
+  .course-card.archived { opacity: 0.7; }
+  .course-cover { margin: -16px -16px 12px; height: 112px; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+  .course-cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .course-cover span { font-family: 'Involve', sans-serif; font-size: 40px; font-weight: 800; color: rgba(255,255,255,0.92); }
+  .course-title { font-family: 'Involve', sans-serif; font-size: 16px; font-weight: 700; color: var(--text); margin-bottom: 4px; overflow-wrap: anywhere; }
+  .course-from { font-size: 13px; color: var(--text-soft); margin-bottom: 10px; }
+  .course-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+  .course-tag { display: inline-block; padding: 1px 8px; border-radius: 20px; border: 1px solid var(--border); font-size: 12px; color: var(--text-soft); white-space: nowrap; }
+  .course-desc { font-size: 13px; color: var(--text); line-height: 1.4; margin-bottom: 14px; white-space: pre-line; }
+  .course-btn { border: 1px solid var(--border); background: var(--bg); color: var(--text); border-radius: 20px; padding: 6px 16px; font-family: 'Involve', sans-serif; font-size: 12px; font-weight: 600; cursor: pointer; }
+  .course-btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; padding: 6px 20px; }
+  .course-more { flex-shrink: 0; width: 32px; height: 32px; border-radius: 10px; border: none; background: var(--blue-tint); color: var(--accent-dark); font-size: 18px; font-weight: 800; cursor: pointer; line-height: 1; }
+  #bootCover { position: fixed; inset: 0; z-index: 300; background: var(--page-bg); display: flex; align-items: center; justify-content: center; transition: opacity 0.18s ease; }
+  #bootCover.gone { opacity: 0; pointer-events: none; }
+  #bootCover i { width: 9px; height: 9px; margin: 0 4px; border-radius: 50%; background: var(--accent); display: inline-block; animation: boot-dot 0.9s ease-in-out infinite; }
+  #bootCover i:nth-child(2) { animation-delay: 0.15s; } #bootCover i:nth-child(3) { animation-delay: 0.3s; }
+  @keyframes boot-dot { 0%, 100% { opacity: 0.25; transform: translateY(0); } 50% { opacity: 1; transform: translateY(-5px); } }
+
   .toast {
     position: fixed; left: 50%; bottom: calc(96px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%);
     background: var(--text); color: white; padding: 10px 18px; border-radius: 12px; max-width: calc(100% - 32px);
@@ -970,6 +1053,8 @@
 </style>
 </head>
 <body class="has-side-nav">
+<!-- Заставка на время загрузки: прячет промежуточные экраны («Меню», «Загружаем…»), пока не откроется кабинет. -->
+<div id="bootCover"><i></i><i></i><i></i></div>
 
   <header class="topbar" id="topbar">
     <div class="tb-inner">
@@ -1233,6 +1318,78 @@
     render(false);
   }
 
+  // Цвета плашки курса (если нет фото-обложки).
+  const COURSE_COVER_COLORS = ['#238BA7', '#4C7BD9', '#8A63D2', '#D2638F', '#E07A3F', '#3E9E6A', '#C9A227', '#5B6573'];
+
+  // Карточка курса — ровно такая же, как у ученика в «Мои курсы»:
+  // обложка (фото или цвет), название, «От …», плашки, описание, кнопки.
+  function buildCourseCard(c, opts) {
+    const card = document.createElement('div');
+    card.className = 'course-card' + (opts.archived ? ' archived' : '');
+    if (c.cover_file_id || c.cover_color) {
+      const cover = document.createElement('div');
+      cover.className = 'course-cover';
+      cover.style.background = c.cover_color || 'var(--blue-tint)';
+      if (c.cover_file_id) {
+        const img = document.createElement('img');
+        img.src = c.cover_file_id.startsWith('blob:') ? c.cover_file_id : API_BASE_URL + '/api/image/' + encodeURIComponent(c.cover_file_id);
+        img.alt = '';
+        img.onerror = () => img.remove();
+        cover.appendChild(img);
+      } else {
+        cover.innerHTML = `<span>${escapeHtml((c.title || '?').trim().charAt(0).toUpperCase())}</span>`;
+      }
+      card.appendChild(cover);
+    }
+    const head = document.createElement('div');
+    head.style.cssText = 'display:flex;align-items:flex-start;gap:8px;';
+    head.innerHTML = `<div style="flex:1;min-width:0;"><div class="course-title">${escapeHtml(c.title || 'Без названия')}</div>` +
+      (c.tutor_name ? `<div class="course-from">От ${escapeHtml(c.tutor_name)}</div>` : '') + '</div>';
+    if (opts.onMore) {
+      const more = document.createElement('button');
+      more.className = 'course-more';
+      more.title = 'Действия с курсом';
+      more.textContent = '\u22EF';
+      more.onclick = (e) => { e.stopPropagation(); opts.onMore(); };
+      head.appendChild(more);
+    }
+    card.appendChild(head);
+    if (opts.tags && opts.tags.length) {
+      const tags = document.createElement('div');
+      tags.className = 'course-tags';
+      opts.tags.forEach((h) => tags.insertAdjacentHTML('beforeend', `<span class="course-tag">${h}</span>`));
+      card.appendChild(tags);
+    }
+    if (c.description) {
+      const d = document.createElement('div');
+      d.className = 'course-desc';
+      d.textContent = c.description;
+      card.appendChild(d);
+    }
+    if (opts.buttons && opts.buttons.length) {
+      const row = document.createElement('div');
+      row.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap;';
+      opts.buttons.forEach((b) => {
+        const el = document.createElement('button');
+        el.className = 'course-btn' + (b.primary ? ' primary' : '');
+        el.textContent = b.label;
+        el.onclick = (e) => { e.stopPropagation(); if (b.onClick) b.onClick(); };
+        row.appendChild(el);
+      });
+      card.appendChild(row);
+    }
+    return card;
+  }
+
+  function openCourse(sub) {
+    currentSubjectId = sub.id;
+    currentSubjectTitle = sub.title;
+    const subjTitleEl = document.getElementById('subjTitle');
+    if (subjTitleEl) subjTitleEl.textContent = sub.title;
+    stack = [{ level: 'menu', title: 'Меню' }];
+    render(false);
+  }
+
   async function renderCoursesList(isBack) {
     showLoadingMenu();
     const resp = await apiGet('/api/teacher/subjects');
@@ -1241,6 +1398,7 @@
     const active = all.filter((s) => !s.is_hidden);
     const archived = all.filter((s) => s.is_hidden);
     const canManage = currentUserRole === 'admin';
+    const studentsTag = (n) => `Учеников: <b style="color:var(--accent);">${n || 0}</b>`;
     swapScreen((screen) => {
       const root = document.createElement('div');
       root.className = 'st';
@@ -1257,48 +1415,24 @@
       }
       root.appendChild(head);
 
-      const courseCard = (sub, i, isArchived) => {
-        const [color] = LESSON_COLORS[i % LESSON_COLORS.length];
-        const card = document.createElement('div');
-        card.className = 'st-card';
-        if (isArchived) card.style.opacity = '0.72';
-        const line = isArchived ? 'В архиве · ученики не видят'
-          : (sub.id === currentSubjectId ? 'Открыт сейчас' : 'Нажмите, чтобы открыть');
-        card.innerHTML = `<div class="st-ava" style="--ev:${isArchived ? '#9AA5B1' : color};border-radius:14px;font-size:20px;">${isArchived ? '🗄' : '📚'}</div>` +
-          `<div class="st-body"><div class="st-name">${escapeHtml(sub.title)}</div><div class="st-line">${line}</div></div>`;
-        const right = document.createElement('div');
-        right.className = 'st-right';
-        right.style.cssText = 'display:flex;align-items:center;gap:4px;';
-        if (canManage) {
-          const more = document.createElement('button');
-          more.className = 'icon-btn';
-          more.title = 'Действия с курсом';
-          more.style.cssText = 'font-size:20px;font-weight:800;line-height:1;color:var(--text-soft);';
-          more.textContent = '⋯';
-          more.onclick = (e) => { e.stopPropagation(); courseActions(sub); };
-          right.appendChild(more);
-        }
-        if (!isArchived) right.insertAdjacentHTML('beforeend', '<span style="color:var(--text-soft);font-size:20px;">\u203a</span>');
-        card.appendChild(right);
-        card.onclick = () => {
-          if (isArchived) { courseActions(sub); return; }
-          currentSubjectId = sub.id;
-          currentSubjectTitle = sub.title;
-          const subjTitleEl = document.getElementById('subjTitle');
-          if (subjTitleEl) subjTitleEl.textContent = sub.title;
-          stack = [{ level: 'menu', title: 'Меню' }];
-          render(false);
-        };
-        return card;
-      };
-
-      const list = document.createElement('div');
-      list.className = 'st-list';
+      const sheet = document.createElement('div');
+      sheet.className = 'course-sheet';
       if (!active.length) {
-        list.innerHTML = `<p class="field-hint">${archived.length ? 'Все курсы в архиве.' : 'Пока нет ни одного курса.'}${canManage ? ' Нажмите «+ Новый курс».' : ''}</p>`;
+        sheet.innerHTML = `<p class="field-hint" style="text-align:center;margin:6px 0;">${archived.length ? 'Все курсы в архиве.' : 'Пока нет ни одного курса.'}${canManage ? ' Нажмите «+ Новый курс».' : ''}</p>`;
       }
-      active.forEach((sub, i) => list.appendChild(courseCard(sub, i, false)));
-      root.appendChild(list);
+      active.forEach((sub) => {
+        const card = buildCourseCard(sub, {
+          tags: [studentsTag(sub.students), ...(sub.id === currentSubjectId ? ['Открыт сейчас'] : [])],
+          onMore: canManage ? () => courseActions(sub) : null,
+          buttons: [
+            { label: 'Открыть', primary: true, onClick: () => openCourse(sub) },
+            ...(canManage ? [{ label: '🎨 Оформление', onClick: () => goCourseLook(sub) }] : []),
+          ],
+        });
+        card.onclick = () => openCourse(sub);
+        sheet.appendChild(card);
+      });
+      root.appendChild(sheet);
 
       if (archived.length) {
         const h = document.createElement('div');
@@ -1306,11 +1440,178 @@
         h.style.cssText = 'margin:18px 2px 8px;font-weight:800;text-transform:uppercase;letter-spacing:0.03em;';
         h.textContent = `Архив · ${archived.length}`;
         root.appendChild(h);
-        const alist = document.createElement('div');
-        alist.className = 'st-list';
-        archived.forEach((sub, i) => alist.appendChild(courseCard(sub, i, true)));
-        root.appendChild(alist);
+        const asheet = document.createElement('div');
+        asheet.className = 'course-sheet';
+        archived.forEach((sub) => {
+          const card = buildCourseCard(sub, {
+            archived: true,
+            tags: ['В архиве · ученики не видят'],
+            onMore: canManage ? () => courseActions(sub) : null,
+            buttons: canManage ? [{ label: '↩️ Вернуть', onClick: () => courseActions(sub) }] : [],
+          });
+          asheet.appendChild(card);
+        });
+        root.appendChild(asheet);
       }
+    }, isBack);
+  }
+
+  function goCourseLook(sub) {
+    stack = [{ level: 'courses_list', title: 'Курсы' }, { level: 'course_look', title: 'Оформление курса', subjectId: sub.id }];
+    render(false);
+  }
+
+  // «Оформление курса»: как карточка выглядит у ученика — обложка (фото или
+  // цвет), название, описание — с живым предпросмотром. Отсюда же — в
+  // настройки того, что ученик видит внутри курса.
+  async function renderCourseLook(subjectId, isBack) {
+    showLoadingMenu();
+    const resp = await apiGet('/api/teacher/subjects');
+    const sub = (resp.subjects || []).find((s) => s.id === subjectId);
+    if (!sub) throw new Error('курс не найден');
+    const draft = Object.assign({}, sub);
+    swapScreen((screen) => {
+      const pv = settingsCard('Так курс видит ученик');
+      const pvBox = document.createElement('div');
+      pvBox.className = 'course-sheet';
+      pvBox.style.cssText = 'padding:12px;margin:0;';
+      pv.appendChild(pvBox);
+      const drawPreview = () => {
+        pvBox.innerHTML = '';
+        pvBox.appendChild(buildCourseCard(draft, {
+          tags: ['Индивидуальное занятие', 'Осталось уроков: <b style="color:var(--accent);">8</b>'],
+          buttons: [{ label: 'Приступить', primary: true }],
+        }));
+      };
+      drawPreview();
+      screen.appendChild(pv);
+
+      // Обложка
+      const cc = settingsCard('Обложка');
+      cc.insertAdjacentHTML('beforeend', '<div class="set-hint">Фото сверху карточки. Лучше горизонтальное (примерно 3:1). Без фото — цветная плашка с первой буквой курса.</div>');
+      const coverRow = document.createElement('div');
+      coverRow.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;';
+      const fileInput = document.createElement('input');
+      fileInput.type = 'file'; fileInput.accept = 'image/*'; fileInput.style.display = 'none';
+      const upBtn = document.createElement('button');
+      upBtn.className = 'set-btn primary';
+      upBtn.textContent = draft.cover_file_id ? '📷 Заменить фото' : '📷 Загрузить фото';
+      upBtn.onclick = () => fileInput.click();
+      const rmBtn = document.createElement('button');
+      rmBtn.className = 'set-btn';
+      rmBtn.textContent = 'Убрать фото';
+      rmBtn.style.display = draft.cover_file_id ? '' : 'none';
+      const saveLook = async (patch) => {
+        await apiSend('PATCH', `/api/teacher/subjects/${subjectId}/look`, patch);
+        Object.assign(draft, patch);
+        upBtn.textContent = draft.cover_file_id ? '📷 Заменить фото' : '📷 Загрузить фото';
+        rmBtn.style.display = draft.cover_file_id ? '' : 'none';
+        drawPreview();
+      };
+      rmBtn.onclick = () => saveLook({ cover_file_id: null }).then(() => showToast('Фото убрано')).catch((err) => showToast('Не получилось: ' + err.message));
+      fileInput.onchange = async () => {
+        const file = fileInput.files[0];
+        if (!file) return;
+        upBtn.disabled = true;
+        upBtn.textContent = 'Загружаю…';
+        // Сразу показываем выбранное фото в предпросмотре.
+        const localUrl = URL.createObjectURL(file);
+        draft.cover_file_id = localUrl; drawPreview();
+        try {
+          const fd = new FormData();
+          fd.append('image', file);
+          const res = await fetch(API_BASE_URL + '/api/teacher/upload-image', { method: 'POST', headers: { 'X-Telegram-Init-Data': tg?.initData || '' }, body: fd });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) throw new Error(data.message || data.detail || ('ошибка ' + res.status));
+          await saveLook({ cover_file_id: data.file_id });
+          draft.cover_file_id = localUrl; drawPreview(); // пока показываем локальную копию — она уже на экране
+          draft.cover_file_id = data.file_id;
+          showToast('Обложка сохранена');
+        } catch (err) {
+          draft.cover_file_id = sub.cover_file_id; drawPreview();
+          showToast('Не получилось загрузить фото: ' + err.message);
+        }
+        upBtn.disabled = false;
+        upBtn.textContent = draft.cover_file_id ? '📷 Заменить фото' : '📷 Загрузить фото';
+        fileInput.value = '';
+      };
+      coverRow.appendChild(upBtn); coverRow.appendChild(rmBtn); coverRow.appendChild(fileInput);
+      cc.appendChild(coverRow);
+      cc.insertAdjacentHTML('beforeend', '<div class="set-title" style="font-size:11px;color:var(--text-soft);">Цвет плашки</div>');
+      const colors = document.createElement('div');
+      colors.style.cssText = 'display:flex;gap:10px;flex-wrap:wrap;';
+      const paintColors = () => colors.querySelectorAll('button').forEach((b) => {
+        const on = (b.dataset.c || null) === (draft.cover_color || null);
+        b.style.boxShadow = on ? '0 0 0 3px var(--bg), 0 0 0 5px var(--accent)' : 'none';
+      });
+      [null, ...COURSE_COVER_COLORS].forEach((col) => {
+        const b = document.createElement('button');
+        b.dataset.c = col || '';
+        b.title = col ? col : 'Без плашки';
+        b.style.cssText = `width:34px;height:34px;border-radius:50%;cursor:pointer;border:${col ? 'none' : '2px dashed var(--border)'};background:${col || 'var(--bg)'};`;
+        if (!col) b.textContent = '\u2715';
+        b.onclick = () => saveLook({ cover_color: col }).then(paintColors).catch((err) => showToast('Не получилось: ' + err.message));
+        colors.appendChild(b);
+      });
+      paintColors();
+      cc.appendChild(colors);
+      screen.appendChild(cc);
+
+      // Название и описание
+      const tc = settingsCard('Название и описание');
+      tc.insertAdjacentHTML('beforeend', '<div class="field-label">Название</div>');
+      const titleIn = document.createElement('input');
+      titleIn.className = 'field-input';
+      titleIn.style.marginBottom = '10px';
+      titleIn.value = draft.title || '';
+      titleIn.oninput = () => { draft.title = titleIn.value; drawPreview(); };
+      tc.appendChild(titleIn);
+      tc.insertAdjacentHTML('beforeend', '<div class="field-label">Описание (видно ученику на карточке)</div>');
+      const descIn = document.createElement('textarea');
+      descIn.className = 'field-input';
+      descIn.rows = 4;
+      descIn.maxLength = 1000;
+      descIn.placeholder = 'Например: подготовка к ЦТ по английскому, 2 занятия в неделю, домашние задания в приложении';
+      descIn.value = draft.description || '';
+      descIn.oninput = () => { draft.description = descIn.value; drawPreview(); };
+      tc.appendChild(descIn);
+      const saveBtn = document.createElement('button');
+      saveBtn.className = 'set-btn primary';
+      saveBtn.style.cssText = 'width:100%;margin-top:12px;';
+      saveBtn.textContent = 'Сохранить';
+      saveBtn.onclick = async () => {
+        const title = titleIn.value.trim();
+        if (!title) { showToast('Название не может быть пустым'); return; }
+        saveBtn.disabled = true;
+        try {
+          if (title !== sub.title) await apiSend('PATCH', `/api/admin/subjects/${subjectId}`, { title });
+          await apiSend('PATCH', `/api/teacher/subjects/${subjectId}/description`, { description: descIn.value.trim() });
+          sub.title = title; sub.description = descIn.value.trim();
+          if (currentSubjectId === subjectId) currentSubjectTitle = title;
+          showToast('Сохранено');
+        } catch (err) { showToast('Не получилось: ' + err.message); }
+        saveBtn.disabled = false;
+      };
+      tc.appendChild(saveBtn);
+      screen.appendChild(tc);
+
+      // Что внутри курса
+      const ic = settingsCard('Внутри курса');
+      ic.insertAdjacentHTML('beforeend', '<div class="set-hint">Какие разделы видит ученик (задания, ДЗ, правила, тесты), их названия, открытие тем по порядку, рейтинг.</div>');
+      const inBtn = document.createElement('button');
+      inBtn.className = 'set-btn';
+      inBtn.style.width = '100%';
+      inBtn.textContent = 'Что видит ученик внутри курса \u203A';
+      inBtn.onclick = () => {
+        currentSubjectId = sub.id;
+        currentSubjectTitle = sub.title;
+        const el = document.getElementById('subjTitle');
+        if (el) el.textContent = sub.title;
+        stack.push({ level: 'subject_blocks', title: 'Что видят ученики' });
+        render(false);
+      };
+      ic.appendChild(inBtn);
+      screen.appendChild(ic);
     }, isBack);
   }
 
@@ -1318,6 +1619,7 @@
   function courseActions(sub) {
     const items = [];
     if (!sub.is_hidden) {
+      items.push({ label: '🎨 Оформление для ученика', onClick: () => goCourseLook(sub) });
       items.push({ label: '✏️ Переименовать', onClick: () => renameCourse(sub) });
       items.push({ label: '🗄 Отправить в архив', onClick: () => confirmAction(
         `Отправить «${escapeHtml(sub.title)}» в архив? Ученики перестанут видеть курс, но всё содержимое и прогресс сохранятся — вернуть можно в любой момент.`,
@@ -1510,10 +1812,23 @@
 
   // Переход между экранами как в Telegram: старый экран уезжает, новый
   // въезжает (вперёд — справа налево, назад — наоборот).
+  function hideBootCover() {
+    const c = document.getElementById('bootCover');
+    if (!c || c.classList.contains('gone')) return;
+    c.classList.add('gone');
+  }
+  function showBootCover() {
+    const c = document.getElementById('bootCover');
+    if (c) c.classList.remove('gone');
+    setTimeout(hideBootCover, 10000); // на всякий случай — не держим заставку вечно
+  }
+  setTimeout(hideBootCover, 10000);
+
   function swapScreen(buildFn, isBack) {
     const screen = document.createElement('div');
     screen.className = 'screen' + (isBack ? ' back' : '');
     buildFn(screen);
+    if (!screen.dataset.loadingScreen) hideBootCover();
     Array.from(screenHost.children).forEach((old) => {
       if (old.dataset.leaving || old.dataset.loadingScreen) { old.remove(); return; }
       old.dataset.leaving = '1';
@@ -1794,6 +2109,33 @@
     if (choice === 'system') document.documentElement.removeAttribute('data-theme');
     else document.documentElement.setAttribute('data-theme', choice);
     if (window.__refreshThemeIcon) window.__refreshThemeIcon();
+  }
+
+  // Цвет оформления: кружки цветов; фон и подложки подстраиваются сами.
+  function buildAccentPicker() {
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;gap:10px;flex-wrap:wrap;';
+    let current = '#238BA7';
+    try { current = (localStorage.getItem('miniapp-accent') || '#238BA7').toUpperCase(); } catch (err) {}
+    const paint = () => row.querySelectorAll('button').forEach((b) => {
+      b.style.boxShadow = b.dataset.c === current ? '0 0 0 3px var(--bg), 0 0 0 5px ' + b.dataset.c : 'none';
+    });
+    (window.ACCENT_COLORS || ['#238BA7']).forEach((c) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.dataset.c = c.toUpperCase();
+      b.title = 'Цвет оформления';
+      b.style.cssText = `width:34px;height:34px;border-radius:50%;border:none;cursor:pointer;background:${c};transition:box-shadow 0.15s ease;`;
+      b.onclick = () => {
+        current = c.toUpperCase();
+        try { localStorage.setItem('miniapp-accent', current); } catch (err) {}
+        if (window.applyAccent) window.applyAccent(current);
+        paint();
+      };
+      row.appendChild(b);
+    });
+    paint();
+    return row;
   }
 
   function settingsSectionTitle(text, marginTop) {
@@ -2378,6 +2720,8 @@
         themeGrid.appendChild(btn);
       });
       themeCard.appendChild(themeGrid);
+      themeCard.insertAdjacentHTML('beforeend', '<div class="set-title" style="margin-top:14px;font-size:11px;color:var(--text-soft);">Цвет оформления</div>');
+      themeCard.appendChild(buildAccentPicker());
       screen.appendChild(themeCard);
 
       // --- Календарь ---
@@ -2489,6 +2833,7 @@
         logo.alt = 'Navats';
         logo.style.cssText = 'height:34px;display:block;margin:4px 0 22px;';
         screen.appendChild(logo);
+        window.tintLogo && window.tintLogo(logo);
       }
       const title = document.createElement('h2');
       title.style.cssText = 'font-family:"Involve",sans-serif;font-size:20px;font-weight:800;margin:0 0 6px;';
@@ -2506,6 +2851,7 @@
       teacherBtn.textContent = '👩‍🏫 Я преподаватель';
       teacherBtn.onclick = () => {
         try { localStorage.setItem('gryphy_preferred_role', 'teacher'); } catch (err) {}
+        showBootCover();
         setAppChromeVisible(true);
         render(false);
       };
@@ -2543,6 +2889,11 @@
     }
     if (current.level === 'courses_list') {
       try { await renderCoursesList(isBack); }
+      catch (err) { showErrorMsg(err, isBack); }
+      return;
+    }
+    if (current.level === 'course_look') {
+      try { await renderCourseLook(current.subjectId, isBack); }
       catch (err) { showErrorMsg(err, isBack); }
       return;
     }
@@ -4659,7 +5010,7 @@
       const b = document.createElement('button');
       b.type = 'button';
       b.textContent = w;
-      const paint = () => { b.style.cssText = `padding:8px 0;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer;border:1px solid ${weekday === i ? '#238BA7' : 'var(--border)'};background:${weekday === i ? '#238BA7' : 'var(--bg)'};color:${weekday === i ? '#fff' : 'var(--text)'};`; };
+      const paint = () => { b.style.cssText = `padding:8px 0;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer;border:1px solid ${weekday === i ? 'var(--accent)' : 'var(--border)'};background:${weekday === i ? 'var(--accent)' : 'var(--bg)'};color:${weekday === i ? '#fff' : 'var(--text)'};`; };
       b._paint = paint;
       paint();
       b.onclick = () => { weekday = i; daysBox.querySelectorAll('button').forEach((x) => x._paint()); };
@@ -5134,7 +5485,7 @@
         const legend = document.createElement('div');
         legend.className = 'sg-legend';
         legend.innerHTML =
-          '<span><i style="background:#238BA7;"></i>запланирован</span>' +
+          '<span><i style="background:var(--accent);"></i>запланирован</span>' +
           '<span><i style="background:#3E9E6A;"></i>проведён</span>' +
           '<span><i style="background:repeating-linear-gradient(135deg,#C3C9D0 0 3px,#F1F2F4 3px 6px);"></i>отменён</span>' +
           '<span><i style="border:1.5px dashed #B7BEC7;"></i>перенесён</span>';
@@ -7260,7 +7611,7 @@
           const btn = document.createElement('button');
           const active = adminPanelTab === t.key;
           btn.textContent = t.label;
-          btn.style.cssText = `flex:1;padding:9px 6px;border-radius:10px;border:2px solid ${active ? '#1B6F86' : 'var(--border)'};background:${active ? 'rgba(35,139,167,0.12)' : 'var(--bg)'};color:${active ? '#1B6F86' : 'var(--text-soft)'};font-family:'Involve',sans-serif;font-size:12.5px;font-weight:800;cursor:pointer;`;
+          btn.style.cssText = `flex:1;padding:9px 6px;border-radius:10px;border:2px solid ${active ? 'var(--accent-dark)' : 'var(--border)'};background:${active ? 'rgba(var(--accent-rgb), 0.12)' : 'var(--bg)'};color:${active ? 'var(--accent-dark)' : 'var(--text-soft)'};font-family:'Involve',sans-serif;font-size:12.5px;font-weight:800;cursor:pointer;`;
           btn.onclick = () => { adminPanelTab = t.key; render(false); };
           tabs.appendChild(btn);
         });
