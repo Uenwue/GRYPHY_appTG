@@ -993,6 +993,51 @@
   #bootCover i:nth-child(2) { animation-delay: 0.15s; } #bootCover i:nth-child(3) { animation-delay: 0.3s; }
   @keyframes boot-dot { 0%, 100% { opacity: 0.25; transform: translateY(0); } 50% { opacity: 1; transform: translateY(-5px); } }
 
+
+  /* --- Новые виды заданий (пропуски, слова, пары, исправление) --- */
+  .nt-wrap { margin-bottom: 14px; }
+  .nt-hint { font-size: 12.5px; color: var(--text-soft); margin: 0 0 12px; line-height: 1.4; }
+  .nt-text { font-size: 16px; line-height: 2.3; color: var(--text); margin-bottom: 14px; word-break: break-word; }
+  .nt-input { font-family: inherit; font-size: 15px; font-weight: 600; color: var(--text); background: var(--bg); border: none; border-bottom: 2px solid var(--accent); border-radius: 6px 6px 0 0; padding: 2px 4px; margin: 0 2px; min-width: 4ch; max-width: 100%; text-align: center; outline: none; }
+  .nt-input:focus { background: var(--blue-tint); }
+  .nt-input.wide { width: 100%; text-align: left; border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; box-sizing: border-box; margin: 0 0 10px; }
+  .nt-input.ok, .nt-slot.ok { border-color: #58A700; background: rgba(88, 204, 2, 0.14); color: #3E7F00; }
+  .nt-input.bad, .nt-slot.bad { border-color: #EA2B2B; background: rgba(255, 75, 75, 0.12); color: #C22020; text-decoration: line-through; }
+  .nt-fix { display: inline-block; font-size: 12.5px; font-weight: 700; color: #3E7F00; background: rgba(88, 204, 2, 0.14); border-radius: 8px; padding: 0 6px; margin: 0 4px; line-height: 1.6; }
+  .nt-slot { display: inline-block; min-width: 64px; min-height: 30px; line-height: 1.3; vertical-align: middle; padding: 4px 10px; margin: 0 2px; border: 2px dashed var(--border); border-radius: 10px; background: var(--bg); color: var(--text); font-family: inherit; font-size: 15px; font-weight: 700; cursor: pointer; }
+  .nt-slot.filled { border-style: solid; border-color: var(--accent); background: var(--blue-tint); }
+  .nt-slot.active { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(var(--accent-rgb), 0.2); }
+  .nt-bank { display: flex; flex-wrap: wrap; gap: 8px; padding: 12px; border-radius: 14px; background: var(--bg-soft, rgba(0,0,0,0.03)); margin-bottom: 14px; }
+  .nt-chip { font-family: inherit; font-size: 15px; font-weight: 700; color: var(--text); background: var(--bg); border: 1px solid var(--border); border-bottom-width: 3px; border-radius: 12px; padding: 7px 12px; cursor: pointer; transition: transform 0.1s ease, opacity 0.15s ease; }
+  .nt-chip:active { transform: translateY(2px); }
+  .nt-chip.used { opacity: 0.25; pointer-events: none; }
+  .nt-bank.letters .nt-chip, .nt-line.letters .nt-chip { min-width: 42px; text-transform: none; font-size: 18px; padding: 8px 0; text-align: center; }
+  .nt-line { display: flex; flex-wrap: wrap; gap: 8px; min-height: 52px; padding: 10px; border: 2px solid var(--border); border-radius: 14px; margin-bottom: 12px; align-items: center; }
+  .nt-line.ok { border-color: #58A700; background: rgba(88, 204, 2, 0.10); }
+  .nt-line.bad { border-color: #EA2B2B; background: rgba(255, 75, 75, 0.08); }
+  .nt-placeholder { font-size: 13px; color: var(--text-soft); }
+  .nt-match { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
+  .nt-match-row { display: grid; grid-template-columns: 1fr auto 1fr; gap: 8px; align-items: center; }
+  .nt-match-left { font-size: 15px; font-weight: 700; padding: 8px 10px; border-radius: 10px; background: var(--bg-soft, rgba(0,0,0,0.03)); }
+  .nt-match-arrow { color: var(--text-soft); }
+  .nt-match-right .nt-slot { width: 100%; margin: 0; box-sizing: border-box; }
+  .nt-correction { line-height: 2.1; }
+  .nt-token { font-family: inherit; font-size: 16px; color: var(--text); background: none; border: none; border-radius: 6px; padding: 1px 2px; cursor: pointer; }
+  .nt-token:hover, .nt-token.active { background: var(--blue-tint); }
+  .nt-token.fixed s { color: #C22020; }
+  .nt-token.fixed b { color: var(--accent-dark); }
+  .nt-editor { border: 1px solid var(--border); border-radius: 14px; padding: 12px; margin-bottom: 14px; background: var(--bg); }
+  .nt-editor-title { font-size: 13px; font-weight: 700; margin-bottom: 8px; }
+  .nt-editor-row { display: flex; gap: 8px; }
+  .nt-btn { flex: 1; font-family: inherit; font-size: 14px; font-weight: 700; padding: 10px; border-radius: 12px; border: 1px solid var(--border); background: var(--bg); color: var(--text); cursor: pointer; }
+  .nt-btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .nt-slot.filled.ok, .nt-slot.ok { border-color: #58A700; border-style: solid; background: rgba(88, 204, 2, 0.14); color: #3E7F00; }
+  .nt-slot.filled.bad, .nt-slot.bad { border-color: #EA2B2B; border-style: solid; background: rgba(255, 75, 75, 0.12); color: #C22020; text-decoration: line-through; }
+  .type-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .type-grid button { font-family: inherit; font-size: 12.5px; font-weight: 700; padding: 9px 4px; border-radius: 12px; border: 1px solid var(--border); background: var(--bg); color: var(--text-soft); cursor: pointer; line-height: 1.2; }
+  .type-grid button.active { border-color: var(--accent); background: var(--blue-tint); color: var(--accent-dark); }
+  .type-grid button small { display: block; font-size: 16px; margin-bottom: 2px; }
+
   .toast {
     position: fixed; left: 50%; bottom: calc(96px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%);
     background: var(--text); color: white; padding: 10px 18px; border-radius: 12px; max-width: calc(100% - 32px);
@@ -1412,7 +1457,7 @@
   // преподавателей, которые они сами разрешили брать. Задания копируются в
   // выбранную тему (копия не зависит от оригинала).
   // =====================================================================
-  const TASK_TYPE_LABELS = { text: 'Текстовый ответ', multi: 'Несколько верных', single: 'Один верный' };
+  const TASK_TYPE_LABELS = { text: 'Текстовый ответ', multi: 'Несколько верных', single: 'Один верный', buttons: 'Один верный', gaps: 'Заполнить пропуски', dragwords: 'Перетащить слова', order: 'Составить предложение', scramble: 'Слово из букв', match: 'Сопоставление', correction: 'Исправить ошибки' };
   const taskTypeLabel = (t) => TASK_TYPE_LABELS[t] || (t ? t : 'Один верный');
   const libState = { scope: 'mine', q: '', type: '', tag: '', subjectId: '', selecting: false, selected: new Map() };
 
@@ -1764,6 +1809,269 @@
 
       load();
     }, isBack);
+  }
+
+
+  // =====================================================================
+  // НОВЫЕ ВИДЫ ЗАДАНИЙ — виджеты для ученика (и предпросмотра у учителя).
+  // Сервер присылает «вид» задания (view) без ответов; виджет собирает
+  // ответ ученика, а после проверки подсвечивает, что верно.
+  // Всё управляется касаниями: нажали слово — оно встало в пропуск,
+  // нажали ещё раз — вернулось обратно.
+  // =====================================================================
+  const NT_TYPES = ['gaps', 'dragwords', 'order', 'scramble', 'match', 'correction'];
+  const NT_HINTS = {
+    gaps: 'Впишите пропущенные слова.',
+    dragwords: 'Нажмите на слово, чтобы поставить его в ближайший пропуск. Нажмите на пропуск, чтобы вернуть слово.',
+    order: 'Нажимайте на слова по порядку, чтобы составить предложение.',
+    scramble: 'Нажимайте на буквы по порядку, чтобы составить слово.',
+    match: 'Для каждого слова слева выберите пару: нажмите на строку, затем на вариант снизу.',
+    correction: 'Найдите ошибки: нажмите на неверное слово и впишите правильный вариант.',
+  };
+  function ntEsc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  }
+
+  function buildNewTaskWidget(type, view, onChange) {
+    view = view || {};
+    const el = document.createElement('div');
+    el.className = 'nt-wrap';
+    const hint = document.createElement('div');
+    hint.className = 'nt-hint';
+    hint.textContent = NT_HINTS[type] || '';
+    el.appendChild(hint);
+    const changed = () => { if (onChange) onChange(); };
+    let api = { el, getAnswer: () => null, isComplete: () => false, showResult: () => {} };
+
+    // Общая механика «пропуски + банк слов» (перетаскивание слов, пары).
+    function slotsAndBank(slotCount, bankWords, renderSlotHost) {
+      const filled = new Array(slotCount).fill(null); // индекс слова из банка
+      const used = new Set();
+      let active = null; // выбранный пропуск (для сопоставления)
+      const slotEls = [];
+      const bank = document.createElement('div');
+      bank.className = 'nt-bank';
+      const chipEls = bankWords.map((w, i) => {
+        const c = document.createElement('button');
+        c.type = 'button';
+        c.className = 'nt-chip';
+        c.textContent = w;
+        c.onclick = () => {
+          if (used.has(i) || locked) return;
+          let target = active != null && filled[active] == null ? active : filled.indexOf(null);
+          if (active != null && filled[active] != null) { used.delete(filled[active]); target = active; }
+          if (target < 0) return;
+          filled[target] = i; used.add(i);
+          active = null;
+          paint(); changed();
+        };
+        bank.appendChild(c);
+        return c;
+      });
+      let locked = false;
+      for (let s = 0; s < slotCount; s++) {
+        const slot = document.createElement('button');
+        slot.type = 'button';
+        slot.className = 'nt-slot';
+        slot.onclick = () => {
+          if (locked) return;
+          if (filled[s] != null) { used.delete(filled[s]); filled[s] = null; active = s; }
+          else active = active === s ? null : s;
+          paint(); changed();
+        };
+        slotEls.push(slot);
+        renderSlotHost(slot, s);
+      }
+      function paint() {
+        slotEls.forEach((sl, s) => {
+          sl.textContent = filled[s] != null ? bankWords[filled[s]] : ' ';
+          sl.classList.toggle('filled', filled[s] != null);
+          sl.classList.toggle('active', active === s);
+        });
+        chipEls.forEach((c, i) => c.classList.toggle('used', used.has(i)));
+      }
+      paint();
+      return {
+        bank,
+        values: () => filled.map((i) => (i == null ? '' : bankWords[i])),
+        complete: () => filled.every((i) => i != null),
+        lock: () => { locked = true; bank.style.display = 'none'; },
+        mark: (details, correct) => {
+          slotEls.forEach((sl, s) => {
+            const ok = details && details[s];
+            sl.classList.add(ok ? 'ok' : 'bad');
+            if (!ok && correct && correct[s] != null) sl.insertAdjacentHTML('afterend', `<span class="nt-fix">${ntEsc(correct[s])}</span>`);
+          });
+        },
+      };
+    }
+
+    if (type === 'gaps' || type === 'dragwords') {
+      const text = document.createElement('div');
+      text.className = 'nt-text';
+      el.appendChild(text);
+      const hosts = [];
+      (view.parts || []).forEach((p) => {
+        if (p.t != null) text.appendChild(document.createTextNode(p.t));
+        else { const h = document.createElement('span'); h.className = 'nt-host'; text.appendChild(h); hosts.push(h); }
+      });
+      if (type === 'gaps') {
+        const inputs = hosts.map((h) => {
+          const inp = document.createElement('input');
+          inp.className = 'nt-input';
+          inp.autocapitalize = 'off';
+          inp.autocomplete = 'off';
+          inp.spellcheck = false;
+          const fit = () => { inp.style.width = Math.max(4, inp.value.length + 1) + 'ch'; };
+          inp.oninput = () => { fit(); changed(); };
+          fit();
+          h.appendChild(inp);
+          return inp;
+        });
+        api = {
+          el,
+          getAnswer: () => inputs.map((i) => i.value.trim()),
+          isComplete: () => inputs.length > 0 && inputs.some((i) => i.value.trim()),
+          showResult: (details, correct) => inputs.forEach((inp, i) => {
+            inp.disabled = true;
+            const ok = details && details[i];
+            inp.classList.add(ok ? 'ok' : 'bad');
+            if (!ok && correct && correct[i] != null) inp.insertAdjacentHTML('afterend', `<span class="nt-fix">${ntEsc(correct[i])}</span>`);
+          }),
+        };
+      } else {
+        const sb = slotsAndBank(hosts.length, view.bank || [], (slot, s) => hosts[s].appendChild(slot));
+        el.appendChild(sb.bank);
+        api = { el, getAnswer: sb.values, isComplete: sb.complete, showResult: (d, c) => { sb.lock(); sb.mark(d, c); } };
+      }
+    } else if (type === 'match') {
+      const left = view.left || [];
+      const rows = document.createElement('div');
+      rows.className = 'nt-match';
+      el.appendChild(rows);
+      const sb = slotsAndBank(left.length, view.right || [], (slot, s) => {
+        const r = document.createElement('div');
+        r.className = 'nt-match-row';
+        r.innerHTML = `<div class="nt-match-left">${ntEsc(left[s])}</div><div class="nt-match-arrow">→</div>`;
+        const host = document.createElement('div');
+        host.className = 'nt-match-right';
+        host.appendChild(slot);
+        r.appendChild(host);
+        rows.appendChild(r);
+      });
+      el.appendChild(sb.bank);
+      api = { el, getAnswer: sb.values, isComplete: sb.complete, showResult: (d, c) => { sb.lock(); sb.mark(d, c); } };
+    } else if (type === 'order' || type === 'scramble') {
+      const items = type === 'order' ? (view.tokens || []) : (view.letters || []);
+      const line = document.createElement('div');
+      line.className = 'nt-line' + (type === 'scramble' ? ' letters' : '');
+      const bank = document.createElement('div');
+      bank.className = 'nt-bank' + (type === 'scramble' ? ' letters' : '');
+      el.appendChild(line);
+      el.appendChild(bank);
+      const picked = [];
+      let locked = false;
+      const chips = items.map((w, i) => {
+        const c = document.createElement('button');
+        c.type = 'button';
+        c.className = 'nt-chip';
+        c.textContent = w;
+        c.onclick = () => { if (locked || picked.includes(i)) return; picked.push(i); paint(); changed(); };
+        bank.appendChild(c);
+        return c;
+      });
+      function paint() {
+        line.innerHTML = '';
+        if (!picked.length) line.innerHTML = `<span class="nt-placeholder">${type === 'order' ? 'Нажимайте на слова ниже…' : 'Нажимайте на буквы ниже…'}</span>`;
+        picked.forEach((i, pos) => {
+          const c = document.createElement('button');
+          c.type = 'button';
+          c.className = 'nt-chip in-line';
+          c.textContent = items[i];
+          c.onclick = () => { if (locked) return; picked.splice(pos, 1); paint(); changed(); };
+          line.appendChild(c);
+        });
+        chips.forEach((c, i) => c.classList.toggle('used', picked.includes(i)));
+      }
+      paint();
+      api = {
+        el,
+        getAnswer: () => (type === 'order' ? picked.map((i) => items[i]) : picked.map((i) => items[i]).join('')),
+        isComplete: () => picked.length === items.length,
+        showResult: (details, correct) => {
+          locked = true;
+          bank.style.display = 'none';
+          line.classList.add(details && details[0] ? 'ok' : 'bad');
+        },
+      };
+    } else if (type === 'correction') {
+      const tokens = view.tokens || [];
+      const fixes = {};
+      let locked = false;
+      const text = document.createElement('div');
+      text.className = 'nt-text nt-correction';
+      el.appendChild(text);
+      const editor = document.createElement('div');
+      editor.className = 'nt-editor';
+      editor.style.display = 'none';
+      el.appendChild(editor);
+      const tokEls = tokens.map((w, i) => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'nt-token';
+        b.onclick = () => { if (!locked) openEditor(i); };
+        text.appendChild(b);
+        text.appendChild(document.createTextNode(' '));
+        return b;
+      });
+      function paint() {
+        tokEls.forEach((b, i) => {
+          if (fixes[i] != null) { b.innerHTML = `<s>${ntEsc(tokens[i])}</s> <b>${ntEsc(fixes[i])}</b>`; b.classList.add('fixed'); }
+          else { b.textContent = tokens[i]; b.classList.remove('fixed'); }
+        });
+      }
+      function openEditor(i) {
+        tokEls.forEach((b, j) => b.classList.toggle('active', j === i));
+        editor.style.display = '';
+        editor.innerHTML = `<div class="nt-editor-title">Исправление для «${ntEsc(tokens[i])}»</div>`;
+        const inp = document.createElement('input');
+        inp.className = 'nt-input wide';
+        inp.value = fixes[i] != null ? fixes[i] : tokens[i].replace(/[.,!?;:…]+$/, '');
+        inp.autocapitalize = 'off';
+        const row = document.createElement('div');
+        row.className = 'nt-editor-row';
+        const ok = document.createElement('button');
+        ok.type = 'button'; ok.className = 'nt-btn primary'; ok.textContent = 'Готово';
+        const clear = document.createElement('button');
+        clear.type = 'button'; clear.className = 'nt-btn'; clear.textContent = fixes[i] != null ? 'Убрать' : 'Отмена';
+        const close = () => { editor.style.display = 'none'; tokEls.forEach((b) => b.classList.remove('active')); paint(); changed(); };
+        ok.onclick = () => {
+          const v = inp.value.trim();
+          if (v && v !== tokens[i]) fixes[i] = v; else delete fixes[i];
+          close();
+        };
+        clear.onclick = () => { delete fixes[i]; close(); };
+        inp.onkeydown = (e) => { if (e.key === 'Enter') ok.click(); };
+        editor.appendChild(inp);
+        row.appendChild(clear); row.appendChild(ok);
+        editor.appendChild(row);
+        setTimeout(() => { inp.focus(); inp.select(); }, 30);
+      }
+      paint();
+      api = {
+        el,
+        getAnswer: () => Object.assign({}, fixes),
+        isComplete: () => Object.keys(fixes).length > 0,
+        showResult: () => { locked = true; editor.style.display = 'none'; },
+      };
+    }
+    return api;
+  }
+
+  // Правильный ответ нового вида заданий — текстом для блока «Правильный ответ».
+  function ntCorrectText(type, correct) {
+    if (Array.isArray(correct)) return correct.join(type === 'correction' ? '; ' : ', ');
+    return String(correct == null ? '' : correct);
   }
 
   // Цвета плашки курса (если нет фото-обложки).
@@ -3773,7 +4081,7 @@
         const listScreen = renderRowList(
           tasks.map((t, i) => Object.assign({}, t, {
             title: '№' + (i + 1) + ': ' + t.question,
-            sub: t.type === 'text' ? 'Текстовый ответ' : (t.type === 'multi' ? 'Несколько верных' : 'Один верный (кнопки)'),
+            sub: t.type_label || (t.type === 'text' ? 'Текстовый ответ' : (t.type === 'multi' ? 'Несколько верных' : 'Один верный (кнопки)')),
           })),
           'task', 'yellow',
           () => {},
@@ -10112,10 +10420,10 @@
     // (учитель должен выбрать её заново, чтобы точно не забыть это сделать).
     let type = existing ? existing.type : (templateFrom ? templateFrom.type : 'text');
     let optionRows = [];
-    if (existing && existing.type !== 'text') {
+    if (existing && (existing.type === 'buttons' || existing.type === 'multi')) {
       const correctSet = new Set(Array.isArray(existing.answer) ? existing.answer : [existing.answer]);
       optionRows = existing.options.map(o => ({ text: o, correct: correctSet.has(o) }));
-    } else if (!existing && templateFrom && templateFrom.type !== 'text') {
+    } else if (!existing && templateFrom && (templateFrom.type === 'buttons' || templateFrom.type === 'multi')) {
       optionRows = templateFrom.options.map(o => ({ text: o, correct: false }));
     }
 
@@ -10156,11 +10464,15 @@
       typeField.className = 'field';
       typeField.innerHTML = '<label class="field-label">Тип задания</label>';
       const seg = document.createElement('div');
-      seg.className = 'segmented';
-      const typeOptions = [['text', 'Текстовый ответ'], ['buttons', 'Один верный'], ['multi', 'Несколько верных']];
-      typeOptions.forEach(([val, label]) => {
+      seg.className = 'type-grid';
+      const typeOptions = [
+        ['text', '✍️', 'Текстовый ответ'], ['buttons', '🔘', 'Один верный'], ['multi', '☑️', 'Несколько верных'],
+        ['gaps', '⌨️', 'Заполнить пропуски'], ['dragwords', '🧩', 'Перетащить слова'], ['match', '🔗', 'Сопоставление'],
+        ['order', '🔀', 'Составить предложение'], ['scramble', '🔠', 'Слово из букв'], ['correction', '📝', 'Исправить ошибки'],
+      ];
+      typeOptions.forEach(([val, icon, label]) => {
         const b = document.createElement('button');
-        b.textContent = label;
+        b.innerHTML = `<small>${icon}</small>${label}`;
         b.type = 'button';
         if (val === type) b.classList.add('active');
         b.onclick = () => { type = val; rerenderOptionsArea(); seg.querySelectorAll('button').forEach(x => x.classList.remove('active')); b.classList.add('active'); };
@@ -10324,9 +10636,156 @@
       card.appendChild(answerArea);
 
       let textAnswerInput;
+      // Настройки новых видов заданий (пропуски, пары и т.д.).
+      const ntPayload = JSON.parse(JSON.stringify((existing && existing.payload) || (templateFrom && templateFrom.payload) || {}));
+      const qLabelEl = qFieldObj.wrapper.querySelector('.field-label');
+      const NT_QUESTION_HINTS = {
+        gaps: 'Заполните пропуски', dragwords: 'Вставьте слова в пропуски', match: 'Соедините пары',
+        order: 'Составьте предложение', scramble: 'Составьте слово', correction: 'Найдите и исправьте ошибки',
+      };
+
+      function ntTextarea(value, placeholder, onInput) {
+        const ta = document.createElement('textarea');
+        ta.className = 'field-textarea';
+        ta.rows = 4;
+        ta.placeholder = placeholder;
+        ta.value = value || '';
+        ta.oninput = () => onInput(ta.value);
+        return ta;
+      }
+
+      function buildNtConstructor() {
+        const f = document.createElement('div');
+        f.className = 'field';
+        answerArea.appendChild(f);
+        const counter = document.createElement('div');
+        counter.className = 'field-hint';
+        if (type === 'gaps' || type === 'dragwords') {
+          f.innerHTML = '<label class="field-label">Текст с пропусками</label><div class="field-hint" style="margin:0 0 8px">Выделите слово и нажмите «Сделать пропуском» — или сами возьмите его в квадратные скобки: She [goes] to school. Несколько верных вариантов — через черту: I [am|\'m] ready.</div>';
+          const count = () => { counter.textContent = 'Пропусков: ' + ((ntPayload.text || '').match(/\[[^\[\]]+\]/g) || []).length; };
+          const ta = ntTextarea(ntPayload.text, 'She [goes] to school every day.', (v) => { ntPayload.text = v; count(); });
+          f.appendChild(ta);
+          const btn = document.createElement('button');
+          btn.type = 'button'; btn.className = 'add-option-btn';
+          btn.textContent = '[ ] Сделать пропуском';
+          btn.onclick = () => {
+            const s = ta.selectionStart ?? ta.value.length, e = ta.selectionEnd ?? ta.value.length;
+            const sel = ta.value.slice(s, e).trim();
+            if (!sel) { showToast('Сначала выделите слово в тексте'); return; }
+            ta.value = ta.value.slice(0, s) + '[' + sel + ']' + ta.value.slice(e);
+            ntPayload.text = ta.value; count(); ta.focus();
+          };
+          f.appendChild(btn);
+          f.appendChild(counter);
+          count();
+          if (type === 'dragwords') {
+            const lbl = document.createElement('label');
+            lbl.className = 'field-label';
+            lbl.style.marginTop = '12px';
+            lbl.textContent = 'Лишние слова (необязательно)';
+            f.appendChild(lbl);
+            const ex = document.createElement('input');
+            ex.className = 'field-input';
+            ex.placeholder = 'Через запятую: went, going';
+            ex.value = (ntPayload.extra || []).join(', ');
+            ex.oninput = () => { ntPayload.extra = ex.value.split(',').map((x) => x.trim()).filter(Boolean); };
+            f.appendChild(ex);
+            f.insertAdjacentHTML('beforeend', '<div class="field-hint">Слова из пропусков попадут в «банк» сами, лишние — для сложности.</div>');
+          }
+        } else if (type === 'correction') {
+          f.innerHTML = '<label class="field-label">Текст с ошибками</label><div class="field-hint" style="margin:0 0 8px">Выделите неверное слово и нажмите «Отметить ошибку» — или напишите так: She {go=>goes} to school.</div>';
+          const count = () => { counter.textContent = 'Ошибок: ' + ((ntPayload.text || '').match(/\{[^{}]*?=>[^{}]*?\}/g) || []).length; };
+          const ta = ntTextarea(ntPayload.text, 'She {go=>goes} to school {everyday=>every day}.', (v) => { ntPayload.text = v; count(); });
+          f.appendChild(ta);
+          const btn = document.createElement('button');
+          btn.type = 'button'; btn.className = 'add-option-btn';
+          btn.textContent = '✏️ Отметить ошибку';
+          const fixRow = document.createElement('div');
+          fixRow.style.cssText = 'display:none;gap:8px;align-items:center;margin:8px 0;';
+          btn.onclick = () => {
+            const s = ta.selectionStart ?? 0, e = ta.selectionEnd ?? 0;
+            const sel = ta.value.slice(s, e).trim();
+            if (!sel) { showToast('Сначала выделите неверное слово'); return; }
+            fixRow.style.display = 'flex';
+            fixRow.innerHTML = `<span style="font-size:13px;white-space:nowrap;">«${escapeHtml(sel)}» →</span>`;
+            const inp = document.createElement('input');
+            inp.className = 'field-input';
+            inp.placeholder = 'как правильно';
+            inp.style.flex = '1';
+            const ok = document.createElement('button');
+            ok.type = 'button'; ok.className = 'add-option-btn'; ok.textContent = 'OK';
+            ok.onclick = () => {
+              const fix = inp.value.trim();
+              if (!fix) return;
+              ta.value = ta.value.slice(0, s) + '{' + sel + '=>' + fix + '}' + ta.value.slice(e);
+              ntPayload.text = ta.value; fixRow.style.display = 'none'; count();
+            };
+            inp.onkeydown = (ev) => { if (ev.key === 'Enter') { ev.preventDefault(); ok.click(); } };
+            fixRow.appendChild(inp); fixRow.appendChild(ok);
+            setTimeout(() => inp.focus(), 20);
+          };
+          f.appendChild(btn);
+          f.appendChild(fixRow);
+          f.appendChild(counter);
+          count();
+        } else if (type === 'order') {
+          f.innerHTML = '<label class="field-label">Правильное предложение</label>';
+          const inp = document.createElement('input');
+          inp.className = 'field-input';
+          inp.placeholder = 'I have never been to London.';
+          inp.value = ntPayload.sentence || '';
+          inp.oninput = () => { ntPayload.sentence = inp.value; };
+          f.appendChild(inp);
+          f.insertAdjacentHTML('beforeend', '<div class="field-hint">Ученик увидит слова вперемешку и соберёт предложение по порядку.</div>');
+        } else if (type === 'scramble') {
+          f.innerHTML = '<label class="field-label">Слово</label>';
+          const inp = document.createElement('input');
+          inp.className = 'field-input';
+          inp.placeholder = 'environment';
+          inp.value = ntPayload.word || '';
+          inp.oninput = () => { ntPayload.word = inp.value; };
+          f.appendChild(inp);
+          f.insertAdjacentHTML('beforeend', '<div class="field-hint">Ученик увидит буквы вперемешку. Заглавная первая буква не подсказывается.</div>');
+        } else if (type === 'match') {
+          f.innerHTML = '<label class="field-label">Пары</label><div class="field-hint" style="margin:0 0 8px">Слева — то, что видит ученик, справа — правильная пара. Правые варианты перемешаются.</div>';
+          if (!Array.isArray(ntPayload.pairs) || !ntPayload.pairs.length) ntPayload.pairs = [['', ''], ['', '']];
+          const list = document.createElement('div');
+          f.appendChild(list);
+          const draw = () => {
+            list.innerHTML = '';
+            ntPayload.pairs.forEach((pr, idx) => {
+              const row = document.createElement('div');
+              row.style.cssText = 'display:grid;grid-template-columns:1fr 1fr auto;gap:6px;margin-bottom:6px;align-items:center;';
+              [0, 1].forEach((k) => {
+                const inp = document.createElement('input');
+                inp.className = 'field-input';
+                inp.placeholder = k ? 'пара' : 'слово';
+                inp.value = pr[k] || '';
+                inp.oninput = () => { ntPayload.pairs[idx][k] = inp.value; };
+                row.appendChild(inp);
+              });
+              const rm = document.createElement('button');
+              rm.type = 'button'; rm.className = 'option-remove'; rm.innerHTML = ICONS.trash;
+              rm.onclick = () => { ntPayload.pairs.splice(idx, 1); draw(); };
+              row.appendChild(rm);
+              list.appendChild(row);
+            });
+          };
+          draw();
+          const add = document.createElement('button');
+          add.type = 'button'; add.className = 'add-option-btn';
+          add.textContent = '+ Пара';
+          add.onclick = () => { ntPayload.pairs.push(['', '']); draw(); };
+          f.appendChild(add);
+        }
+      }
 
       function rerenderOptionsArea() {
         answerArea.innerHTML = '';
+        const isNt = NT_TYPES.includes(type);
+        if (qLabelEl) qLabelEl.textContent = isNt ? 'Задание (инструкция для ученика)' : 'Вопрос';
+        qInput.placeholder = isNt ? (NT_QUESTION_HINTS[type] || '') : 'Например: Вставьте букву: к_рабль';
+        if (isNt) { buildNtConstructor(); return; }
         if (type === 'text') {
           const f = document.createElement('div');
           f.className = 'field';
@@ -10448,11 +10907,16 @@
       saveBtn.className = 'save-btn';
       saveBtn.textContent = existing ? 'Сохранить изменения' : 'Добавить задание';
       saveBtn.onclick = async () => {
-        const question = qInput.value.trim();
+        const isNt = NT_TYPES.includes(type);
+        const question = qInput.value.trim() || (isNt ? NT_QUESTION_HINTS[type] : '');
         if (!question) { showToast('Введите текст вопроса'); return; }
 
-        let answer, options;
-        if (type === 'text') {
+        let answer, options, payload = null;
+        if (isNt) {
+          payload = JSON.parse(JSON.stringify(ntPayload));
+          if (type === 'match') payload.pairs = (payload.pairs || []).filter((p) => (p[0] || '').trim() && (p[1] || '').trim());
+          options = []; answer = null;
+        } else if (type === 'text') {
           answer = textAnswerInput.value.trim();
           if (!answer) { showToast('Введите правильный ответ'); return; }
           options = [];
@@ -10469,6 +10933,7 @@
           question, description: dInput.value.trim(), type, options, answer, explanation: eInput.value.trim(),
           image_file_id: imageFileId, table_data: tableData,
         };
+        if (isNt) { taskData.payload = payload; delete taskData.options; delete taskData.answer; }
 
         saveBtn.disabled = true;
         try {
@@ -10567,11 +11032,59 @@
     container.appendChild(wrap);
   }
 
+  // Предпросмотр нового вида задания: тот же виджет, что у ученика; ответ
+  // проверяется сервером, но нигде не сохраняется.
+  async function renderNtPreview(task, isBack) {
+    const { view } = await apiGet(`/api/teacher/tasks/${task.id}/view`);
+    swapScreen((screen) => {
+      const banner = document.createElement('p');
+      banner.className = 'preview-banner';
+      banner.textContent = '👁 Так это увидит ученик — можно попробовать ответить';
+      screen.appendChild(banner);
+      const card = document.createElement('div');
+      card.className = 'task-card';
+      const q = document.createElement('p');
+      q.className = 'task-question';
+      q.innerHTML = renderMarkdownText(task.question);
+      card.appendChild(q);
+      if (task.description) card.insertAdjacentHTML('beforeend', `<p class="task-description">${renderMarkdownText(task.description)}</p>`);
+      if (task.image_file_id) renderTaskImage(card, task.image_file_id);
+      const btn = document.createElement('button');
+      btn.className = 'submit-btn';
+      btn.textContent = 'Проверить';
+      btn.disabled = true;
+      const widget = buildNewTaskWidget(task.type, view, () => { btn.disabled = !widget.isComplete(); });
+      card.appendChild(widget.el);
+      btn.onclick = async () => {
+        btn.disabled = true;
+        try {
+          const r = await apiSend('POST', `/api/teacher/tasks/${task.id}/try`, { answer: widget.getAnswer() });
+          widget.showResult(r.details, r.correct_answer);
+          btn.remove();
+          const fb = document.createElement('div');
+          fb.className = 'feedback ' + (r.correct ? 'ok' : (r.status === 'partial' ? 'mid' : 'bad'));
+          fb.innerHTML = `<p class="feedback-title">${r.correct ? '✅ Верно!' : (r.status === 'partial' ? '🟡 Частично верно' : '❌ Неверно')}</p>` +
+            (!r.correct && !['gaps', 'dragwords', 'match'].includes(task.type) ? `<p class="feedback-body">Правильный ответ: ${escapeHtml(ntCorrectText(task.type, r.correct_answer))}</p>` : '') +
+            (task.explanation ? `<p class="feedback-explain">${renderMarkdownText(task.explanation)}</p>` : '');
+          card.appendChild(fb);
+          const again = document.createElement('button');
+          again.className = 'skip-btn';
+          again.textContent = '↻ Ещё раз';
+          again.onclick = () => renderNtPreview(task, false);
+          card.appendChild(again);
+        } catch (err) { btn.disabled = false; showToast('Не получилось: ' + err.message); }
+      };
+      card.appendChild(btn);
+      screen.appendChild(card);
+    }, isBack);
+  }
+
   async function renderTaskPreview(topicId, taskId, isBack) {
     showLoadingMenu();
     try {
       const tasks = await apiGet(`/api/teacher/topics/${topicId}/tasks`);
       const task = tasks.find(t => t.id === taskId);
+      if (NT_TYPES.includes(task.type)) { await renderNtPreview(task, isBack); return; }
       renderQuestionPreview(task, isBack, () => { stack.pop(); renderCrumbs(); render(true); });
     } catch (err) { showErrorMsg(err, isBack); }
   }
