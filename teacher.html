@@ -1279,6 +1279,13 @@
     }
     body.dash-wide.has-side-nav .wrap { max-width: 1360px; }
   }
+  /* Пока оболочка скрыта (выбор «ученик / преподаватель») — без боковой
+     панели, колонка узкая и по центру, кнопки не растягиваются на весь экран. */
+  body.chrome-hidden .side-nav, body.chrome-hidden.mode-finance .side-nav { display: none !important; }
+  body.chrome-hidden .wrap, body.chrome-hidden.has-side-nav .wrap, body.chrome-hidden.mode-finance.has-side-nav .wrap {
+    margin-left: auto !important; margin-right: auto !important; max-width: 420px !important;
+    padding-left: 0 !important; padding-right: 0 !important;
+  }
 </style>
   <style>img.emoji { height: 1.2em; width: 1.2em; margin: 0 0.05em; vertical-align: -0.22em; display: inline-block; object-fit: contain; pointer-events: none; user-select: text; }</style>
   <script>
@@ -4038,6 +4045,8 @@
     if (header) header.style.display = visible ? '' : 'none';
     if (sideNav) sideNav.style.display = visible ? '' : 'none';
     if (crumbs) crumbs.style.display = visible ? '' : 'none';
+    // Экран выбора роли и т.п.: без боковой панели и узкой колонкой по центру.
+    document.body.classList.toggle('chrome-hidden', !visible);
   }
 
   // Настройки — отдельный экран внутри приложения (как у ученика), а не
