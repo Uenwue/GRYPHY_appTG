@@ -976,7 +976,7 @@
   .course-sheet { background: var(--bg); border-radius: 24px; padding: 16px; display: flex; flex-direction: column; gap: 14px; }
   .course-card { background: var(--bg); border: 1px solid var(--border); border-radius: 18px; padding: 16px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); cursor: pointer; overflow: hidden; }
   .course-card.archived { opacity: 0.7; }
-  .course-cover { margin: -16px -16px 12px; height: 112px; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+  .course-cover { margin: -16px -16px 12px; aspect-ratio: 3 / 1; display: flex; align-items: center; justify-content: center; overflow: hidden; }
   .course-cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
   .course-cover span { font-family: 'Involve', sans-serif; font-size: 40px; font-weight: 800; color: rgba(255,255,255,0.92); }
   .course-title { font-family: 'Involve', sans-serif; font-size: 16px; font-weight: 700; color: var(--text); margin-bottom: 4px; overflow-wrap: anywhere; }
@@ -1093,14 +1093,99 @@
 
 <script>
   // Адрес вашего бэкенда на Amvera — тот же самый, что и у ученической версии.
-  const API_BASE_URL = 'https://gryphy-bot-uenwue.waw0.amvera.tech';
+  // Адрес сервера. Если страница открыта с самого сервера (app.<домен> или
+  // адрес Amvera) — запросы идут туда же; со старого GitHub Pages и из
+  // файла — на адрес Amvera.
+  const API_BASE_URL = (() => {
+    const h = location.hostname || '';
+    if (!h || h === 'localhost' || h.startsWith('127.') || h.endsWith('github.io')) return 'https://gryphy-bot-uenwue.waw0.amvera.tech';
+    return location.origin;
+  })();
 
   const tg = window.Telegram?.WebApp;
+
+  // ===== Вход на сайте (вне Telegram) =====
+  // В мини-аппе личность подтверждает сам Telegram (initData). На сайте
+  // человек входит через «Войти через Telegram», сервер выдаёт токен на
+  // 30 дней — он хранится в браузере и отправляется в том же заголовке.
+  const WEB_LOGO_SRC = document.querySelector('.tb-logo-img')?.getAttribute('src') || '';
+  const WEB_TOKEN_KEY = 'navats-web-token';
+  const WEB_USER_KEY = 'navats-web-user';
+  const IS_WEB = !(tg && tg.initData);
+  function authData() {
+    if (tg && tg.initData) return tg.initData;
+    try { return localStorage.getItem(WEB_TOKEN_KEY) || ''; } catch (err) { return ''; }
+  }
+  function currentTgUser() {
+    if (tg && tg.initDataUnsafe && tg.initDataUnsafe.user) return tg.initDataUnsafe.user;
+    try { return JSON.parse(localStorage.getItem(WEB_USER_KEY) || 'null'); } catch (err) { return null; }
+  }
+  function webLogout() {
+    try { localStorage.removeItem(WEB_TOKEN_KEY); localStorage.removeItem(WEB_USER_KEY); } catch (err) {}
+    location.reload();
+  }
+  function onWebAuthLost() {
+    if (!IS_WEB) return;
+    try { localStorage.removeItem(WEB_TOKEN_KEY); } catch (err) {}
+    showWebLogin('Сессия закончилась — войдите ещё раз.');
+  }
+  // Показывает экран входа, если это сайт и человек ещё не вошёл. true — показан.
+  function webLoginGate() {
+    if (!IS_WEB || authData()) return false;
+    showWebLogin();
+    return true;
+  }
+  async function showWebLogin(note) {
+    if (document.getElementById('webLogin')) return;
+    const ov = document.createElement('div');
+    ov.id = 'webLogin';
+    ov.style.cssText = 'position:fixed;inset:0;z-index:400;background:var(--page-bg);display:flex;align-items:center;justify-content:center;padding:20px;overflow-y:auto;';
+    ov.innerHTML = '<div style="background:var(--bg);border:1px solid var(--border);border-radius:24px;padding:28px 22px;max-width:380px;width:100%;text-align:center;box-shadow:0 8px 30px rgba(0,0,0,0.06);">' +
+      `<img data-accent-logo="1" src="${WEB_LOGO_SRC}" alt="Navats" style="height:40px;margin:0 auto 18px;display:block;">` +
+      '<div style="font-family:\'Involve\',sans-serif;font-size:22px;font-weight:800;margin-bottom:8px;color:var(--text);">Вход в Navats</div>' +
+      '<div style="font-size:14px;line-height:1.45;color:var(--text-soft);margin-bottom:20px;">Войдите через Telegram — это и вход, и регистрация. Ваши курсы, уроки и прогресс те же, что в боте.</div>' +
+      (note ? `<div style="font-size:13px;font-weight:700;color:var(--red-dark,#EA2B2B);margin-bottom:12px;">${note}</div>` : '') +
+      '<div id="tgWidget" style="min-height:48px;display:flex;justify-content:center;"></div>' +
+      '<div id="webLoginErr" style="font-size:13px;color:var(--red-dark,#EA2B2B);margin-top:12px;display:none;"></div>' +
+      '<div style="font-size:12px;color:var(--text-soft);margin-top:18px;">Нажимая «Войти», вы разрешаете боту присылать вам уведомления об уроках и заданиях.</div>' +
+      '</div>';
+    document.body.appendChild(ov);
+    if (window.tintLogo) window.tintLogo(ov.querySelector('img'));
+    const errBox = ov.querySelector('#webLoginErr');
+    const showErr = (t) => { errBox.textContent = t; errBox.style.display = 'block'; };
+    window.onTelegramAuth = async (user) => {
+      try {
+        const res = await fetch(API_BASE_URL + '/api/auth/telegram', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(user),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data.token) throw new Error(data.message || 'не получилось подтвердить вход');
+        localStorage.setItem(WEB_TOKEN_KEY, data.token);
+        localStorage.setItem(WEB_USER_KEY, JSON.stringify(data.user || user));
+        location.reload();
+      } catch (err) { showErr('Не получилось войти: ' + err.message); }
+    };
+    let botName = 'navats_bot';
+    try {
+      const cfg = await (await fetch(API_BASE_URL + '/api/auth/config')).json();
+      if (cfg && cfg.bot_username) botName = cfg.bot_username;
+    } catch (err) { /* останется имя по умолчанию */ }
+    const s = document.createElement('script');
+    s.async = true;
+    s.src = 'https://telegram.org/js/telegram-widget.js?22';
+    s.setAttribute('data-telegram-login', botName);
+    s.setAttribute('data-size', 'large');
+    s.setAttribute('data-radius', '12');
+    s.setAttribute('data-request-access', 'write');
+    s.setAttribute('data-onauth', 'onTelegramAuth(user)');
+    s.onerror = () => showErr('Не загрузилась кнопка входа Telegram. Проверьте интернет или VPN.');
+    ov.querySelector('#tgWidget').appendChild(s);
+  }
   if (tg) { tg.ready(); tg.expand(); }
 
   async function apiGet(path) {
-    const res = await fetch(API_BASE_URL + path, { headers: { 'X-Telegram-Init-Data': tg?.initData || '' } });
-    if (res.status === 401) { const e = new Error('Не удалось подтвердить, что это вы.'); e.status = 401; throw e; }
+    const res = await fetch(API_BASE_URL + path, { headers: { 'X-Telegram-Init-Data': authData() } });
+    if (res.status === 401) { onWebAuthLost(); const e = new Error('Не удалось подтвердить, что это вы.'); e.status = 401; throw e; }
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
       const fallback = res.status === 403 ? 'Нет доступа к этому предмету.' : ('Сервер ответил с ошибкой: ' + res.status);
@@ -1113,10 +1198,10 @@
   async function apiSend(method, path, body) {
     const res = await fetch(API_BASE_URL + path, {
       method,
-      headers: { 'Content-Type': 'application/json', 'X-Telegram-Init-Data': tg?.initData || '' },
+      headers: { 'Content-Type': 'application/json', 'X-Telegram-Init-Data': authData() },
       body: JSON.stringify(body || {}),
     });
-    if (res.status === 401) throw new Error('Не удалось подтвердить, что это вы.');
+    if (res.status === 401) { onWebAuthLost(); throw new Error('Не удалось подтвердить, что это вы.'); }
     if (!res.ok) {
       const errBody = await res.json().catch(() => ({}));
       const fallback = res.status === 403 ? 'Нет доступа к этому предмету.' : ('Сервер ответил с ошибкой: ' + res.status);
@@ -1244,6 +1329,8 @@
       icon: '<path d="M4 3.5C4 2.67 4.67 2 5.5 2H12L16 6V16.5C16 17.33 15.33 18 14.5 18H5.5C4.67 18 4 17.33 4 16.5V3.5Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M7 10H13M7 13H11" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>' },
     { level: 'tests', title: 'Тесты', primary: true,
       icon: '<path d="M6 3H14L14 17L10 14.5L6 17V3Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>' },
+    { level: 'library', title: 'Библиотека заданий', navLabel: 'Библиотека', standalone: true,
+      icon: '<path d="M3 3.5H6.5V16.5H3V3.5Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M8.5 3.5H12V16.5H8.5V3.5Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M13.5 4.6L16.8 3.8L18.4 15.5L15.1 16.3L13.5 4.6Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>' },
     { level: 'students', title: 'Ученики', primary: true,
       icon: '<circle cx="10" cy="7" r="3" stroke="currentColor" stroke-width="1.6"/><path d="M4 17c0-3 2.7-5 6-5s6 2 6 5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>' },
     { level: 'groups', title: 'Группы',
@@ -1316,6 +1403,367 @@
     currentMode = 'subject';
     stack = [{ level: 'courses_list', title: 'Курсы' }];
     render(false);
+  }
+
+
+  // =====================================================================
+  // БИБЛИОТЕКА ЗАДАНИЙ
+  // «Мои» — задания из всех моих курсов; «Открытые» — задания других
+  // преподавателей, которые они сами разрешили брать. Задания копируются в
+  // выбранную тему (копия не зависит от оригинала).
+  // =====================================================================
+  const TASK_TYPE_LABELS = { text: 'Текстовый ответ', multi: 'Несколько верных', single: 'Один верный' };
+  const taskTypeLabel = (t) => TASK_TYPE_LABELS[t] || (t ? t : 'Один верный');
+  const libState = { scope: 'mine', q: '', type: '', tag: '', subjectId: '', selecting: false, selected: new Map() };
+
+  function libSheet(title) {
+    lockBodyScroll();
+    const ov = document.createElement('div');
+    ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.35);display:flex;align-items:flex-end;justify-content:center;z-index:70;';
+    const box = document.createElement('div');
+    box.style.cssText = 'background:var(--bg);border-radius:20px 20px 0 0;padding:16px 16px calc(16px + env(safe-area-inset-bottom,0px));width:100%;max-width:520px;max-height:86vh;overflow-y:auto;box-sizing:border-box;';
+    const head = document.createElement('div');
+    head.style.cssText = 'display:flex;align-items:center;gap:8px;margin-bottom:12px;';
+    head.innerHTML = `<div style="flex:1;font-size:17px;font-weight:700;">${escapeHtml(title)}</div>`;
+    const x = document.createElement('button');
+    x.className = 'icon-btn';
+    x.textContent = '✕';
+    head.appendChild(x);
+    box.appendChild(head);
+    ov.appendChild(box);
+    document.body.appendChild(ov);
+    const close = () => { unlockBodyScroll(); ov.remove(); };
+    x.onclick = close;
+    ov.onclick = (e) => { if (e.target === ov) close(); };
+    return { box, close };
+  }
+
+  // Выбор темы (или раздела) в своих курсах: курс → разделы → темы.
+  async function pickLibraryTarget(opts, onPick) {
+    let tree;
+    try { tree = await apiGet('/api/teacher/library/targets'); } catch (err) { showToast('Не получилось загрузить курсы: ' + err.message); return; }
+    const { box, close } = libSheet(opts.title || 'Выберите тему');
+    const body = document.createElement('div');
+    box.appendChild(body);
+    const drawCourses = () => {
+      body.innerHTML = '';
+      if (!tree.length) { body.innerHTML = '<p class="field-hint">Сначала создайте курс.</p>'; return; }
+      tree.forEach((c) => {
+        const b = document.createElement('button');
+        b.className = 'set-choice inline';
+        b.style.cssText = 'width:100%;justify-content:space-between;margin-bottom:8px;padding:12px 14px;';
+        b.innerHTML = `<span style="font-weight:700;">📚 ${escapeHtml(c.title)}</span><span style="color:var(--text-soft);">›</span>`;
+        b.onclick = () => drawCourse(c);
+        body.appendChild(b);
+      });
+    };
+    const drawCourse = (c) => {
+      body.innerHTML = '';
+      const back = document.createElement('button');
+      back.className = 'set-btn';
+      back.style.cssText = 'margin-bottom:12px;';
+      back.textContent = '← ' + c.title;
+      back.onclick = drawCourses;
+      body.appendChild(back);
+      if (!c.sections.length) body.insertAdjacentHTML('beforeend', '<p class="field-hint">В этом курсе пока нет разделов.</p>');
+      c.sections.forEach((s) => {
+        const h = document.createElement('div');
+        h.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:8px;margin:12px 2px 6px;';
+        h.innerHTML = `<span class="set-hint" style="margin:0;font-weight:800;text-transform:uppercase;letter-spacing:0.03em;">${s.is_homework ? '📝 ДЗ · ' : '🎯 '}${escapeHtml(s.title)}</span>`;
+        if (opts.pickSection) {
+          const pickS = document.createElement('button');
+          pickS.className = 'set-btn primary';
+          pickS.style.cssText = 'padding:6px 12px;font-size:12.5px;';
+          pickS.textContent = 'Сюда';
+          pickS.onclick = () => { close(); onPick({ sectionId: s.id, sectionTitle: s.title, subjectTitle: c.title }); };
+          h.appendChild(pickS);
+        }
+        body.appendChild(h);
+        if (!opts.pickSection) {
+          if (!s.topics.length) body.insertAdjacentHTML('beforeend', '<div class="set-hint" style="margin:0 2px 6px;">Нет тем</div>');
+          s.topics.forEach((tp) => {
+            const b = document.createElement('button');
+            b.className = 'set-choice inline';
+            b.style.cssText = 'width:100%;justify-content:flex-start;margin-bottom:6px;padding:11px 14px;text-align:left;';
+            b.textContent = tp.title;
+            b.onclick = () => { close(); onPick({ topicId: tp.id, topicTitle: tp.title, subjectTitle: c.title }); };
+            body.appendChild(b);
+          });
+        }
+      });
+    };
+    drawCourses();
+  }
+
+  async function libCopy(taskIds, target) {
+    const doCopy = async (t) => {
+      const res = await apiSend('POST', '/api/teacher/library/copy', { task_ids: taskIds, topic_id: t.topicId });
+      showToast(`Добавлено заданий: ${res.copied} → «${t.topicTitle}»`);
+      return res;
+    };
+    if (target) { try { return await doCopy(target); } catch (err) { showToast('Не получилось: ' + err.message); return null; } }
+    return new Promise((resolve) => pickLibraryTarget({ title: 'В какую тему добавить' }, async (t) => {
+      try { resolve(await doCopy(t)); } catch (err) { showToast('Не получилось: ' + err.message); resolve(null); }
+    }));
+  }
+
+  function editTagsDialog(tags, onSave) {
+    lockBodyScroll();
+    const ov = document.createElement('div');
+    ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center;z-index:80;padding:20px;';
+    ov.innerHTML = '<div style="background:var(--bg);border-radius:16px;padding:18px;max-width:340px;width:100%;">' +
+      '<div style="font-size:17px;font-weight:700;margin-bottom:6px;">Теги задания</div>' +
+      '<div class="set-hint" style="margin-bottom:10px;">Через запятую: тема, уровень, тип. Например: Present Simple, A2, ЦТ</div>' +
+      `<input class="field-input" id="tgIn" value="${escapeHtml(tags.join(', '))}">` +
+      '<div style="display:flex;gap:8px;margin-top:14px;"><button class="set-btn" id="tgC" style="flex:1;">Отмена</button><button class="set-btn primary" id="tgS" style="flex:1;">Сохранить</button></div></div>';
+    document.body.appendChild(ov);
+    const close = () => { unlockBodyScroll(); ov.remove(); };
+    ov.querySelector('#tgC').onclick = close;
+    ov.querySelector('#tgS').onclick = async () => {
+      const list = ov.querySelector('#tgIn').value.split(',').map((s) => s.trim()).filter(Boolean);
+      try { await onSave(list); close(); } catch (err) { showToast('Не получилось: ' + err.message); }
+    };
+  }
+
+  async function topicShareDialog(topicId, title) {
+    let st;
+    try { st = await apiGet(`/api/teacher/topics/${topicId}/share`); } catch (err) { showToast(err.message); return; }
+    const { box, close } = libSheet('Доступ другим преподавателям');
+    const all = st.total && st.shared === st.total;
+    box.insertAdjacentHTML('beforeend', `<div class="set-hint" style="margin-bottom:12px;">Открытые задания другие преподаватели видят в «Библиотеке → Открытые» и могут скопировать к себе. Ваши ученики, курсы и ответы учеников им не видны.<br><br>Тема «${escapeHtml(title || '')}»: открыто ${st.shared} из ${st.total}.</div>`);
+    const b = document.createElement('button');
+    b.className = 'set-btn primary';
+    b.style.width = '100%';
+    b.textContent = all ? '🔒 Закрыть все задания темы' : '🌐 Открыть все задания темы';
+    b.onclick = async () => {
+      try {
+        await apiSend('POST', `/api/teacher/topics/${topicId}/share`, { shared: !all });
+        close();
+        showToast(all ? 'Задания темы закрыты' : 'Задания темы открыты другим преподавателям');
+      } catch (err) { showToast('Не получилось: ' + err.message); }
+    };
+    box.appendChild(b);
+    box.insertAdjacentHTML('beforeend', '<div class="set-hint" style="margin-top:10px;">Отдельные задания можно открыть или закрыть в «Библиотеке», нажав на задание.</div>');
+  }
+
+  async function openLibraryTask(item, current, refresh) {
+    let t;
+    try { t = await apiGet(`/api/teacher/library/tasks/${item.id}`); } catch (err) { showToast(err.message); return; }
+    const { box, close } = libSheet(t.mine ? 'Задание' : 'Задание от ' + (t.author || 'преподавателя'));
+    const meta = document.createElement('div');
+    meta.className = 'set-hint';
+    meta.style.marginBottom = '10px';
+    meta.textContent = `${taskTypeLabel(t.type)} · ${t.subject_title || ''} → ${t.topic_title || ''}`;
+    box.appendChild(meta);
+    const card = document.createElement('div');
+    card.style.cssText = 'border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:12px;';
+    let html = '';
+    if (t.description) html += `<div style="font-size:13px;color:var(--text-soft);margin-bottom:6px;white-space:pre-line;">${escapeHtml(t.description)}</div>`;
+    html += `<div style="font-size:15px;font-weight:700;white-space:pre-line;margin-bottom:8px;">${escapeHtml(t.question || '')}</div>`;
+    if (t.image_file_id) html += `<img src="${API_BASE_URL}/api/image/${encodeURIComponent(t.image_file_id)}" style="max-width:100%;border-radius:10px;margin-bottom:8px;" onerror="this.remove()">`;
+    const answers = Array.isArray(t.answer) ? t.answer : [t.answer];
+    (t.options || []).forEach((o) => {
+      const ok = answers.includes(o);
+      html += `<div style="padding:7px 10px;border-radius:10px;margin-bottom:5px;border:1px solid ${ok ? 'var(--green, #58CC02)' : 'var(--border)'};font-size:13.5px;">${ok ? '✅ ' : ''}${escapeHtml(o)}</div>`;
+    });
+    if (!(t.options || []).length && t.answer) html += `<div style="font-size:13.5px;"><b>Ответ:</b> ${escapeHtml(Array.isArray(t.answer) ? t.answer.join(', ') : t.answer)}</div>`;
+    if (t.explanation) html += `<div style="font-size:13px;color:var(--text-soft);margin-top:8px;white-space:pre-line;">💡 ${escapeHtml(t.explanation)}</div>`;
+    card.innerHTML = html;
+    box.appendChild(card);
+    if (t.tags.length) box.insertAdjacentHTML('beforeend', `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;">${t.tags.map((x) => `<span class="course-tag">#${escapeHtml(x)}</span>`).join('')}</div>`);
+
+    const add = document.createElement('button');
+    add.className = 'set-btn primary';
+    add.style.cssText = 'width:100%;margin-bottom:8px;';
+    add.textContent = current.targetTopicId ? `＋ Добавить в «${current.targetTitle || 'тему'}»` : '＋ Добавить в тему…';
+    add.onclick = async () => {
+      close();
+      const res = await libCopy([t.id], current.targetTopicId ? { topicId: current.targetTopicId, topicTitle: current.targetTitle || 'тему' } : null);
+      if (res && current.targetTopicId) goBack();
+    };
+    box.appendChild(add);
+    if (t.mine) {
+      const row = document.createElement('div');
+      row.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:8px;';
+      const tagsBtn = document.createElement('button');
+      tagsBtn.className = 'set-btn';
+      tagsBtn.textContent = '🏷 Теги';
+      tagsBtn.onclick = () => editTagsDialog(t.tags, async (list) => {
+        await apiSend('PATCH', `/api/teacher/library/tasks/${t.id}`, { tags: list });
+        close(); showToast('Теги сохранены'); refresh();
+      });
+      const shareBtn = document.createElement('button');
+      shareBtn.className = 'set-btn';
+      shareBtn.textContent = t.is_shared ? '🔒 Закрыть' : '🌐 Открыть другим';
+      shareBtn.onclick = async () => {
+        try {
+          await apiSend('PATCH', `/api/teacher/library/tasks/${t.id}`, { is_shared: !t.is_shared });
+          close(); showToast(t.is_shared ? 'Задание закрыто' : 'Задание открыто другим преподавателям'); refresh();
+        } catch (err) { showToast('Не получилось: ' + err.message); }
+      };
+      row.appendChild(tagsBtn); row.appendChild(shareBtn);
+      box.appendChild(row);
+    }
+  }
+
+  async function renderLibrary(current, isBack) {
+    const st = libState;
+    if (!isBack) { st.selected = new Map(); st.selecting = false; }
+    let targets = [];
+    swapScreen((screen) => {
+      if (current.targetTopicId) {
+        screen.insertAdjacentHTML('beforeend', `<div class="sched-current" style="margin:0 0 12px;">Выбранные задания добавятся в тему <b>«${escapeHtml(current.targetTitle || '')}»</b></div>`);
+      }
+      // Мои / Открытые
+      const seg = document.createElement('div');
+      seg.className = 'sched-seg';
+      seg.style.marginBottom = '10px';
+      const hint = document.createElement('div');
+      hint.className = 'set-hint';
+      hint.style.margin = '0 2px 10px';
+      hint.textContent = 'Здесь только задания, которые другие преподаватели сами разрешили брать. Вы получаете копию — оригинал автора не меняется.';
+      const paintSeg = () => {
+        seg.querySelectorAll('button').forEach((b) => b.classList.toggle('on', b.dataset.k === st.scope));
+        hint.style.display = st.scope === 'shared' ? '' : 'none';
+      };
+      [['mine', 'Мои задания'], ['shared', 'Открытые другими']].forEach(([k, l]) => {
+        const b = document.createElement('button');
+        b.dataset.k = k;
+        b.textContent = l;
+        b.onclick = () => { if (st.scope === k) return; st.scope = k; st.tag = ''; st.type = ''; st.subjectId = ''; st.selected = new Map(); paintSeg(); load(); };
+        seg.appendChild(b);
+      });
+      screen.appendChild(seg);
+      screen.appendChild(hint);
+      paintSeg();
+
+      // Поиск (поле не пересоздаётся — фокус и клавиатура не пропадают)
+      const search = document.createElement('input');
+      search.className = 'field-input';
+      search.type = 'search';
+      search.placeholder = '🔍 Поиск по тексту, теме, тегу';
+      search.value = st.q;
+      search.style.marginBottom = '10px';
+      let tmr = null;
+      search.oninput = () => { clearTimeout(tmr); tmr = setTimeout(() => { st.q = search.value.trim(); load(); }, 400); };
+      screen.appendChild(search);
+
+      const dyn = document.createElement('div');
+      dyn.innerHTML = '<p class="field-hint" style="text-align:center;margin:18px 0;">Загружаем…</p>';
+      screen.appendChild(dyn);
+
+      let seq = 0;
+      async function load() {
+        const my = ++seq;
+        dyn.style.opacity = '0.55';
+        let data;
+        try {
+          const reqs = [apiGet('/api/teacher/library?' + new URLSearchParams({ scope: st.scope, q: st.q, type: st.type, tag: st.tag, subject_id: st.scope === 'mine' ? st.subjectId : '' }))];
+          if (!targets.length) reqs.push(apiGet('/api/teacher/library/targets').then((x) => { targets = x; }).catch(() => {}));
+          [data] = await Promise.all(reqs);
+        } catch (err) {
+          if (my !== seq) return;
+          dyn.style.opacity = '1';
+          dyn.innerHTML = `<p class="field-hint" style="text-align:center;">Не получилось загрузить: ${escapeHtml(err.message)}</p>`;
+          return;
+        }
+        if (my !== seq) return;
+        dyn.style.opacity = '1';
+        draw(data);
+      }
+
+      function draw(data) {
+        dyn.innerHTML = '';
+        // Фильтры: курс (для своих), вид задания, тег
+        const filters = document.createElement('div');
+        filters.style.cssText = 'display:flex;gap:6px;overflow-x:auto;padding-bottom:6px;margin-bottom:8px;';
+        const fchip = (label, on, fn) => {
+          const b = document.createElement('button');
+          b.className = 'set-choice inline' + (on ? ' on' : '');
+          b.style.cssText = 'padding:6px 11px;white-space:nowrap;flex-shrink:0;';
+          b.textContent = label;
+          b.onclick = fn;
+          filters.appendChild(b);
+        };
+        if (st.scope === 'mine' && targets.length > 1) {
+          fchip('Все курсы', !st.subjectId, () => { st.subjectId = ''; load(); });
+          targets.forEach((c) => fchip('📚 ' + c.title, String(st.subjectId) === String(c.id), () => { st.subjectId = c.id; load(); }));
+        }
+        if (data.types.length > 1) data.types.forEach((ty) => fchip(taskTypeLabel(ty), st.type === ty, () => { st.type = st.type === ty ? '' : ty; load(); }));
+        data.tags.forEach((tg) => fchip('#' + tg, st.tag.toLowerCase() === tg.toLowerCase(), () => { st.tag = st.tag.toLowerCase() === tg.toLowerCase() ? '' : tg; load(); }));
+        if (filters.children.length) dyn.appendChild(filters);
+
+        const bar = document.createElement('div');
+        bar.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:8px;margin:2px 2px 10px;';
+        bar.innerHTML = `<span class="set-hint" style="margin:0;">${data.items.length}${data.has_more ? '+' : ''} ${dashPlural(data.items.length, 'задание', 'задания', 'заданий')}</span>`;
+        const selBtn = document.createElement('button');
+        selBtn.className = 'set-btn';
+        selBtn.style.cssText = 'padding:6px 12px;font-size:12.5px;';
+        selBtn.textContent = st.selecting ? 'Отменить выбор' : '☑️ Выбрать несколько';
+        selBtn.onclick = () => { st.selecting = !st.selecting; st.selected = new Map(); draw(data); };
+        if (data.items.length) bar.appendChild(selBtn);
+        dyn.appendChild(bar);
+
+        const list = document.createElement('div');
+        list.style.cssText = 'display:flex;flex-direction:column;gap:8px;';
+        if (!data.items.length) {
+          list.innerHTML = `<p class="field-hint" style="text-align:center;margin:18px 0;">${st.q || st.tag || st.type ? 'Ничего не нашлось.' : (st.scope === 'shared' ? 'Пока никто не открыл свои задания.' : 'У вас пока нет заданий — добавьте их в темах курсов.')}</p>`;
+        }
+        const actionBtn = document.createElement('button');
+        const paintAction = () => {
+          const n = st.selected.size;
+          actionBtn.style.display = st.selecting ? '' : 'none';
+          actionBtn.disabled = !n;
+          actionBtn.textContent = n ? (current.targetTopicId ? `Добавить ${n} в «${current.targetTitle || 'тему'}»` : `Добавить ${n} в тему…`) : 'Отметьте задания';
+        };
+        data.items.forEach((it) => {
+          const c = document.createElement('div');
+          c.style.cssText = 'display:flex;gap:10px;align-items:flex-start;background:var(--bg);border:1px solid var(--border);border-radius:14px;padding:12px 14px;cursor:pointer;';
+          const check = document.createElement('span');
+          check.style.cssText = 'flex-shrink:0;width:22px;height:22px;border-radius:7px;border:2px solid var(--border);display:' + (st.selecting ? 'flex' : 'none') + ';align-items:center;justify-content:center;color:#fff;font-size:13px;margin-top:1px;';
+          const paintCheck = () => {
+            const on = st.selected.has(it.id);
+            check.style.background = on ? 'var(--accent)' : 'transparent';
+            check.style.borderColor = on ? 'var(--accent)' : 'var(--border)';
+            check.textContent = on ? '✓' : '';
+          };
+          paintCheck();
+          c.appendChild(check);
+          const body = document.createElement('div');
+          body.style.cssText = 'flex:1;min-width:0;';
+          const where = st.scope === 'shared' ? `От ${escapeHtml(it.author || 'преподавателя')} · ${escapeHtml(it.topic_title || '')}` : `${escapeHtml(it.subject_title || '')} → ${escapeHtml(it.topic_title || '')}`;
+          body.innerHTML = `<div style="font-size:14px;font-weight:700;line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">${it.has_image ? '🖼 ' : ''}${escapeHtml(it.question || 'Без текста')}</div>` +
+            `<div class="set-hint" style="margin:3px 0 0;font-size:12px;">${where}</div>` +
+            `<div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:6px;"><span class="course-tag">${escapeHtml(taskTypeLabel(it.type))}</span>` +
+            (it.in_group ? '<span class="course-tag">🔗 в группе</span>' : '') +
+            (st.scope === 'mine' && it.is_shared ? '<span class="course-tag" style="color:var(--accent-dark);border-color:var(--accent);">🌐 открыто</span>' : '') +
+            it.tags.map((x) => `<span class="course-tag">#${escapeHtml(x)}</span>`).join('') + '</div>';
+          c.appendChild(body);
+          c.onclick = () => {
+            if (st.selecting) {
+              if (st.selected.has(it.id)) st.selected.delete(it.id); else st.selected.set(it.id, it);
+              paintCheck(); paintAction();
+            } else openLibraryTask(it, current, load);
+          };
+          list.appendChild(c);
+        });
+        dyn.appendChild(list);
+        if (data.has_more) dyn.insertAdjacentHTML('beforeend', '<p class="field-hint" style="text-align:center;margin:12px 0;">Показаны последние 60 — уточните поиск или фильтр.</p>');
+
+        actionBtn.className = 'set-btn primary';
+        actionBtn.style.cssText = 'position:sticky;bottom:calc(84px + env(safe-area-inset-bottom,0px));width:100%;margin-top:14px;box-shadow:0 6px 18px rgba(0,0,0,0.18);z-index:5;';
+        actionBtn.onclick = async () => {
+          const ids = [...st.selected.keys()];
+          if (!ids.length) return;
+          const res = await libCopy(ids, current.targetTopicId ? { topicId: current.targetTopicId, topicTitle: current.targetTitle || 'тему' } : null);
+          if (res) { st.selecting = false; st.selected = new Map(); if (current.targetTopicId) goBack(); else draw(data); }
+        };
+        paintAction();
+        dyn.appendChild(actionBtn);
+      }
+
+      load();
+    }, isBack);
   }
 
   // Цвета плашки курса (если нет фото-обложки).
@@ -1480,6 +1928,136 @@
     });
   }
 
+  // Кадрирование обложки: учитель двигает фото пальцем и увеличивает
+  // (ползунок или двумя пальцами) — в рамке ровно то, что увидит ученик
+  // (обложка 3:1). Возвращает Blob JPEG 1200×400 или null, если отменил.
+  function cropCoverDialog(file) {
+    return new Promise((resolve) => {
+      const url = URL.createObjectURL(file);
+      const img = new Image();
+      img.onerror = () => { URL.revokeObjectURL(url); showToast('Не получилось открыть фото'); resolve(null); };
+      img.onload = () => {
+        lockBodyScroll();
+        const ov = document.createElement('div');
+        ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.55);display:flex;align-items:center;justify-content:center;z-index:95;padding:16px;';
+        const box = document.createElement('div');
+        box.style.cssText = 'background:var(--bg);border-radius:18px;padding:16px;width:100%;max-width:420px;';
+        box.innerHTML = '<div style="font-size:17px;font-weight:700;margin-bottom:4px;">Выберите кадр</div>' +
+          '<div class="set-hint" style="margin-bottom:12px;">Двигайте фото пальцем и увеличивайте ползунком — в рамке то, что увидит ученик.</div>';
+        const vp = document.createElement('div');
+        vp.style.cssText = 'position:relative;width:100%;aspect-ratio:3/1;overflow:hidden;border-radius:14px;background:#000;touch-action:none;cursor:grab;user-select:none;';
+        const pic = document.createElement('img');
+        pic.src = url;
+        pic.draggable = false;
+        pic.style.cssText = 'position:absolute;left:0;top:0;transform-origin:0 0;max-width:none;pointer-events:none;';
+        vp.appendChild(pic);
+        // сетка «третей» — легче выровнять
+        vp.insertAdjacentHTML('beforeend', '<div style="position:absolute;inset:0;pointer-events:none;background:' +
+          'linear-gradient(90deg,transparent calc(33.33% - 0.5px),rgba(255,255,255,0.45) calc(33.33% - 0.5px),rgba(255,255,255,0.45) calc(33.33% + 0.5px),transparent calc(33.33% + 0.5px),transparent calc(66.66% - 0.5px),rgba(255,255,255,0.45) calc(66.66% - 0.5px),rgba(255,255,255,0.45) calc(66.66% + 0.5px),transparent calc(66.66% + 0.5px));' +
+          'box-shadow:inset 0 0 0 2px rgba(255,255,255,0.8);border-radius:14px;"></div>');
+        box.appendChild(vp);
+        const zoomRow = document.createElement('div');
+        zoomRow.style.cssText = 'display:flex;align-items:center;gap:10px;margin-top:14px;';
+        zoomRow.innerHTML = '<span style="font-size:14px;">🔍</span>';
+        const slider = document.createElement('input');
+        slider.type = 'range'; slider.min = '1'; slider.max = '4'; slider.step = '0.01'; slider.value = '1';
+        slider.style.cssText = 'flex:1;accent-color:var(--accent);';
+        zoomRow.appendChild(slider);
+        box.appendChild(zoomRow);
+        const btns = document.createElement('div');
+        btns.style.cssText = 'display:flex;gap:8px;margin-top:14px;';
+        btns.innerHTML = '<button class="set-btn" style="flex:1;">Отмена</button><button class="set-btn primary" style="flex:1;">Готово</button>';
+        box.appendChild(btns);
+        ov.appendChild(box);
+        document.body.appendChild(ov);
+
+        const iw = img.naturalWidth, ih = img.naturalHeight;
+        let vw = 0, vh = 0, base = 1, zoom = 1, x = 0, y = 0;
+        const scale = () => base * zoom;
+        const clamp = () => {
+          const s = scale();
+          x = Math.min(0, Math.max(vw - iw * s, x));
+          y = Math.min(0, Math.max(vh - ih * s, y));
+        };
+        const paint = () => { clamp(); pic.style.transform = `translate(${x}px,${y}px) scale(${scale()})`; };
+        const layout = () => {
+          vw = vp.clientWidth; vh = vp.clientHeight;
+          base = Math.max(vw / iw, vh / ih);
+          x = (vw - iw * scale()) / 2; y = (vh - ih * scale()) / 2;
+          pic.style.width = iw + 'px'; pic.style.height = ih + 'px';
+          paint();
+        };
+        requestAnimationFrame(layout);
+        // Зум вокруг точки (cx, cy) внутри рамки.
+        const setZoom = (z, cx, cy) => {
+          z = Math.min(4, Math.max(1, z));
+          const s0 = scale();
+          if (cx == null) { cx = vw / 2; cy = vh / 2; }
+          const ix = (cx - x) / s0, iy = (cy - y) / s0;
+          zoom = z;
+          x = cx - ix * scale(); y = cy - iy * scale();
+          slider.value = String(z);
+          paint();
+        };
+        slider.oninput = () => setZoom(parseFloat(slider.value));
+        vp.addEventListener('wheel', (e) => {
+          e.preventDefault();
+          const r = vp.getBoundingClientRect();
+          setZoom(zoom * (e.deltaY < 0 ? 1.08 : 1 / 1.08), e.clientX - r.left, e.clientY - r.top);
+        }, { passive: false });
+        const pts = new Map();
+        let last = null, pinch = null;
+        vp.addEventListener('pointerdown', (e) => {
+          vp.setPointerCapture(e.pointerId);
+          pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+          vp.style.cursor = 'grabbing';
+          if (pts.size === 1) last = { x: e.clientX, y: e.clientY };
+          if (pts.size === 2) {
+            const [a, b] = [...pts.values()];
+            pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), z: zoom };
+          }
+        });
+        vp.addEventListener('pointermove', (e) => {
+          if (!pts.has(e.pointerId)) return;
+          pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+          if (pts.size === 2 && pinch) {
+            const [a, b] = [...pts.values()];
+            const r = vp.getBoundingClientRect();
+            setZoom(pinch.z * Math.hypot(a.x - b.x, a.y - b.y) / (pinch.d || 1), (a.x + b.x) / 2 - r.left, (a.y + b.y) / 2 - r.top);
+          } else if (pts.size === 1 && last) {
+            x += e.clientX - last.x; y += e.clientY - last.y;
+            last = { x: e.clientX, y: e.clientY };
+            paint();
+          }
+        });
+        const up = (e) => {
+          pts.delete(e.pointerId);
+          if (pts.size < 2) pinch = null;
+          if (pts.size === 1) { const p = [...pts.values()][0]; last = { x: p.x, y: p.y }; }
+          if (!pts.size) { last = null; vp.style.cursor = 'grab'; }
+        };
+        vp.addEventListener('pointerup', up);
+        vp.addEventListener('pointercancel', up);
+
+        const finish = (blob) => { unlockBodyScroll(); ov.remove(); URL.revokeObjectURL(url); resolve(blob); };
+        const [cancelBtn, okBtn] = btns.querySelectorAll('button');
+        cancelBtn.onclick = () => finish(null);
+        okBtn.onclick = () => {
+          const s = scale();
+          const cv = document.createElement('canvas');
+          cv.width = 1200; cv.height = 400;
+          const cx = cv.getContext('2d');
+          cx.fillStyle = '#fff';
+          cx.fillRect(0, 0, cv.width, cv.height);
+          cx.imageSmoothingQuality = 'high';
+          cx.drawImage(img, -x / s, -y / s, vw / s, vh / s, 0, 0, cv.width, cv.height);
+          cv.toBlob((b) => finish(b), 'image/jpeg', 0.88);
+        };
+      };
+      img.src = url;
+    });
+  }
+
   function goCourseLook(sub) {
     stack = [{ level: 'courses_list', title: 'Курсы' }, { level: 'course_look', title: 'Оформление курса', subjectId: sub.id }];
     render(false);
@@ -1512,7 +2090,7 @@
 
       // Обложка
       const cc = settingsCard('Обложка');
-      cc.insertAdjacentHTML('beforeend', '<div class="set-hint">Фото сверху карточки. Лучше горизонтальное (примерно 3:1). Без фото — цветная плашка с первой буквой курса.</div>');
+      cc.insertAdjacentHTML('beforeend', '<div class="set-hint">Фото сверху карточки. После выбора фото можно выбрать кадр — какая часть будет видна ученику. Без фото — цветная плашка с первой буквой курса.</div>');
       const coverRow = document.createElement('div');
       coverRow.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;';
       const fileInput = document.createElement('input');
@@ -1534,7 +2112,11 @@
       };
       rmBtn.onclick = () => saveLook({ cover_file_id: null }).then(() => showToast('Фото убрано')).catch((err) => showToast('Не получилось: ' + err.message));
       fileInput.onchange = async () => {
-        const file = fileInput.files[0];
+        const picked = fileInput.files[0];
+        fileInput.value = '';
+        if (!picked) return;
+        // Сначала — выбор кадра: какая часть фото будет видна на карточке.
+        const file = await cropCoverDialog(picked);
         if (!file) return;
         upBtn.disabled = true;
         upBtn.textContent = 'Загружаю…';
@@ -1543,9 +2125,8 @@
         draft.cover_file_id = localUrl; drawPreview();
         try {
           const fd = new FormData();
-          const small = await shrinkImage(file, 1600);
-          fd.append('image', small, 'cover.jpg');
-          const res = await fetch(API_BASE_URL + '/api/teacher/upload-image?purpose=cover', { method: 'POST', headers: { 'X-Telegram-Init-Data': tg?.initData || '' }, body: fd });
+          fd.append('image', file, 'cover.jpg');
+          const res = await fetch(API_BASE_URL + '/api/teacher/upload-image?purpose=cover', { method: 'POST', headers: { 'X-Telegram-Init-Data': authData() }, body: fd });
           const data = await res.json().catch(() => ({}));
           if (!res.ok) throw new Error(data.message || data.detail || ('ошибка ' + res.status));
           await saveLook({ cover_file_id: data.file_id });
@@ -2748,6 +3329,18 @@
       themeCard.insertAdjacentHTML('beforeend', '<div class="set-title" style="margin-top:14px;font-size:11px;color:var(--text-soft);">Цвет оформления</div>');
       themeCard.appendChild(buildAccentPicker());
       screen.appendChild(themeCard);
+      if (IS_WEB) {
+        const acc = settingsCard('Аккаунт');
+        const me = currentTgUser();
+        if (me) acc.insertAdjacentHTML('beforeend', `<div class="set-hint">Вы вошли через Telegram как ${escapeHtml(me.first_name || '')}${me.username ? ' (@' + escapeHtml(me.username) + ')' : ''}.</div>`);
+        const out = document.createElement('button');
+        out.className = 'set-btn';
+        out.style.cssText = 'width:100%;color:var(--red-dark);';
+        out.textContent = 'Выйти';
+        out.onclick = () => webLogout();
+        acc.appendChild(out);
+        screen.appendChild(acc);
+      }
 
       // --- Календарь ---
       const calCard = settingsCard('Календарь');
@@ -2914,6 +3507,11 @@
     }
     if (current.level === 'courses_list') {
       try { await renderCoursesList(isBack); }
+      catch (err) { showErrorMsg(err, isBack); }
+      return;
+    }
+    if (current.level === 'library') {
+      try { await renderLibrary(current, isBack); }
       catch (err) { showErrorMsg(err, isBack); }
       return;
     }
@@ -3198,7 +3796,7 @@
           exportBtn.style.flex = '1';
           exportBtn.textContent = '⬇️ Экспорт в .docx';
           exportBtn.onclick = () => {
-            const url = API_BASE_URL + `/api/teacher/topics/${current.topicId}/export?init_data=` + encodeURIComponent(tg?.initData || '');
+            const url = API_BASE_URL + `/api/teacher/topics/${current.topicId}/export?init_data=` + encodeURIComponent(authData());
             // На iPhone скачивание через fetch+blob не работает (файл
             // открывается как текст вместо сохранения) — открываем ссылку
             // в системном браузере, там скачивание работает как положено.
@@ -3224,7 +3822,7 @@
               formData.append('file', file);
               const res = await fetch(API_BASE_URL + `/api/teacher/topics/${current.topicId}/import`, {
                 method: 'POST',
-                headers: { 'X-Telegram-Init-Data': tg?.initData || '' },
+                headers: { 'X-Telegram-Init-Data': authData() },
                 body: formData,
               });
               const data = await res.json();
@@ -3242,6 +3840,35 @@
           ioRow.appendChild(importInput);
 
           listScreen.insertBefore(ioRow, listScreen.firstChild);
+
+          // Библиотека: взять задания из своих курсов или открытых другими,
+          // открыть задания этой темы другим преподавателям, копия темы в другой курс.
+          const libRow = document.createElement('div');
+          libRow.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;';
+          const fromLib = document.createElement('button');
+          fromLib.className = 'add-row-btn';
+          fromLib.style.cssText = 'margin-top:0;grid-column:1 / -1;';
+          fromLib.textContent = '📚 Добавить из библиотеки';
+          fromLib.onclick = () => { stack.push({ level: 'library', title: 'Библиотека', targetTopicId: current.topicId, targetTitle: current.title }); renderCrumbs(); render(false); };
+          libRow.appendChild(fromLib);
+          const shareBtn = document.createElement('button');
+          shareBtn.className = 'add-row-btn';
+          shareBtn.style.marginTop = '0';
+          shareBtn.textContent = '🌐 Доступ другим…';
+          shareBtn.onclick = () => topicShareDialog(current.topicId, current.title);
+          libRow.appendChild(shareBtn);
+          const copyTopicBtn = document.createElement('button');
+          copyTopicBtn.className = 'add-row-btn';
+          copyTopicBtn.style.marginTop = '0';
+          copyTopicBtn.textContent = '📋 Копия темы…';
+          copyTopicBtn.onclick = () => pickLibraryTarget({ title: 'Куда скопировать тему', pickSection: true }, async (target) => {
+            try {
+              await apiSend('POST', `/api/teacher/topics/${current.topicId}/copy`, { section_id: target.sectionId });
+              showToast(`Тема скопирована в «${target.subjectTitle}» → «${target.sectionTitle}»`);
+            } catch (err) { showToast('Не получилось: ' + err.message); }
+          });
+          libRow.appendChild(copyTopicBtn);
+          listScreen.insertBefore(libRow, ioRow.nextSibling);
 
           if (tasks.length > 1) {
             const selectBtn = document.createElement('button');
@@ -6965,7 +7592,7 @@
     _liveSocket = socket;
     const statusEl = overlay.querySelector('#lsStatus');
     socket.on('connect', () => {
-      socket.emit('join_lesson', { lesson_id: lessonId, init_data: tg?.initData || '' });
+      socket.emit('join_lesson', { lesson_id: lessonId, init_data: authData() });
       statusEl.textContent = 'подключено';
     });
     socket.on('disconnect', () => { statusEl.textContent = 'соединение потеряно'; });
@@ -7007,7 +7634,7 @@
       if (!drawing) return;
       drawing = false;
       if (currentStroke && currentStroke.points.length >= 2) {
-        socket.emit('draw_stroke', { lesson_id: lessonId, init_data: tg?.initData || '', stroke: currentStroke });
+        socket.emit('draw_stroke', { lesson_id: lessonId, init_data: authData(), stroke: currentStroke });
       }
       currentStroke = null;
     }
@@ -7021,7 +7648,7 @@
 
     overlay.querySelector('#lsClear').onclick = () => {
       ctx2d.clearRect(0, 0, canvas.width, canvas.height);
-      socket.emit('clear_board', { lesson_id: lessonId, init_data: tg?.initData || '' });
+      socket.emit('clear_board', { lesson_id: lessonId, init_data: authData() });
     };
 
     const taskTextEl = overlay.querySelector('#lsTaskText');
@@ -7029,7 +7656,7 @@
     taskTextEl.oninput = () => {
       clearTimeout(taskTimer);
       taskTimer = setTimeout(() => {
-        socket.emit('open_task', { lesson_id: lessonId, init_data: tg?.initData || '', task: { text: taskTextEl.value } });
+        socket.emit('open_task', { lesson_id: lessonId, init_data: authData(), task: { text: taskTextEl.value } });
       }, 300);
     };
 
@@ -9195,7 +9822,7 @@
     formData.append('file', file);
     const res = await fetch(API_BASE_URL + '/api/upload-file', {
       method: 'POST',
-      headers: { 'X-Telegram-Init-Data': tg?.initData || '' },
+      headers: { 'X-Telegram-Init-Data': authData() },
       body: formData,
     });
     const data = await res.json();
@@ -9675,7 +10302,7 @@
               formData.append('image', file);
               const res = await fetch(API_BASE_URL + '/api/teacher/upload-image', {
                 method: 'POST',
-                headers: { 'X-Telegram-Init-Data': tg?.initData || '' },
+                headers: { 'X-Telegram-Init-Data': authData() },
                 body: formData,
               });
               const data = await res.json().catch(() => ({}));
@@ -10018,7 +10645,7 @@
         exportBtn.style.flex = '1';
         exportBtn.textContent = '⬇️ Экспорт в .docx';
         exportBtn.onclick = () => {
-          const url = API_BASE_URL + `/api/teacher/tests/${testId}/export?init_data=` + encodeURIComponent(tg?.initData || '');
+          const url = API_BASE_URL + `/api/teacher/tests/${testId}/export?init_data=` + encodeURIComponent(authData());
           // На iPhone скачивание через fetch+blob не работает — открываем
           // ссылку в системном браузере, там скачивание работает как надо.
           if (tg?.openLink) tg.openLink(url); else window.open(url, '_blank');
@@ -10043,7 +10670,7 @@
             formData.append('file', file);
             const res = await fetch(API_BASE_URL + `/api/teacher/tests/${testId}/import`, {
               method: 'POST',
-              headers: { 'X-Telegram-Init-Data': tg?.initData || '' },
+              headers: { 'X-Telegram-Init-Data': authData() },
               body: formData,
             });
             const data = await res.json().catch(() => ({}));
@@ -10284,7 +10911,7 @@
               formData.append('image', file);
               const res = await fetch(API_BASE_URL + '/api/teacher/upload-image', {
                 method: 'POST',
-                headers: { 'X-Telegram-Init-Data': tg?.initData || '' },
+                headers: { 'X-Telegram-Init-Data': authData() },
                 body: formData,
               });
               const data = await res.json().catch(() => ({}));
@@ -10862,7 +11489,7 @@
     applyIcon();
   })();
 
-  render(false);
+  if (!webLoginGate()) render(false);
 </script>
 
 </body>
