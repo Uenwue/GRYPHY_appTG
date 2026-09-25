@@ -23,8 +23,9 @@
     root.setProperty('--th-accent-dark', mix([0, 0, 0], 0.78));
     root.setProperty('--th-accent-rgb', r + ',' + g + ',' + b);
     root.setProperty('--th-tint', mix([255, 255, 255], 0.13));
+    // Светлая тема: фон страницы — лёгкий оттенок выбранного цвета.
+    // Тёмная тема: фон всегда исходный, меняется только основной цвет.
     root.setProperty('--th-page', mix([255, 255, 255], 0.06));
-    root.setProperty('--th-page-dark', mix([20, 24, 31], 0.07));
   };
   // Логотип перекрашивается в цвет оформления (буква N — прозрачная, поэтому
   // достаточно залить непрозрачные пиксели новым цветом).
@@ -962,6 +963,127 @@
   @keyframes screen-out { to { opacity: 0; transform: translateX(-22%); } }
   @keyframes screen-out-back { to { opacity: 0; transform: translateX(28%); } }
 </style>
+  <style>img.emoji { height: 1.2em; width: 1.2em; margin: 0 0.05em; vertical-align: -0.22em; display: inline-block; object-fit: contain; pointer-events: none; user-select: text; }</style>
+  <script>
+  // Эмодзи как на iPhone у всех: на не-Apple устройствах символы эмодзи
+  // подменяются картинками Apple. На обычных кнопках эмодзи в подписи убираются.
+  // Временное решение — потом заменим на системные иконки.
+  (function () {
+    var CDN = 'https://cdn.jsdelivr.net/npm/emoji-datasource-apple@16.0.0/img/apple/64/';
+    var ua = navigator.userAgent || '';
+    var NATIVE = /iPhone|iPad|iPod|Macintosh|Mac OS X/.test(ua) && !/Windows|Android/.test(ua);
+    var EMOJI = /(?:\p{Regional_Indicator}{2})|(?:\p{Extended_Pictographic}(?:️|\p{Emoji_Modifier})?(?:‍\p{Extended_Pictographic}(?:️|\p{Emoji_Modifier})?)*)/gu;
+    // Стрелки и значки, которые в интерфейсе задуманы как обычный текст.
+    var TEXTY = { 0xa9: 1, 0xae: 1, 0x2122: 1, 0x203c: 1, 0x2049: 1, 0x2139: 1, 0x2194: 1, 0x2195: 1, 0x2196: 1, 0x2197: 1, 0x2198: 1, 0x2199: 1, 0x21a9: 1, 0x21aa: 1, 0x25b6: 1, 0x25c0: 1, 0x27a1: 1, 0x2b05: 1, 0x2b06: 1, 0x2b07: 1 };
+    var FAILED = {};  // коды, для которых картинки нет — оставляем обычным символом
+    var SKIP_TAGS = { SCRIPT: 1, STYLE: 1, TEXTAREA: 1, INPUT: 1, OPTION: 1, SELECT: 1, NOSCRIPT: 1, TITLE: 1, CANVAS: 1, SVG: 1 };
+    // Кнопки, где текст — это содержимое (варианты ответа, слова, карточки), а не подпись.
+    var CONTENT_BTN = '.dk-opt, .dk-tile, .option-btn, .format-btn, .no-emoji-strip, [class*="nt-"]:not(.nt-btn):not(.nt-file)';
+    var BTN = 'button, label.nt-file, [role="button"]';
+
+    function isEmoji(seq) {
+      var cp = seq.codePointAt(0);
+      return !(TEXTY[cp] && seq.indexOf('️') === -1);
+    }
+    function codeOf(seq) {
+      var out = [];
+      for (var ch of seq) out.push(ch.codePointAt(0).toString(16));
+      return out.join('-');
+    }
+    function onImgError() {
+      var img = this, code = img.getAttribute('data-code'), tried = img.getAttribute('data-tried');
+      if (!tried) {
+        img.setAttribute('data-tried', '1');
+        var alt = code.indexOf('-fe0f') !== -1 ? code.replace(/-fe0f/g, '')
+          : (code.indexOf('-') === -1 ? code + '-fe0f' : code.replace(/^([0-9a-f]+)/, '$1-fe0f'));
+        img.src = CDN + alt + '.png';
+        return;
+      }
+      FAILED[img.getAttribute('data-code')] = 1;
+      if (img.parentNode) img.parentNode.replaceChild(document.createTextNode(img.alt), img);
+    }
+    function makeImg(seq) {
+      var img = document.createElement('img');
+      img.className = 'emoji';
+      img.alt = seq;
+      img.draggable = false;
+      img.setAttribute('data-code', codeOf(seq));
+      img.onerror = onImgError;
+      img.src = CDN + codeOf(seq) + '.png';
+      return img;
+    }
+    function skipEl(el) {
+      for (var p = el; p && p.nodeType === 1; p = p.parentNode) {
+        if (SKIP_TAGS[p.tagName.toUpperCase()] || p.isContentEditable) return true;
+      }
+      return false;
+    }
+    function isLabelBtn(el) {
+      if (!el || !el.matches) return false;
+      return el.matches(BTN) && !el.matches(CONTENT_BTN) && !el.closest(CONTENT_BTN);
+    }
+    // Убирает эмодзи в начале/конце подписи обычной кнопки.
+    function stripLabel(node) {
+      var t = node.data, changed = false;
+      var lead = /^(\s*)((?:\p{Regional_Indicator}{2}|\p{Extended_Pictographic}(?:️|\p{Emoji_Modifier})?(?:‍\p{Extended_Pictographic}(?:️|\p{Emoji_Modifier})?)*)\s*)+/u;
+      var trail = /(\s*(?:\p{Regional_Indicator}{2}|\p{Extended_Pictographic}(?:️|\p{Emoji_Modifier})?(?:‍\p{Extended_Pictographic}(?:️|\p{Emoji_Modifier})?)*))+\s*$/u;
+      var m = t.match(lead);
+      if (m && isEmoji(m[2]) && /[\p{L}\p{N}]/u.test(t.slice(m[0].length))) { t = m[1] + t.slice(m[0].length); changed = true; }
+      var m2 = t.match(trail);
+      if (m2 && /[\p{L}\p{N}]/u.test(t.slice(0, m2.index))) { t = t.slice(0, m2.index); changed = true; }
+      if (changed) node.data = t;
+    }
+    function processText(node) {
+      var parent = node.parentNode;
+      if (!parent || parent.nodeType !== 1 || skipEl(parent)) return;
+      if (!node.data || !/\p{Extended_Pictographic}|\p{Regional_Indicator}/u.test(node.data)) return;
+      if (isLabelBtn(parent)) stripLabel(node);
+      if (NATIVE) return;
+      var text = node.data, last = 0, frag = null, m;
+      EMOJI.lastIndex = 0;
+      while ((m = EMOJI.exec(text))) {
+        if (!isEmoji(m[0]) || FAILED[codeOf(m[0])]) continue;
+        frag = frag || document.createDocumentFragment();
+        if (m.index > last) frag.appendChild(document.createTextNode(text.slice(last, m.index)));
+        frag.appendChild(makeImg(m[0]));
+        last = m.index + m[0].length;
+      }
+      if (!frag) return;
+      if (last < text.length) frag.appendChild(document.createTextNode(text.slice(last)));
+      parent.replaceChild(frag, node);
+    }
+    function processPlaceholder(el) {
+      var ph = el.getAttribute('placeholder');
+      if (ph && /^\s*\p{Extended_Pictographic}/u.test(ph)) {
+        var clean = ph.replace(/^\s*(?:\p{Extended_Pictographic}(?:️)?(?:‍\p{Extended_Pictographic}️?)*\s*)+/u, '');
+        if (clean !== ph) el.setAttribute('placeholder', clean);
+      }
+    }
+    function walk(root) {
+      if (root.nodeType === 3) { processText(root); return; }
+      if (root.nodeType !== 1 || SKIP_TAGS[root.tagName.toUpperCase()]) {
+        if (root.nodeType === 1 && root.hasAttribute('placeholder')) processPlaceholder(root);
+        return;
+      }
+      if (root.hasAttribute && root.hasAttribute('placeholder')) processPlaceholder(root);
+      root.querySelectorAll('[placeholder]').forEach(processPlaceholder);
+      var tw = document.createTreeWalker(root, NodeFilter.SHOW_TEXT), list = [], n;
+      while ((n = tw.nextNode())) list.push(n);
+      list.forEach(processText);
+    }
+    function start() {
+      walk(document.body);
+      new MutationObserver(function (muts) {
+        muts.forEach(function (mu) {
+          if (mu.type === 'characterData') processText(mu.target);
+          else if (mu.type === 'attributes') processPlaceholder(mu.target);
+          else mu.addedNodes.forEach(function (nd) { if (nd.isConnected) walk(nd); });
+        });
+      }).observe(document.body, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ['placeholder'] });
+    }
+    if (document.body) start(); else document.addEventListener('DOMContentLoaded', start);
+  })();
+  </script>
 </head>
 <body>
 
