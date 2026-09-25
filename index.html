@@ -911,10 +911,16 @@
   .dk-link { background: none; border: none; font-family: inherit; font-size: 13px; font-weight: 700; color: var(--accent-dark); cursor: pointer; padding: 0; }
   .dk-import { margin-bottom: 10px; }
   .dk-hint { font-size: 12.5px; color: var(--text-soft); margin-bottom: 8px; line-height: 1.4; }
-  .dk-row { display: grid; grid-template-columns: 22px 1fr 26px; gap: 6px; align-items: start; margin-bottom: 8px; }
+  .dk-row { display: grid; grid-template-columns: 22px 1fr 34px 22px; gap: 6px; align-items: start; margin-bottom: 8px; }
   .dk-row-num { font-size: 12px; font-weight: 800; color: var(--text-soft); padding-top: 12px; text-align: center; }
   .dk-row-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
   .dk-row-fields .dk-cell { margin: 0; font-size: 14px; padding: 10px 12px; overflow: hidden; }
+  .dk-row-pic { width: 34px; height: 40px; margin-top: 1px; border-radius: 10px; border: 1px dashed var(--border); background: var(--bg) center/cover no-repeat; cursor: pointer; font-size: 15px; padding: 0; }
+  .dk-row-pic.has { border-style: solid; }
+  .dk-face img, .dk-q img { max-width: 100%; max-height: 130px; border-radius: 12px; display: block; margin: 0 auto 10px; object-fit: contain; }
+  .dk-face-body { display: flex; flex-direction: column; align-items: center; max-width: 100%; }
+  .dk-speak { position: absolute; right: 12px; bottom: 12px; width: 38px; height: 38px; border-radius: 50%; border: 1px solid var(--border); background: var(--bg); font-size: 17px; cursor: pointer; z-index: 2; }
+  .dk-term-row img { width: 34px; height: 34px; border-radius: 8px; object-fit: cover; display: block; margin-top: 4px; }
   .dk-row-rm { background: none; border: none; color: var(--text-soft); font-size: 15px; cursor: pointer; padding-top: 10px; }
   .lr-slot { padding: 10px 4px; border-radius: 12px; border: 1px solid var(--border); background: var(--bg); font-size: 15px; font-weight: 700; color: var(--text); cursor: pointer; }
   .lr-slot.on { background: var(--accent); border-color: var(--accent); color: #fff; }
@@ -2684,7 +2690,7 @@
   }
   function buildDeckEditor(opts) {
     const deck = opts.deck || { title: '', description: '', cards: [] };
-    const cards = (deck.cards || []).map((c) => ({ id: c.id, term: c.term, definition: c.definition }));
+    const cards = (deck.cards || []).map((c) => ({ id: c.id, term: c.term, definition: c.definition, image_file_id: c.image_file_id || null }));
     if (!cards.length) cards.push({ term: '', definition: '' }, { term: '', definition: '' });
     const wrap = document.createElement('div');
     wrap.className = 'dk-editor';
@@ -2726,6 +2732,35 @@
           setTimeout(() => { inp.style.height = 'auto'; inp.style.height = inp.scrollHeight + 'px'; }, 0);
         });
         row.appendChild(fields);
+        // Картинка к карточке (показывается со стороны определения).
+        const pic = document.createElement('button');
+        pic.type = 'button';
+        pic.className = 'dk-row-pic';
+        pic.title = 'Картинка';
+        if (c.image_file_id) { pic.style.backgroundImage = `url(${API_BASE_URL}/api/image/${encodeURIComponent(c.image_file_id)})`; pic.classList.add('has'); }
+        else pic.textContent = '🖼';
+        const fi = document.createElement('input');
+        fi.type = 'file'; fi.accept = 'image/*'; fi.style.display = 'none';
+        fi.onchange = async () => {
+          const file = fi.files[0];
+          if (!file) return;
+          pic.textContent = '…';
+          try {
+            const fd = new FormData();
+            fd.append('image', file);
+            const res = await fetch(API_BASE_URL + '/api/decks/upload-image', { method: 'POST', headers: { 'X-Telegram-Init-Data': authData() }, body: fd });
+            const d = await res.json().catch(() => ({}));
+            if (!res.ok) throw new Error(d.message || ('ошибка ' + res.status));
+            c.image_file_id = d.file_id;
+          } catch (err) { alert('Не получилось загрузить картинку: ' + err.message); }
+          draw();
+        };
+        pic.onclick = () => {
+          if (c.image_file_id && confirm('Убрать картинку с карточки?')) { c.image_file_id = null; draw(); return; }
+          if (!c.image_file_id) fi.click();
+        };
+        row.appendChild(pic);
+        row.appendChild(fi);
         const rm = document.createElement('button');
         rm.type = 'button';
         rm.className = 'dk-row-rm';
@@ -2781,7 +2816,7 @@
     save.onclick = async () => {
       const t = title.value.trim();
       if (!t) { alert('Введите название колоды'); return; }
-      const clean = cards.filter((c) => c.term.trim() && c.definition.trim()).map((c) => ({ id: c.id, term: c.term.trim(), definition: c.definition.trim() }));
+      const clean = cards.filter((c) => c.term.trim() && c.definition.trim()).map((c) => ({ id: c.id, term: c.term.trim(), definition: c.definition.trim(), image_file_id: c.image_file_id || null }));
       if (!clean.length) { alert('Добавьте хотя бы одну карточку'); return; }
       save.disabled = true;
       try { await opts.onSave({ title: t, description: desc.value.trim(), cards: clean }); }
@@ -2815,9 +2850,22 @@
   function dkDir() { try { return localStorage.getItem('deck-dir') || 'term'; } catch (e) { return 'term'; } }
   // Что показывать вопросом и что — ответом (по настройке «Сначала термин / определение»).
   function dkSides(card) {
+    const img = card.image_file_id ? `<img src="${API_BASE_URL}/api/image/${encodeURIComponent(card.image_file_id)}" alt="" onerror="this.remove()">` : '';
     return dkDir() === 'def'
-      ? { q: card.definition, a: card.term, qLabel: 'Определение', aLabel: 'Термин' }
-      : { q: card.term, a: card.definition, qLabel: 'Термин', aLabel: 'Определение' };
+      ? { q: card.definition, a: card.term, qLabel: 'Определение', aLabel: 'Термин', qImg: img, aImg: '' }
+      : { q: card.term, a: card.definition, qLabel: 'Термин', aLabel: 'Определение', qImg: '', aImg: img };
+  }
+  // Озвучка голосом устройства (без сервера). Язык — по буквам текста.
+  function dkSpeak(text) {
+    try {
+      if (!window.speechSynthesis) return false;
+      const u = new SpeechSynthesisUtterance(String(text || ''));
+      u.lang = /[а-яё]/i.test(text) ? 'ru-RU' : (/[äöüß]/i.test(text) ? 'de-DE' : (/[éèêàçù]/i.test(text) ? 'fr-FR' : (/[ñ¿¡]/i.test(text) ? 'es-ES' : 'en-US')));
+      u.rate = 0.9;
+      speechSynthesis.cancel();
+      speechSynthesis.speak(u);
+      return true;
+    } catch (e) { return false; }
   }
   function dkReview(cardId, know) {
     return apiPost('/api/decks/review', { card_id: cardId, know: !!know }).catch(() => {});
@@ -2920,7 +2968,7 @@
       screen.insertAdjacentHTML('beforeend', `<div class="dk-section">Карточки · ${cards.length}</div>`);
       const list = document.createElement('div');
       cards.forEach((c) => {
-        list.insertAdjacentHTML('beforeend', `<div class="dk-term-row"><span class="dot ${c.box >= 5 ? 'l' : c.box >= 1 ? 'm' : ''}"></span><span class="t">${escapeHtml(c.term)}</span><span class="d">${escapeHtml(c.definition)}</span></div>`);
+        list.insertAdjacentHTML('beforeend', `<div class="dk-term-row"><span class="dot ${c.box >= 5 ? 'l' : c.box >= 1 ? 'm' : ''}"></span><span class="t">${escapeHtml(c.term)}</span><span class="d">${escapeHtml(c.definition)}${c.image_file_id ? `<img src="${API_BASE_URL}/api/image/${encodeURIComponent(c.image_file_id)}" alt="" loading="lazy" onerror="this.remove()">` : ''}</span></div>`);
       });
       screen.appendChild(list);
 
@@ -3030,7 +3078,18 @@
         screen.insertAdjacentHTML('beforeend', `<div class="dk-count">${i + 1} / ${queue.length}</div><div class="dk-progress"><i style="width:${(i / queue.length) * 100}%"></i></div>`);
         const flash = document.createElement('div');
         flash.className = 'dk-flash';
-        flash.innerHTML = `<div class="dk-flash-inner"><div class="dk-face"><small>${sd.qLabel}</small>${escapeHtml(sd.q)}</div><div class="dk-face back"><small>${sd.aLabel}</small>${escapeHtml(sd.a)}</div></div>`;
+        flash.innerHTML = `<div class="dk-flash-inner"><div class="dk-face"><small>${sd.qLabel}</small><div class="dk-face-body">${sd.qImg}${escapeHtml(sd.q)}</div></div><div class="dk-face back"><small>${sd.aLabel}</small><div class="dk-face-body">${sd.aImg}${escapeHtml(sd.a)}</div></div></div>`;
+        if (window.speechSynthesis) {
+          const sp = document.createElement('button');
+          sp.className = 'dk-speak';
+          sp.textContent = '🔊';
+          sp.title = 'Произнести';
+          sp.addEventListener('pointerdown', (e) => e.stopPropagation());
+          sp.addEventListener('pointerup', (e) => e.stopPropagation());
+          sp.onclick = (e) => { e.stopPropagation(); dkSpeak(flash.classList.contains('flipped') ? sd.a : sd.q); };
+          flash.style.position = 'relative';
+          flash.appendChild(sp);
+        }
         screen.appendChild(flash);
         screen.insertAdjacentHTML('beforeend', '<div class="dk-tip">Нажмите, чтобы перевернуть · свайп вправо — знаю, влево — ещё учу</div>');
         const row = document.createElement('div');
@@ -3096,7 +3155,7 @@
         const item = queue.shift();
         const sd = dkSides(item.card);
         screen.insertAdjacentHTML('beforeend', `<div class="dk-progress"><i style="width:${(done / total) * 100}%"></i></div>`);
-        screen.insertAdjacentHTML('beforeend', `<div class="dk-q"><small>${sd.qLabel}</small>${escapeHtml(sd.q)}</div>`);
+        screen.insertAdjacentHTML('beforeend', `<div class="dk-q"><small>${sd.qLabel}</small>${sd.qImg}${escapeHtml(sd.q)}</div>`);
         const requeue = (it) => { queue.splice(Math.min(queue.length, 2 + Math.floor(Math.random() * 2)), 0, it); };
         if (item.stage === 0) {
           const others = dkShuffle(all.filter((c) => c.id !== item.card.id)).slice(0, 3).map((c) => dkSides(c).a);
@@ -3195,7 +3254,7 @@
         const card = queue[i];
         const sd = dkSides(card);
         screen.insertAdjacentHTML('beforeend', `<div class="dk-count">${i + 1} / ${queue.length}</div><div class="dk-progress"><i style="width:${(i / queue.length) * 100}%"></i></div>`);
-        screen.insertAdjacentHTML('beforeend', `<div class="dk-q"><small>${sd.qLabel}</small>${escapeHtml(sd.q)}</div>`);
+        screen.insertAdjacentHTML('beforeend', `<div class="dk-q"><small>${sd.qLabel}</small>${sd.qImg}${escapeHtml(sd.q)}</div>`);
         const inp = document.createElement('input');
         inp.className = 'dk-input';
         inp.placeholder = sd.aLabel + '…';
@@ -5383,6 +5442,7 @@
         { title: 'Учёба', keys: [
           { key: 'schedule_reminder', label: 'О предстоящих занятиях' },
           { key: 'topic_unlocked', label: 'Открылась новая тема' },
+          { key: 'cards_review', label: 'Пора повторить карточки (раз в день, вечером)' },
         ] },
         { title: 'Обратная связь', keys: [
           { key: 'error_report_resolved', label: 'Ответ на сообщение об ошибке' },
@@ -6059,6 +6119,15 @@
     // при внутренних переходах между режимами (параметр direct).
     const isDirect = new URLSearchParams(location.search).has('direct');
     // Пришли из напоминания о занятии (кнопки «Перенести» / «Не смогу»).
+    // Из напоминания бота «Пора повторить карточки» — сразу на карточки.
+    if (new URLSearchParams(location.search).get('open') === 'cards') {
+      removeBootLoader();
+      setAppChromeVisible(true);
+      stack = [{ level: 'decks', subjectId: 'all', title: 'Карточки' }];
+      renderCrumbs();
+      render(false);
+      return;
+    }
     const lessonParam = new URLSearchParams(location.search).get('lesson');
     if (lessonParam) {
       removeBootLoader();
