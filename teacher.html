@@ -23,8 +23,9 @@
     root.setProperty('--th-accent-dark', mix([0, 0, 0], 0.78));
     root.setProperty('--th-accent-rgb', r + ',' + g + ',' + b);
     root.setProperty('--th-tint', mix([255, 255, 255], 0.13));
+    // Светлая тема: фон страницы — лёгкий оттенок выбранного цвета.
+    // Тёмная тема: фон всегда исходный, меняется только основной цвет.
     root.setProperty('--th-page', mix([255, 255, 255], 0.06));
-    root.setProperty('--th-page-dark', mix([20, 24, 31], 0.07));
   };
   // Логотип перекрашивается в цвет оформления (буква N — прозрачная, поэтому
   // достаточно залить непрозрачные пиксели новым цветом).
@@ -1153,6 +1154,38 @@
   .dk-speak { position: absolute; right: 12px; bottom: 12px; width: 38px; height: 38px; border-radius: 50%; border: 1px solid var(--border); background: var(--bg); font-size: 17px; cursor: pointer; z-index: 2; }
   .dk-term-row img { width: 34px; height: 34px; border-radius: 8px; object-fit: cover; display: block; margin-top: 4px; }
   .dk-row-rm { background: none; border: none; color: var(--text-soft); font-size: 15px; cursor: pointer; padding-top: 10px; }
+  .acc-row { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; font-family: inherit; background: var(--bg); border: 1px solid var(--border); border-radius: 12px; padding: 10px 12px; margin-bottom: 6px; cursor: pointer; color: var(--text); }
+  .acc-row b { display: block; font-size: 14px; } .acc-row small { display: block; font-size: 12px; color: var(--text-soft); margin-top: 1px; }
+  .acc-row.on { border-color: var(--accent); background: var(--blue-tint); }
+  .acc-check { width: 22px; height: 22px; border-radius: 7px; border: 2px solid var(--border); display: flex; align-items: center; justify-content: center; font-weight: 800; color: #fff; flex-shrink: 0; }
+  .acc-row.on .acc-check { background: var(--accent); border-color: var(--accent); }
+  .acc-head { font-size: 11.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-soft); margin: 12px 2px 6px; }
+
+  /* --- Главная курса («Обучение») --- */
+  .cm-head { display: flex; gap: 14px; align-items: center; background: var(--bg); border: 1px solid var(--border); border-radius: 20px; padding: 12px; margin-bottom: 14px; box-shadow: 0 2px 12px rgba(0,0,0,0.05); }
+  .cm-cover { width: 76px; height: 76px; border-radius: 16px; flex-shrink: 0; overflow: hidden; }
+  .cm-cover { position: relative; display: flex; align-items: center; justify-content: center; }
+  .cm-cover span { font-size: 32px; font-weight: 800; color: rgba(255,255,255,0.92); }
+  .cm-cover img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
+  .cm-info { flex: 1; min-width: 0; }
+  .cm-title { font-size: 18px; font-weight: 800; color: var(--text); overflow-wrap: anywhere; }
+  .cm-sub { font-size: 12.5px; color: var(--text-soft); margin: 2px 0 8px; }
+  .cm-switch { font-family: inherit; font-size: 12.5px; font-weight: 700; color: var(--accent-dark); background: var(--blue-tint); border: none; border-radius: 20px; padding: 6px 12px; cursor: pointer; }
+  .cm-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+  @media (min-width: 768px) { .cm-grid { grid-template-columns: repeat(4, 1fr); } }
+  .cm-tile { position: relative; text-align: left; font-family: inherit; background: var(--bg); border: 1px solid var(--border); border-radius: 18px; padding: 14px; cursor: pointer; color: var(--text); box-shadow: 0 2px 10px rgba(0,0,0,0.04); transition: transform 0.12s ease; }
+  .cm-tile:active { transform: scale(0.97); }
+  .cm-tile b { display: block; font-size: 15px; margin-top: 10px; }
+  .cm-tile small { display: block; font-size: 12px; color: var(--text-soft); margin-top: 2px; }
+  .cm-ic { width: 40px; height: 40px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 20px; }
+  .cm-badge { position: absolute; top: 10px; right: 10px; background: var(--red-dark, #EA2B2B); color: #fff; font-size: 11px; font-weight: 800; border-radius: 10px; padding: 1px 7px; }
+  .cm-badge.inline { position: static; margin-left: auto; margin-right: 6px; }
+  .cm-list { background: var(--bg); border: 1px solid var(--border); border-radius: 18px; overflow: hidden; }
+  .cm-row { display: flex; align-items: center; width: 100%; text-align: left; font-family: inherit; font-size: 14.5px; font-weight: 600; color: var(--text); background: none; border: none; border-bottom: 1px solid var(--border); padding: 14px 16px; cursor: pointer; }
+  .cm-row:last-child { border-bottom: none; }
+  .cm-row > span:first-child { flex: 1; }
+  .cm-arrow { color: var(--text-soft); font-size: 18px; }
+
   .toast {
     position: fixed; left: 50%; bottom: calc(96px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%);
     background: var(--text); color: white; padding: 10px 18px; border-radius: 12px; max-width: calc(100% - 32px);
@@ -1210,7 +1243,164 @@
   .feedback.ok .feedback-title { color: var(--green-dark); }
   .feedback.bad .feedback-title { color: var(--red-dark); }
   .feedback-explain { margin-top: 6px; font-size: 13px; color: var(--text-soft); font-weight: 600; }
+
+  /* === Компьютер: разделы — в боковой панели слева (под шапкой), в шапке
+     остаются логотип, переключатель «Кабинет / Обучение» и кнопки справа. === */
+  @media (min-width: 768px) {
+    .tb-sep, .tb-nav { display: none !important; }
+    .side-nav, body.mode-finance .side-nav {
+      display: flex !important;
+      position: fixed; top: 61px; bottom: 0; left: 0; right: auto; width: 224px;
+      flex-direction: column; align-items: stretch; justify-content: flex-start; gap: 4px;
+      padding: 16px 12px 24px; box-sizing: border-box; overflow-y: auto;
+      background: var(--bg); border-top: none; border-right: 1px solid var(--border); box-shadow: none;
+    }
+    .side-nav-item {
+      flex: none; max-width: none; width: 100%;
+      flex-direction: row; justify-content: flex-start; align-items: center; gap: 12px;
+      padding: 10px 12px; border-radius: 12px; color: var(--text-soft);
+    }
+    .side-nav-item:hover { background: var(--bg-soft); color: var(--text); }
+    .side-nav-item svg { width: 22px; height: 22px; flex-shrink: 0; }
+    .side-nav-item .side-nav-label, .side-nav-label {
+      font-size: 14px; font-weight: 700; text-transform: none; letter-spacing: normal;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: left;
+    }
+    .side-nav-item.active { background: var(--blue-tint); color: var(--accent-dark); }
+    .side-nav-item.active::before { content: ''; position: absolute; left: -12px; top: 8px; bottom: 8px; width: 4px; border-radius: 0 3px 3px 0; background: var(--accent); transform: none; height: auto; }
+    .side-nav-item .nav-badge { position: static; margin-left: auto; font-size: 11px; line-height: 18px; padding: 0 7px; border-radius: 10px; }
+    .side-nav-item.desktop-only { display: flex; }
+    .side-nav-item.mobile-only, .side-nav-more { display: none !important; }
+    .side-course { border: 1px solid var(--border); margin-bottom: 8px; color: var(--text) !important; }
+    .side-course .side-nav-label { flex: 1; }
+    .side-nav-sep { height: 1px; background: var(--border); margin: 6px 4px; flex-shrink: 0; }
+    body.has-side-nav .wrap, body.mode-finance.has-side-nav .wrap {
+      margin-left: 224px !important; margin-right: auto; max-width: 1040px; padding-left: 28px !important; padding-right: 28px; padding-bottom: 32px; box-sizing: border-box;
+    }
+    body.dash-wide.has-side-nav .wrap { max-width: 1360px; }
+  }
 </style>
+  <style>img.emoji { height: 1.2em; width: 1.2em; margin: 0 0.05em; vertical-align: -0.22em; display: inline-block; object-fit: contain; pointer-events: none; user-select: text; }</style>
+  <script>
+  // Эмодзи как на iPhone у всех: на не-Apple устройствах символы эмодзи
+  // подменяются картинками Apple. На обычных кнопках эмодзи в подписи убираются.
+  // Временное решение — потом заменим на системные иконки.
+  (function () {
+    var CDN = 'https://cdn.jsdelivr.net/npm/emoji-datasource-apple@16.0.0/img/apple/64/';
+    var ua = navigator.userAgent || '';
+    var NATIVE = /iPhone|iPad|iPod|Macintosh|Mac OS X/.test(ua) && !/Windows|Android/.test(ua);
+    var EMOJI = /(?:\p{Regional_Indicator}{2})|(?:\p{Extended_Pictographic}(?:️|\p{Emoji_Modifier})?(?:‍\p{Extended_Pictographic}(?:️|\p{Emoji_Modifier})?)*)/gu;
+    // Стрелки и значки, которые в интерфейсе задуманы как обычный текст.
+    var TEXTY = { 0xa9: 1, 0xae: 1, 0x2122: 1, 0x203c: 1, 0x2049: 1, 0x2139: 1, 0x2194: 1, 0x2195: 1, 0x2196: 1, 0x2197: 1, 0x2198: 1, 0x2199: 1, 0x21a9: 1, 0x21aa: 1, 0x25b6: 1, 0x25c0: 1, 0x27a1: 1, 0x2b05: 1, 0x2b06: 1, 0x2b07: 1 };
+    var FAILED = {};  // коды, для которых картинки нет — оставляем обычным символом
+    var SKIP_TAGS = { SCRIPT: 1, STYLE: 1, TEXTAREA: 1, INPUT: 1, OPTION: 1, SELECT: 1, NOSCRIPT: 1, TITLE: 1, CANVAS: 1, SVG: 1 };
+    // Кнопки, где текст — это содержимое (варианты ответа, слова, карточки), а не подпись.
+    var CONTENT_BTN = '.dk-opt, .dk-tile, .option-btn, .format-btn, .no-emoji-strip, [class*="nt-"]:not(.nt-btn):not(.nt-file)';
+    var BTN = 'button, label.nt-file, [role="button"]';
+
+    function isEmoji(seq) {
+      var cp = seq.codePointAt(0);
+      return !(TEXTY[cp] && seq.indexOf('️') === -1);
+    }
+    function codeOf(seq) {
+      var out = [];
+      for (var ch of seq) out.push(ch.codePointAt(0).toString(16));
+      return out.join('-');
+    }
+    function onImgError() {
+      var img = this, code = img.getAttribute('data-code'), tried = img.getAttribute('data-tried');
+      if (!tried) {
+        img.setAttribute('data-tried', '1');
+        var alt = code.indexOf('-fe0f') !== -1 ? code.replace(/-fe0f/g, '')
+          : (code.indexOf('-') === -1 ? code + '-fe0f' : code.replace(/^([0-9a-f]+)/, '$1-fe0f'));
+        img.src = CDN + alt + '.png';
+        return;
+      }
+      FAILED[img.getAttribute('data-code')] = 1;
+      if (img.parentNode) img.parentNode.replaceChild(document.createTextNode(img.alt), img);
+    }
+    function makeImg(seq) {
+      var img = document.createElement('img');
+      img.className = 'emoji';
+      img.alt = seq;
+      img.draggable = false;
+      img.setAttribute('data-code', codeOf(seq));
+      img.onerror = onImgError;
+      img.src = CDN + codeOf(seq) + '.png';
+      return img;
+    }
+    function skipEl(el) {
+      for (var p = el; p && p.nodeType === 1; p = p.parentNode) {
+        if (SKIP_TAGS[p.tagName.toUpperCase()] || p.isContentEditable) return true;
+      }
+      return false;
+    }
+    function isLabelBtn(el) {
+      if (!el || !el.matches) return false;
+      return el.matches(BTN) && !el.matches(CONTENT_BTN) && !el.closest(CONTENT_BTN);
+    }
+    // Убирает эмодзи в начале/конце подписи обычной кнопки.
+    function stripLabel(node) {
+      var t = node.data, changed = false;
+      var lead = /^(\s*)((?:\p{Regional_Indicator}{2}|\p{Extended_Pictographic}(?:️|\p{Emoji_Modifier})?(?:‍\p{Extended_Pictographic}(?:️|\p{Emoji_Modifier})?)*)\s*)+/u;
+      var trail = /(\s*(?:\p{Regional_Indicator}{2}|\p{Extended_Pictographic}(?:️|\p{Emoji_Modifier})?(?:‍\p{Extended_Pictographic}(?:️|\p{Emoji_Modifier})?)*))+\s*$/u;
+      var m = t.match(lead);
+      if (m && isEmoji(m[2]) && /[\p{L}\p{N}]/u.test(t.slice(m[0].length))) { t = m[1] + t.slice(m[0].length); changed = true; }
+      var m2 = t.match(trail);
+      if (m2 && /[\p{L}\p{N}]/u.test(t.slice(0, m2.index))) { t = t.slice(0, m2.index); changed = true; }
+      if (changed) node.data = t;
+    }
+    function processText(node) {
+      var parent = node.parentNode;
+      if (!parent || parent.nodeType !== 1 || skipEl(parent)) return;
+      if (!node.data || !/\p{Extended_Pictographic}|\p{Regional_Indicator}/u.test(node.data)) return;
+      if (isLabelBtn(parent)) stripLabel(node);
+      if (NATIVE) return;
+      var text = node.data, last = 0, frag = null, m;
+      EMOJI.lastIndex = 0;
+      while ((m = EMOJI.exec(text))) {
+        if (!isEmoji(m[0]) || FAILED[codeOf(m[0])]) continue;
+        frag = frag || document.createDocumentFragment();
+        if (m.index > last) frag.appendChild(document.createTextNode(text.slice(last, m.index)));
+        frag.appendChild(makeImg(m[0]));
+        last = m.index + m[0].length;
+      }
+      if (!frag) return;
+      if (last < text.length) frag.appendChild(document.createTextNode(text.slice(last)));
+      parent.replaceChild(frag, node);
+    }
+    function processPlaceholder(el) {
+      var ph = el.getAttribute('placeholder');
+      if (ph && /^\s*\p{Extended_Pictographic}/u.test(ph)) {
+        var clean = ph.replace(/^\s*(?:\p{Extended_Pictographic}(?:️)?(?:‍\p{Extended_Pictographic}️?)*\s*)+/u, '');
+        if (clean !== ph) el.setAttribute('placeholder', clean);
+      }
+    }
+    function walk(root) {
+      if (root.nodeType === 3) { processText(root); return; }
+      if (root.nodeType !== 1 || SKIP_TAGS[root.tagName.toUpperCase()]) {
+        if (root.nodeType === 1 && root.hasAttribute('placeholder')) processPlaceholder(root);
+        return;
+      }
+      if (root.hasAttribute && root.hasAttribute('placeholder')) processPlaceholder(root);
+      root.querySelectorAll('[placeholder]').forEach(processPlaceholder);
+      var tw = document.createTreeWalker(root, NodeFilter.SHOW_TEXT), list = [], n;
+      while ((n = tw.nextNode())) list.push(n);
+      list.forEach(processText);
+    }
+    function start() {
+      walk(document.body);
+      new MutationObserver(function (muts) {
+        muts.forEach(function (mu) {
+          if (mu.type === 'characterData') processText(mu.target);
+          else if (mu.type === 'attributes') processPlaceholder(mu.target);
+          else mu.addedNodes.forEach(function (nd) { if (nd.isConnected) walk(nd); });
+        });
+      }).observe(document.body, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ['placeholder'] });
+    }
+    if (document.body) start(); else document.addEventListener('DOMContentLoaded', start);
+  })();
+  </script>
 </head>
 <body class="has-side-nav">
 <!-- Заставка на время загрузки: прячет промежуточные экраны («Меню», «Загружаем…»), пока не откроется кабинет. -->
@@ -1457,6 +1647,7 @@
     const topLvl = stack[stack.length - 1]?.level;
     crumbsEl.classList.toggle('crumbs-hidden', (currentMode === 'finance' && stack.length === 1)
       || topLvl === 'personal_settings' || topLvl === 'courses_list' || topLvl === 'income'
+      || (topLvl === 'menu' && currentMode !== 'finance' && stack.length === 1)
       || (topLvl === 'students' && stack.length === 1));
     crumbsEl.classList.toggle('crumbs-root', stack.length === 1);
     if (stack.length > 1) {
@@ -2729,7 +2920,7 @@
   async function renderTeacherDecks(isBack) {
     if (!currentSubjectId) { goCoursesList(); return; }
     showLoadingMenu();
-    const decks = await apiGet(`/api/teacher/subjects/${currentSubjectId}/decks`);
+    const decks = await withAccessLabels('deck', (await apiGet(`/api/teacher/subjects/${currentSubjectId}/decks`)).map((d) => Object.assign({}, d, { sub: '' })));
     swapScreen((screen) => {
       screen.insertAdjacentHTML('beforeend', '<div class="set-hint" style="margin:0 2px 12px;">Колоды карточек для учеников курса: слова, даты, формулы. Ученики учат их в режимах «Карточки», «Заучивание», «Письмо» и «Подбор», а программа сама напоминает повторить (интервальное повторение). Ученики могут делать и свои колоды.</div>');
       const add = document.createElement('button');
@@ -2752,7 +2943,7 @@
         c.style.display = 'flex';
         c.style.alignItems = 'center';
         c.style.gap = '10px';
-        c.innerHTML = `<div style="flex:1;min-width:0;"><div class="dk-card-title">${escapeHtml(d.title)}</div><div class="dk-card-sub">${d.count} ${dashPlural(d.count, 'карточка', 'карточки', 'карточек')}${d.is_hidden ? ' · скрыта от учеников' : ''}</div></div>`;
+        c.innerHTML = `<div style="flex:1;min-width:0;"><div class="dk-card-title">${escapeHtml(d.title)}</div><div class="dk-card-sub">${d.count} ${dashPlural(d.count, 'карточка', 'карточки', 'карточек')}${d.is_hidden ? ' · скрыта от учеников' : ''}${d.sub ? ' · ' + escapeHtml(d.sub) : ''}</div></div>`;
         const more = document.createElement('button');
         more.className = 'course-more';
         more.textContent = '⋯';
@@ -2761,6 +2952,7 @@
           scMenu([
             { label: '✏️ Изменить', onClick: () => { stack.push({ level: 'deck_edit', deckId: d.id, title: d.title }); renderCrumbs(); render(false); } },
             { label: '📊 Кто как учит', onClick: () => deckStatsSheet(d) },
+            { label: '👥 Кому доступно', onClick: () => accessDialog('deck', d.id, d.title, () => renderTeacherDecks(false)) },
             { label: d.is_hidden ? '👁 Показать ученикам' : '🙈 Скрыть от учеников', onClick: async () => { await apiSend('PATCH', `/api/decks/${d.id}`, { is_hidden: !d.is_hidden }); renderTeacherDecks(false); } },
             { label: '🗑 Удалить', danger: true, onClick: () => confirmDelete(`Удалить колоду «${escapeHtml(d.title)}»? Прогресс учеников по ней тоже удалится.`, async () => { await apiSend('DELETE', `/api/decks/${d.id}`); renderTeacherDecks(false); }) },
           ]);
@@ -2807,6 +2999,108 @@
         }) : null,
       }));
     }, isBack);
+  }
+
+
+  // =====================================================================
+  // «КОМУ ДОСТУПНО»: раздел, тема, тест или колода — всему курсу, группе
+  // (мини-группе, паре) или отдельным ученикам; можно сразу нескольким.
+  // =====================================================================
+  const audienceCache = {};
+  async function getAudiences(subjectId, fresh) {
+    if (!fresh && audienceCache[subjectId]) return audienceCache[subjectId];
+    audienceCache[subjectId] = await apiGet(`/api/teacher/subjects/${subjectId}/audiences`).catch(() => ({ groups: [], students: [] }));
+    return audienceCache[subjectId];
+  }
+  function accessLabel(targets, aud) {
+    if (!targets || !targets.length) return '';
+    const names = targets.map((t) => {
+      if (t.type === 'group') { const g = (aud.groups || []).find((x) => x.id === t.id); return g ? g.title : 'группа'; }
+      const s = (aud.students || []).find((x) => x.id === t.id); return s ? s.name : 'ученик';
+    });
+    return '👥 ' + (names.length > 3 ? names.slice(0, 3).join(', ') + ` и ещё ${names.length - 3}` : names.join(', '));
+  }
+  // Подписывает элементы списка «кому доступно» (если доступ ограничен).
+  async function withAccessLabels(itemType, items) {
+    if (!items.length || !currentSubjectId) return items;
+    const [map, aud] = await Promise.all([
+      apiGet(`/api/teacher/access-summary?item_type=${itemType}&ids=${items.map((i) => i.id).join(',')}`).catch(() => ({})),
+      getAudiences(currentSubjectId),
+    ]);
+    return items.map((it) => {
+      const lbl = accessLabel(map[String(it.id)], aud);
+      return lbl ? Object.assign({}, it, { sub: (it.sub ? it.sub + ' · ' : '') + lbl, access_limited: true }) : it;
+    });
+  }
+
+  async function accessDialog(itemType, itemId, title, onSaved) {
+    let cur, aud;
+    try {
+      [cur, aud] = await Promise.all([apiGet(`/api/teacher/access/${itemType}/${itemId}`), getAudiences(currentSubjectId, true)]);
+    } catch (err) { showToast('Не получилось загрузить: ' + err.message); return; }
+    const selGroups = new Set(cur.targets.filter((t) => t.type === 'group').map((t) => t.id));
+    const selStudents = new Set(cur.targets.filter((t) => t.type === 'student').map((t) => t.id));
+    let whole = !cur.targets.length;
+    const { box, close } = libSheet('Кому доступно');
+    box.insertAdjacentHTML('beforeend', `<div class="set-hint" style="margin-bottom:12px;">«${escapeHtml(title || '')}». Можно открыть сразу нескольким: группам, парам и отдельным ученикам. Остальные ученики курса этого не увидят.</div>`);
+    const body = document.createElement('div');
+    box.appendChild(body);
+    const row = (label, sub, on, onClick) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'acc-row' + (on ? ' on' : '');
+      b.innerHTML = `<span class="acc-check">${on ? '✓' : ''}</span><span style="flex:1;min-width:0;"><b>${escapeHtml(label)}</b>${sub ? `<small>${escapeHtml(sub)}</small>` : ''}</span>`;
+      b.onclick = onClick;
+      return b;
+    };
+    let query = '';
+    const draw = () => {
+      body.innerHTML = '';
+      body.appendChild(row('Весь курс', 'Все ученики курса — как обычно', whole, () => { whole = true; selGroups.clear(); selStudents.clear(); draw(); }));
+      if (aud.groups.length) {
+        body.insertAdjacentHTML('beforeend', '<div class="acc-head">Группы и пары</div>');
+        aud.groups.forEach((g) => body.appendChild(row(g.title, `${g.kind || 'Группа'} · ${g.count} ${dashPlural(g.count, 'ученик', 'ученика', 'учеников')}`, selGroups.has(g.id), () => {
+          whole = false;
+          if (selGroups.has(g.id)) selGroups.delete(g.id); else selGroups.add(g.id);
+          if (!selGroups.size && !selStudents.size) whole = true;
+          draw();
+        })));
+      }
+      if (aud.students.length) {
+        body.insertAdjacentHTML('beforeend', '<div class="acc-head">Ученики (индивидуально)</div>');
+        if (aud.students.length > 8) {
+          const s = document.createElement('input');
+          s.className = 'field-input';
+          s.placeholder = '🔍 Найти ученика';
+          s.value = query;
+          s.style.marginBottom = '8px';
+          s.oninput = () => { query = s.value; draw(); const again = body.querySelector('input'); if (again) { again.focus(); again.setSelectionRange(again.value.length, again.value.length); } };
+          body.appendChild(s);
+        }
+        aud.students.filter((st) => !query || st.name.toLowerCase().includes(query.toLowerCase())).forEach((st) => body.appendChild(row(st.name, st.group || '', selStudents.has(st.id), () => {
+          whole = false;
+          if (selStudents.has(st.id)) selStudents.delete(st.id); else selStudents.add(st.id);
+          if (!selGroups.size && !selStudents.size) whole = true;
+          draw();
+        })));
+      }
+      if (!aud.groups.length && !aud.students.length) body.insertAdjacentHTML('beforeend', '<p class="field-hint">В курсе пока нет групп и учеников.</p>');
+    };
+    draw();
+    const save = document.createElement('button');
+    save.className = 'set-btn primary';
+    save.style.cssText = 'width:100%;margin-top:12px;position:sticky;bottom:0;';
+    save.textContent = 'Сохранить';
+    save.onclick = async () => {
+      const targets = whole ? [{ type: 'course' }] : [...[...selGroups].map((id) => ({ type: 'group', id })), ...[...selStudents].map((id) => ({ type: 'student', id }))];
+      try {
+        await apiSend('POST', `/api/teacher/access/${itemType}/${itemId}`, { targets });
+        close();
+        showToast(whole ? 'Доступно всему курсу' : 'Доступ сохранён');
+        if (onSaved) onSaved();
+      } catch (err) { showToast('Не получилось: ' + err.message); }
+    };
+    box.appendChild(save);
   }
 
   // Цвета плашки курса (если нет фото-обложки).
@@ -3409,7 +3703,17 @@
     // В режиме «Финансы» — отдельный, простой набор FINANCE_NAV_ITEMS
     // (4 пункта, как в референсе), предметные пункты в нём не участвуют
     // вообще, даже если какой-то предмет всё ещё выбран.
-    const items = currentMode === 'finance' ? FINANCE_NAV_ITEMS : SIDE_NAV_ITEMS.filter((item) => (item.standalone || currentSubjectId) && (!item.adminOnly || currentUserRole === 'admin'));
+    const items = currentMode === 'finance' ? FINANCE_NAV_ITEMS : SIDE_NAV_ITEMS.filter((item) => (item.standalone || currentSubjectId) && (!item.adminOnly || currentUserRole === 'admin') && !CABINET_ONLY_LEVELS.includes(item.level));
+    // На компьютере в «Обучении» сверху панели — выбор курса (раньше был в шапке).
+    if (currentMode !== 'finance') {
+      const course = document.createElement('button');
+      course.className = 'side-nav-item side-course desktop-only' + (rootLevel === 'courses_list' ? ' active' : '');
+      course.title = 'Сменить курс';
+      course.innerHTML = '<svg viewBox="0 0 20 20" fill="none"><path d="M3 4.5C3 3.67 3.67 3 4.5 3H9V17H4.5C3.67 17 3 16.33 3 15.5V4.5Z" stroke="currentColor" stroke-width="1.6"/><path d="M9 3H15.5C16.33 3 17 3.67 17 4.5V15.5C17 16.33 16.33 17 15.5 17H9" stroke="currentColor" stroke-width="1.6"/></svg>' +
+        `<span class="side-nav-label">${escapeHtml(currentSubjectTitle || 'Мои курсы')}</span><span style="color:var(--text-soft);font-size:12px;">▾</span>`;
+      course.onclick = () => goCoursesList();
+      nav.appendChild(course);
+    }
     items.forEach((item) => {
       const btn = document.createElement('button');
       btn.className = 'side-nav-item' + (item.primary ? '' : ' desktop-only') + (item.mobileOnly ? ' mobile-only' : '');
@@ -3562,7 +3866,7 @@
 
   function renderRowList(items, iconType, iconClass, onOpen, onEdit, onDelete, emptyText, addLabel, onAdd, onPreview, extra) {
     extra = extra || {};
-    const { onLock, onHide, onReorder, onToggleExplanations, onMove, onVideo } = extra;
+    const { onLock, onHide, onReorder, onToggleExplanations, onMove, onVideo, onAccess } = extra;
     return swapScreen((screen) => {
       const list = document.createElement('div');
       list.className = 'list';
@@ -3654,6 +3958,15 @@
           lockBtn.innerHTML = item.is_locked ? ICONS.lockOpen : ICONS.lockClosed;
           lockBtn.onclick = (e) => { e.stopPropagation(); onLock(item); };
           actions.appendChild(lockBtn);
+        }
+        if (onAccess) {
+          const accBtn = document.createElement('button');
+          accBtn.className = 'icon-btn';
+          accBtn.title = 'Кому доступно';
+          accBtn.textContent = '👥';
+          accBtn.style.opacity = item.access_limited ? '1' : '0.45';
+          accBtn.onclick = (e) => { e.stopPropagation(); onAccess(item); };
+          actions.appendChild(accBtn);
         }
         if (onHide) {
           const hideBtn = document.createElement('button');
@@ -4726,8 +5039,9 @@
       const kind = current.sectionsKind || 'trainer';
       try {
         const sections = await apiGet(`/api/teacher/subjects/${currentSubjectId}/sections?kind=${kind}`);
+        const sectionsLabeled = await withAccessLabels('section', sections);
         renderRowList(
-          sections, 'section', 'blue',
+          sectionsLabeled, 'section', 'blue',
           (item) => { stack.push({ level: 'topics', sectionId: item.id, title: item.title }); renderCrumbs(); render(false); },
           (item) => promptRename('Название раздела', item.title, async (val) => {
             await apiSend('PATCH', `/api/teacher/sections/${item.id}`, { title: val });
@@ -4760,6 +5074,7 @@
               await apiSend('PATCH', `/api/teacher/sections/${item.id}`, { is_hidden: !item.is_hidden });
               render(false);
             },
+            onAccess: (item) => accessDialog('section', item.id, item.title, () => render(false)),
             onReorder: async (fromIndex, toIndex) => {
               const ids = sections.map(s => s.id);
               const [moved] = ids.splice(fromIndex, 1);
@@ -4774,8 +5089,9 @@
       showLoadingMenu();
       try {
         const topics = await apiGet(`/api/teacher/sections/${current.sectionId}/topics`);
+        const topicsLabeled = await withAccessLabels('topic', topics.map(t => Object.assign({}, t, { sub: t.task_count + ' заданий' })));
         renderRowList(
-          topics.map(t => Object.assign({}, t, { sub: t.task_count + ' заданий' })),
+          topicsLabeled,
           'topic', 'green',
           (item) => { stack.push({ level: 'tasks', topicId: item.id, title: item.title }); renderCrumbs(); render(false); },
           (item) => promptRename('Название темы', item.title, async (val) => {
@@ -4821,6 +5137,7 @@
             },
             onMove: (item) => promptMoveTopic(item.id, current.sectionId, () => render(false)),
             onVideo: (item) => promptTopicVideo(item, () => render(false)),
+            onAccess: (item) => accessDialog('topic', item.id, item.title, () => render(false)),
           },
         );
       } catch (err) { showErrorMsg(err, isBack); }
@@ -4947,12 +5264,13 @@
       showLoadingMenu();
       try {
         const tests = await apiGet(`/api/teacher/subjects/${currentSubjectId}/tests`);
+        const testsLabeled = await withAccessLabels('test', tests.map(t => Object.assign({}, t, {
+          sub: t.question_count + ' вопросов'
+            + (t.time_limit_minutes ? ` · ⏱ ${t.time_limit_minutes} мин` : '')
+            + (t.scale_title ? ` · 📐 ${t.scale_title}` : ''),
+        })));
         const listScreen = renderRowList(
-          tests.map(t => Object.assign({}, t, {
-            sub: t.question_count + ' вопросов'
-              + (t.time_limit_minutes ? ` · ⏱ ${t.time_limit_minutes} мин` : '')
-              + (t.scale_title ? ` · 📐 ${t.scale_title}` : ''),
-          })),
+          testsLabeled,
           'task', 'yellow',
           (item) => { stack.push({ level: 'test_detail', testId: item.id, title: item.title }); renderCrumbs(); render(false); },
           (item) => promptRename('Название теста', item.title, async (val) => {
@@ -4981,6 +5299,7 @@
               await apiSend('PATCH', `/api/teacher/tests/${item.id}`, { show_explanations: item.show_explanations === false });
               render(false);
             },
+            onAccess: (item) => accessDialog('test', item.id, item.title, () => render(false)),
           },
         );
         if (listScreen) {
@@ -5047,68 +5366,94 @@
     }
   }
 
-  function renderSubjectMenu(isBack) {
+  // Главная курса в «Обучении» — как главная кабинета: карточка курса,
+  // плитки разделов и короткий список остального.
+  async function renderSubjectMenu(isBack) {
+    showLoadingMenu();
+    const [subjResp, reviews] = await Promise.all([
+      apiGet('/api/teacher/subjects').catch(() => ({ subjects: [] })),
+      apiGet('/api/teacher/reviews?status=pending').catch(() => ({ pending: 0 })),
+    ]);
+    const sub = (subjResp.subjects || []).find((s) => s.id === currentSubjectId) || { title: currentSubjectTitle };
+    const go = (level, title, extra) => { stack = [Object.assign({ level, title }, extra || {})]; renderCrumbs(); render(false); };
+    const push = (level, title) => { stack.push({ level, title }); renderCrumbs(); render(false); };
     swapScreen((screen) => {
-      const list = document.createElement('div');
-      list.className = 'list';
+      // Карточка курса
+      const head = document.createElement('div');
+      head.className = 'cm-head';
+      const cover = document.createElement('div');
+      cover.className = 'cm-cover';
+      cover.style.background = sub.cover_color || 'var(--accent)';
+      cover.innerHTML = `<span>${escapeHtml(((sub.title || 'К').trim()[0] || 'К').toUpperCase())}</span>` +
+        (sub.cover_file_id ? `<img src="${API_BASE_URL}/api/image/${encodeURIComponent(sub.cover_file_id)}" alt="" onerror="this.remove()">` : '');
+      head.appendChild(cover);
+      const info = document.createElement('div');
+      info.className = 'cm-info';
+      info.innerHTML = `<div class="cm-title">${escapeHtml(sub.title || 'Курс')}</div>` +
+        `<div class="cm-sub">${sub.students != null ? `${sub.students} ${dashPlural(sub.students || 0, 'ученик', 'ученика', 'учеников')}` : ''}${sub.is_hidden ? ' · в архиве' : ''}</div>`;
+      const sw = document.createElement('button');
+      sw.className = 'cm-switch';
+      sw.textContent = 'Сменить курс ▾';
+      sw.onclick = () => goCoursesList();
+      info.appendChild(sw);
+      head.appendChild(info);
+      screen.appendChild(head);
 
-      const menuItems = [
-        { icon: 'M1 10C1 10 4.5 4 10 4C15.5 4 19 10 19 10C19 10 15.5 16 10 16C4.5 16 1 10 1 10Z', iconExtra: '<circle cx="10" cy="10" r="2.6" stroke="#58A700" stroke-width="1.5"/>', color: '#58A700', label: 'Смотреть как ученик', action: () => {
+      // Плитки разделов
+      const tiles = [
+        { level: 'sections', extra: { sectionsKind: 'trainer' }, title: 'Тренажёры', ic: '🎯', color: '#238BA7', sub: 'Темы и задания' },
+        { level: 'sections', extra: { sectionsKind: 'homework' }, title: 'ДЗ', ic: '📝', color: '#E07A3F', sub: 'Домашние задания' },
+        { level: 'decks', title: 'Карточки', ic: '🎴', color: '#8A63D2', sub: 'Колоды слов' },
+        { level: 'tests', title: 'Тесты', ic: '🧪', color: '#D2638F', sub: 'В формате экзамена' },
+        { level: 'reviews', title: 'Проверка', ic: '✅', color: '#3E9E6A', sub: reviews.pending ? `Ждут: ${reviews.pending}` : 'Эссе и голосовые', badge: reviews.pending },
+        { level: 'library', title: 'Библиотека', ic: '📚', color: '#4C7BD9', sub: 'Все задания' },
+        { level: 'students', title: 'Ученики', ic: '👤', color: '#C9A227', sub: 'Доступ и прогресс' },
+        { level: 'groups', title: 'Группы', ic: '👥', color: '#5B6573', sub: 'Мини-группы и пары' },
+      ];
+      const grid = document.createElement('div');
+      grid.className = 'cm-grid';
+      tiles.forEach((tl) => {
+        const b = document.createElement('button');
+        b.className = 'cm-tile';
+        b.innerHTML = `<span class="cm-ic" style="background:${tl.color}1f;color:${tl.color};">${tl.ic}</span><b>${tl.title}</b><small>${escapeHtml(tl.sub)}</small>` +
+          (tl.badge ? `<span class="cm-badge">${tl.badge}</span>` : '');
+        b.onclick = () => { if (tl.level === 'students') studentsGroupFilter = 'all'; go(tl.level, tl.title, tl.extra); };
+        grid.appendChild(b);
+      });
+      screen.appendChild(grid);
+
+      // Остальное — коротким списком
+      const more = [
+        { label: 'Расписание занятий', fn: () => push('schedule', 'Расписание занятий') },
+        { label: 'Сообщения об ошибках', fn: () => push('error_reports', 'Сообщения об ошибках'), badge: true },
+        { label: 'Рейтинг участников', fn: () => push('leaderboard', 'Рейтинг участников') },
+        { label: 'Настройки курса', fn: () => push('subject_blocks', 'Настройки курса') },
+        { label: 'Оформление для учеников', fn: () => goCourseLook(sub) },
+        { label: 'Смотреть как ученик', fn: () => {
           if (tg?.showConfirm) {
-            tg.showConfirm('Откроется настоящий ученический вид — можно пройти любое задание и тест по-настоящему, с таймером и подсчётом баллов. Учтите: ваши ответы тоже сохранятся в статистике, как у обычного ученика.', (ok) => { if (ok) window.location.href = 'index.html'; });
+            tg.showConfirm('Откроется настоящий ученический вид — можно пройти любое задание и тест по-настоящему. Ваши ответы тоже сохранятся в статистике, как у обычного ученика.', (ok) => { if (ok) window.location.href = 'index.html'; });
           } else { window.location.href = 'index.html'; }
         } },
-        { icon: 'M10 2V4M10 16V18M18 10H16M4 10H2M15.5 4.5L14 6M6 14L4.5 15.5M15.5 15.5L14 14M6 6L4.5 4.5', circle: true, color: '#8B93A3', label: 'Настройки предмета', level: 'subject_blocks', title: 'Настройки предмета' },
-        { icon: 'M3 8H17M7 2V5M13 2V5', rect: true, color: '#5B8DEF', label: 'Расписание занятий', level: 'schedule', title: 'Расписание занятий' },
-        { icon: 'M10 7V10.5M10 13.2V13.3', circleThin: true, color: '#EA2B2B', label: 'Сообщения об ошибках', level: 'error_reports', title: 'Сообщения об ошибках', badge: true },
-        { icon: 'M10 3L12.2 7.6L17.3 8.3L13.6 11.9L14.5 17L10 14.5L5.5 17L6.4 11.9L2.7 8.3L7.8 7.6L10 3Z', color: '#F5A623', label: 'Рейтинг участников', level: 'leaderboard', title: 'Рейтинг участников' },
-        { icon: 'M7 7c0-1.7 1.3-3 3-3s3 1.3 3 3-1.3 3-3 3-3-1.3-3-3ZM3 17c0-2.8 3.1-5 7-5s7 2.2 7 5', color: '#2ECC71', label: 'Группы', level: 'groups', title: 'Группы' },
-        { icon: 'M3 3h6v6H3V3ZM11 3h6v6h-6V3ZM3 11h6v6H3v-6ZM11 11h6v6h-6v-6Z', color: '#5B8DEF', label: 'Дашборд', level: 'dashboard', title: 'Дашборд' },
-        { icon: 'M4 4h12v12H4V4ZM4 8h12M7 2v3M13 2v3', color: '#F5A623', label: 'Мои уроки', level: 'lessons', title: 'Мои уроки' },
-        { icon: 'M3 6h14v9H3V6ZM3 9h14M6 12h3', color: '#58A700', label: 'Оплаты', level: 'payments', title: 'Оплаты' },
-        { icon: 'M3 5h14v10H3V5ZM7 5V3M13 5V3M6 10h4', color: '#1B6F86', label: 'Абонементы', level: 'packages', title: 'Абонементы' },
       ];
-      if (currentUserRole === 'admin') {
-        menuItems.push({ icon: 'M8.4 2.5h3.2l.5 2.1c.6.2 1.1.5 1.6.9l2-.7 1.6 2.8-1.6 1.4c.05.3.08.6.08 1s-.03.7-.08 1l1.6 1.4-1.6 2.8-2-.7c-.5.4-1 .7-1.6.9l-.5 2.1H8.4l-.5-2.1a5.6 5.6 0 01-1.6-.9l-2 .7-1.6-2.8 1.6-1.4A6 6 0 013.9 10c0-.34.03-.68.08-1L2.4 7.6 4 4.8l2 .7c.5-.4 1-.7 1.6-.9l.5-2.1Z', circle: true, color: '#1B6F86', label: 'Админ-панель', level: 'admin_panel', title: 'Админ-панель' });
-      }
-
-      menuItems.forEach((item) => {
-        const row = document.createElement('button');
-        row.className = 'row-card';
-        row.style.cssText = 'width:100%;cursor:pointer;align-items:center;';
-        const iconWrap = document.createElement('div');
-        iconWrap.style.cssText = `width:30px;height:30px;border-radius:8px;background:${item.color}22;display:flex;align-items:center;justify-content:center;flex-shrink:0;`;
-        let svgInner = `<path d="${item.icon}" stroke="${item.color}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>`;
-        if (item.circle) svgInner = `<circle cx="10" cy="10" r="2.5" stroke="${item.color}" stroke-width="1.5"/>` + svgInner;
-        if (item.circleThin) svgInner = `<circle cx="10" cy="10" r="7" stroke="${item.color}" stroke-width="1.5"/>` + svgInner;
-        if (item.rect) svgInner = `<rect x="3" y="4" width="14" height="13" rx="2" stroke="${item.color}" stroke-width="1.5"/>` + svgInner;
-        if (item.rectBottom) svgInner = svgInner + `<rect x="4" y="14" width="12" height="4" rx="1" stroke="${item.color}" stroke-width="1.5"/>`;
-        if (item.people) svgInner = `<circle cx="10" cy="7" r="3" stroke="${item.color}" stroke-width="1.5"/>` + svgInner;
-        iconWrap.innerHTML = `<svg width="16" height="16" viewBox="0 0 20 20" fill="none">${svgInner}</svg>`;
-        row.appendChild(iconWrap);
-        const lbl = document.createElement('div');
-        lbl.className = 'row-title';
-        lbl.style.cssText = 'flex:1;text-align:left;font-size:14px;';
-        lbl.textContent = item.label;
-        row.appendChild(lbl);
-        const arrow = document.createElement('span');
-        arrow.style.cssText = 'color:var(--border);font-size:18px;font-weight:700;flex-shrink:0;';
-        arrow.textContent = '›';
-        row.appendChild(arrow);
-        row.onclick = item.action || (() => { stack.push({ level: item.level, title: item.title }); renderCrumbs(); render(false); });
-        list.appendChild(row);
-
-        if (item.badge) {
-          const badge = document.createElement('span');
-          badge.dataset.reportsBadge = '1';
-          badge.textContent = _newReportsCount;
-          badge.style.cssText = 'background:var(--red-dark);color:white;border-radius:10px;padding:1px 7px;font-size:11px;font-weight:800;flex-shrink:0;margin-right:4px;';
-          badge.style.display = _newReportsCount > 0 ? '' : 'none';
-          row.insertBefore(badge, arrow);
+      if (currentUserRole === 'admin') more.push({ label: 'Админ-панель', fn: () => go('admin_panel', 'Админ-панель') });
+      const list = document.createElement('div');
+      list.className = 'cm-list';
+      more.forEach((m) => {
+        const r = document.createElement('button');
+        r.className = 'cm-row';
+        r.innerHTML = `<span>${m.label}</span><span class="cm-arrow">›</span>`;
+        if (m.badge) {
+          const bd = document.createElement('span');
+          bd.className = 'cm-badge inline';
+          bd.dataset.reportsBadge = '1';
+          bd.textContent = _newReportsCount;
+          bd.style.display = _newReportsCount > 0 ? '' : 'none';
+          r.insertBefore(bd, r.lastChild);
           ensureReportsBadgeFresh();
         }
+        r.onclick = m.fn;
+        list.appendChild(r);
       });
-
       screen.appendChild(list);
     }, isBack);
   }
@@ -5969,8 +6314,22 @@
   async function renderLeaderboard(isBack) {
     showLoadingMenu();
     try {
-      const rows = await apiGet(`/api/subjects/${currentSubjectId}/leaderboard?type=${teacherLeaderboardType}`);
+      const [rows, rating] = await Promise.all([
+        apiGet(`/api/subjects/${currentSubjectId}/leaderboard?type=${teacherLeaderboardType}`),
+        apiGet(`/api/teacher/subjects/${currentSubjectId}/rating`).catch(() => ({ enabled: false })),
+      ]);
       swapScreen((screen) => {
+        // Рейтинг включается отдельно для каждого курса.
+        const rc = settingsCard('');
+        const rrow = document.createElement('div');
+        rrow.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:10px;';
+        rrow.innerHTML = `<div><div style="font-size:14.5px;font-weight:700;">Рейтинг для учеников курса</div><div class="set-hint" style="margin:2px 0 0;">${rating.enabled ? 'Ученики этого курса видят рейтинг во вкладке «Рейтинг».' : 'Выключен: ученики рейтинг не видят. Вы видите его всегда.'}</div></div>`;
+        rrow.appendChild(buildSettingsToggle(!!rating.enabled, async (v) => {
+          try { await apiSend('PATCH', `/api/teacher/subjects/${currentSubjectId}/rating`, { enabled: v }); showToast(v ? 'Рейтинг включён для учеников' : 'Рейтинг выключен'); render(false); }
+          catch (err) { showToast('Не получилось: ' + err.message); }
+        }));
+        rc.appendChild(rrow);
+        screen.appendChild(rc);
         const tabs = document.createElement('div');
         tabs.style.cssText = 'display:flex;gap:6px;margin-bottom:16px;';
         const tabDefs = [
