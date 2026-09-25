@@ -1133,10 +1133,16 @@
   .dk-link { background: none; border: none; font-family: inherit; font-size: 13px; font-weight: 700; color: var(--accent-dark); cursor: pointer; padding: 0; }
   .dk-import { margin-bottom: 10px; }
   .dk-hint { font-size: 12.5px; color: var(--text-soft); margin-bottom: 8px; line-height: 1.4; }
-  .dk-row { display: grid; grid-template-columns: 22px 1fr 26px; gap: 6px; align-items: start; margin-bottom: 8px; }
+  .dk-row { display: grid; grid-template-columns: 22px 1fr 34px 22px; gap: 6px; align-items: start; margin-bottom: 8px; }
   .dk-row-num { font-size: 12px; font-weight: 800; color: var(--text-soft); padding-top: 12px; text-align: center; }
   .dk-row-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
   .dk-row-fields .dk-cell { margin: 0; font-size: 14px; padding: 10px 12px; overflow: hidden; }
+  .dk-row-pic { width: 34px; height: 40px; margin-top: 1px; border-radius: 10px; border: 1px dashed var(--border); background: var(--bg) center/cover no-repeat; cursor: pointer; font-size: 15px; padding: 0; }
+  .dk-row-pic.has { border-style: solid; }
+  .dk-face img, .dk-q img { max-width: 100%; max-height: 130px; border-radius: 12px; display: block; margin: 0 auto 10px; object-fit: contain; }
+  .dk-face-body { display: flex; flex-direction: column; align-items: center; max-width: 100%; }
+  .dk-speak { position: absolute; right: 12px; bottom: 12px; width: 38px; height: 38px; border-radius: 50%; border: 1px solid var(--border); background: var(--bg); font-size: 17px; cursor: pointer; z-index: 2; }
+  .dk-term-row img { width: 34px; height: 34px; border-radius: 8px; object-fit: cover; display: block; margin-top: 4px; }
   .dk-row-rm { background: none; border: none; color: var(--text-soft); font-size: 15px; cursor: pointer; padding-top: 10px; }
   .toast {
     position: fixed; left: 50%; bottom: calc(96px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%);
@@ -2506,7 +2512,7 @@
   }
   function buildDeckEditor(opts) {
     const deck = opts.deck || { title: '', description: '', cards: [] };
-    const cards = (deck.cards || []).map((c) => ({ id: c.id, term: c.term, definition: c.definition }));
+    const cards = (deck.cards || []).map((c) => ({ id: c.id, term: c.term, definition: c.definition, image_file_id: c.image_file_id || null }));
     if (!cards.length) cards.push({ term: '', definition: '' }, { term: '', definition: '' });
     const wrap = document.createElement('div');
     wrap.className = 'dk-editor';
@@ -2548,6 +2554,35 @@
           setTimeout(() => { inp.style.height = 'auto'; inp.style.height = inp.scrollHeight + 'px'; }, 0);
         });
         row.appendChild(fields);
+        // Картинка к карточке (показывается со стороны определения).
+        const pic = document.createElement('button');
+        pic.type = 'button';
+        pic.className = 'dk-row-pic';
+        pic.title = 'Картинка';
+        if (c.image_file_id) { pic.style.backgroundImage = `url(${API_BASE_URL}/api/image/${encodeURIComponent(c.image_file_id)})`; pic.classList.add('has'); }
+        else pic.textContent = '🖼';
+        const fi = document.createElement('input');
+        fi.type = 'file'; fi.accept = 'image/*'; fi.style.display = 'none';
+        fi.onchange = async () => {
+          const file = fi.files[0];
+          if (!file) return;
+          pic.textContent = '…';
+          try {
+            const fd = new FormData();
+            fd.append('image', file);
+            const res = await fetch(API_BASE_URL + '/api/decks/upload-image', { method: 'POST', headers: { 'X-Telegram-Init-Data': authData() }, body: fd });
+            const d = await res.json().catch(() => ({}));
+            if (!res.ok) throw new Error(d.message || ('ошибка ' + res.status));
+            c.image_file_id = d.file_id;
+          } catch (err) { alert('Не получилось загрузить картинку: ' + err.message); }
+          draw();
+        };
+        pic.onclick = () => {
+          if (c.image_file_id && confirm('Убрать картинку с карточки?')) { c.image_file_id = null; draw(); return; }
+          if (!c.image_file_id) fi.click();
+        };
+        row.appendChild(pic);
+        row.appendChild(fi);
         const rm = document.createElement('button');
         rm.type = 'button';
         rm.className = 'dk-row-rm';
@@ -2603,7 +2638,7 @@
     save.onclick = async () => {
       const t = title.value.trim();
       if (!t) { alert('Введите название колоды'); return; }
-      const clean = cards.filter((c) => c.term.trim() && c.definition.trim()).map((c) => ({ id: c.id, term: c.term.trim(), definition: c.definition.trim() }));
+      const clean = cards.filter((c) => c.term.trim() && c.definition.trim()).map((c) => ({ id: c.id, term: c.term.trim(), definition: c.definition.trim(), image_file_id: c.image_file_id || null }));
       if (!clean.length) { alert('Добавьте хотя бы одну карточку'); return; }
       save.disabled = true;
       try { await opts.onSave({ title: t, description: desc.value.trim(), cards: clean }); }
@@ -2653,6 +2688,7 @@
           e.stopPropagation();
           scMenu([
             { label: '✏️ Изменить', onClick: () => { stack.push({ level: 'deck_edit', deckId: d.id, title: d.title }); renderCrumbs(); render(false); } },
+            { label: '📊 Кто как учит', onClick: () => deckStatsSheet(d) },
             { label: d.is_hidden ? '👁 Показать ученикам' : '🙈 Скрыть от учеников', onClick: async () => { await apiSend('PATCH', `/api/decks/${d.id}`, { is_hidden: !d.is_hidden }); renderTeacherDecks(false); } },
             { label: '🗑 Удалить', danger: true, onClick: () => confirmDelete(`Удалить колоду «${escapeHtml(d.title)}»? Прогресс учеников по ней тоже удалится.`, async () => { await apiSend('DELETE', `/api/decks/${d.id}`); renderTeacherDecks(false); }) },
           ]);
@@ -2662,6 +2698,22 @@
         screen.appendChild(c);
       });
     }, isBack);
+  }
+
+  async function deckStatsSheet(d) {
+    let st;
+    try { st = await apiGet(`/api/teacher/decks/${d.id}/stats`); } catch (err) { showToast(err.message); return; }
+    const { box } = libSheet('«' + d.title + '»: кто как учит');
+    if (!st.students.length) { box.insertAdjacentHTML('beforeend', '<p class="field-hint">Пока никто из учеников не открывал эту колоду.</p>'); return; }
+    box.insertAdjacentHTML('beforeend', `<div class="set-hint" style="margin-bottom:10px;">Всего карточек: ${st.total}. Зелёным — выучено, жёлтым — в процессе.</div>`);
+    st.students.forEach((s) => {
+      const n = Math.max(1, st.total);
+      const last = (s.last || '').slice(0, 16).replace(/^(\d{4})-(\d\d)-(\d\d)/, '$3.$2');
+      box.insertAdjacentHTML('beforeend', `<div style="padding:10px 0;border-bottom:1px solid var(--border);">` +
+        `<div style="display:flex;justify-content:space-between;gap:8px;"><b style="font-size:14px;">${escapeHtml(s.name)}</b><span class="set-hint" style="margin:0;">${last}</span></div>` +
+        `<div class="set-hint" style="margin:2px 0 6px;">Выучено ${s.learned} из ${st.total} · изучает ${s.learning} · ответов: ✅ ${s.correct} / ❌ ${s.wrong}</div>` +
+        `<div class="dk-bar" style="margin-top:0;"><i class="l" style="width:${(s.learned / n) * 100}%"></i><i class="m" style="width:${(s.learning / n) * 100}%"></i></div></div>`);
+    });
   }
 
   async function renderTeacherDeckEdit(deckId, isBack) {
