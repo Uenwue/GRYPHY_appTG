@@ -915,6 +915,15 @@
   .dk-row-num { font-size: 12px; font-weight: 800; color: var(--text-soft); padding-top: 12px; text-align: center; }
   .dk-row-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
   .dk-row-fields .dk-cell { margin: 0; font-size: 14px; padding: 10px 12px; overflow: hidden; }
+  .dk-import { border: 1px solid var(--border); border-radius: 14px; padding: 12px; margin-bottom: 12px; background: var(--bg-soft, rgba(0,0,0,0.02)); }
+  .dk-import-title { font-size: 14px; font-weight: 800; margin-bottom: 8px; }
+  .dk-howto { font-size: 13px; margin-bottom: 10px; }
+  .dk-howto summary { cursor: pointer; font-weight: 700; color: var(--accent-dark); }
+  .dk-howto ol { margin: 8px 0; padding-left: 20px; line-height: 1.45; }
+  .dk-sep-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .dk-sep-row label { font-size: 11.5px; font-weight: 700; color: var(--text-soft); }
+  .dk-sel { margin-top: 4px; padding: 9px 10px; font-size: 13.5px; }
+  .dk-flip { display: flex; align-items: center; gap: 8px; font-size: 13px; margin: 2px 0 4px; }
   .dk-row-pic { width: 34px; height: 40px; margin-top: 1px; border-radius: 10px; border: 1px dashed var(--border); background: var(--bg) center/cover no-repeat; cursor: pointer; font-size: 15px; padding: 0; }
   .dk-row-pic.has { border-style: solid; }
   .dk-face img, .dk-q img { max-width: 100%; max-height: 130px; border-radius: 12px; display: block; margin: 0 auto 10px; object-fit: contain; }
@@ -984,6 +993,10 @@
       <button class="tab-btn" id="tabChallenges" onclick="switchTab('challenges')">
         <svg viewBox="0 0 24 24" fill="none"><path d="M4 8V16M7 6V18M17 6V18M20 8V16M7 12H17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
         Тренажёр
+      </button>
+      <button class="tab-btn" id="tabCards" onclick="switchTab('cards')">
+        <svg viewBox="0 0 24 24" fill="none"><rect x="3" y="6" width="13" height="15" rx="2.5" stroke="currentColor" stroke-width="2"/><path d="M7.5 3H18.5C19.9 3 21 4.1 21 5.5V17" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        Карточки
       </button>
       <button class="tab-btn" id="tabRating" onclick="switchTab('rating')">
         <svg viewBox="0 0 24 24" fill="none"><path d="M12 3L14.6 8.9L21 9.6L16.2 13.9L17.6 20.3L12 17L6.4 20.3L7.8 13.9L3 9.6L9.4 8.9L12 3Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
@@ -1151,6 +1164,7 @@
   let stack = [{ level: 'subjects', title: 'Предметы' }];
   let trainerStack = stack;
   let hwStack = [{ level: 'subjects', title: 'Предметы' }];
+  let cardsStack = [{ level: 'decks', subjectId: 'all', title: '' }];
   let trainerInitialized = false;
   let currentTasks = [];
 
@@ -2773,32 +2787,89 @@
     const importBtn = document.createElement('button');
     importBtn.type = 'button';
     importBtn.className = 'dk-link';
-    importBtn.textContent = '📥 Вставить списком';
+    importBtn.textContent = '📥 Импорт';
     const importBox = document.createElement('div');
     importBox.className = 'dk-import';
-    importBox.style.display = 'none';
-    importBox.innerHTML = '<div class="dk-hint">Каждая карточка с новой строки: слово и перевод через тире, двоеточие, знак = или табуляцию (можно скопировать из таблицы или Quizlet).<br>Например: <b>go — идти</b></div>';
+    importBox.style.display = opts.openImport ? '' : 'none';
+    importBox.innerHTML = '<div class="dk-import-title">Импорт из Quizlet, таблицы или списка</div>' +
+      '<details class="dk-howto"><summary>Как перенести набор из Quizlet</summary><ol>' +
+      '<li>Откройте свой набор на сайте quizlet.com (с компьютера или в браузере телефона в режиме «версия для ПК»).</li>' +
+      '<li>Нажмите «⋯» рядом с названием набора → <b>«Экспорт»</b>.</li>' +
+      '<li>Оставьте настройки как есть (между термином и определением — <b>Tab</b>, между карточками — <b>новая строка</b>) и нажмите «Копировать текст».</li>' +
+      '<li>Вставьте текст в поле ниже.</li></ol>' +
+      '<div class="dk-hint" style="margin:0;">Если в определениях есть переносы строк, в Quizlet выберите между карточками «Точка с запятой» и здесь — тоже.</div></details>';
     const importTa = document.createElement('textarea');
     importTa.className = 'dk-input';
     importTa.rows = 6;
-    importTa.placeholder = 'apple — яблоко\nbanana — банан';
+    importTa.placeholder = 'apple\tяблоко\nbanana\tбанан\n\nили: go — идти';
     importBox.appendChild(importTa);
+    // Разделители: «авто» понимает табуляцию (Quizlet, таблицы), тире, двоеточие, =.
+    const sepRow = document.createElement('div');
+    sepRow.className = 'dk-sep-row';
+    sepRow.innerHTML = '<label>Между словом и переводом<select class="dk-input dk-sel" data-k="col">' +
+      '<option value="auto">Авто</option><option value="\t">Tab (Quizlet)</option><option value=",">Запятая</option><option value=" - ">Тире</option><option value="custom">Своё…</option></select></label>' +
+      '<label>Между карточками<select class="dk-input dk-sel" data-k="row">' +
+      '<option value="\n">Новая строка</option><option value=";">Точка с запятой</option><option value="custom">Своё…</option></select></label>';
+    importBox.appendChild(sepRow);
+    const colSel = sepRow.querySelector('[data-k="col"]'), rowSel = sepRow.querySelector('[data-k="row"]');
+    const customRow = document.createElement('div');
+    customRow.className = 'dk-sep-row';
+    customRow.style.display = 'none';
+    customRow.innerHTML = '<label>Свой разделитель слова и перевода<input class="dk-input" data-k="colc" placeholder="например |"></label>' +
+      '<label>Свой разделитель карточек<input class="dk-input" data-k="rowc" placeholder="например ##"></label>';
+    importBox.appendChild(customRow);
+    const preview = document.createElement('div');
+    preview.className = 'dk-hint';
+    importBox.appendChild(preview);
+    const flipWrap = document.createElement('label');
+    flipWrap.className = 'dk-flip';
+    flipWrap.innerHTML = '<input type="checkbox"> Поменять местами слово и перевод';
+    importBox.appendChild(flipWrap);
+    const parseImport = () => {
+      let text = importTa.value.replace(/\r\n?/g, '\n');
+      const rowSep = rowSel.value === 'custom' ? (customRow.querySelector('[data-k="rowc"]').value || '\n') : rowSel.value;
+      let colSep = colSel.value === 'custom' ? (customRow.querySelector('[data-k="colc"]').value || '\t') : colSel.value;
+      if (colSep === 'auto' && text.includes('\t')) colSep = '\t';
+      const flip = flipWrap.querySelector('input').checked;
+      const out = [];
+      text.split(rowSep).map((l) => l.trim()).filter(Boolean).forEach((line) => {
+        let pair = null;
+        if (colSep === 'auto') pair = dkSplitLine(line);
+        else {
+          const i = line.indexOf(colSep);
+          if (i > 0) pair = [line.slice(0, i).trim(), line.slice(i + colSep.length).trim()];
+        }
+        if (pair && pair[0] && pair[1]) out.push(flip ? { term: pair[1], definition: pair[0] } : { term: pair[0], definition: pair[1] });
+      });
+      return out;
+    };
+    const paintPreview = () => {
+      customRow.style.display = (colSel.value === 'custom' || rowSel.value === 'custom') ? '' : 'none';
+      if (!importTa.value.trim()) { preview.textContent = ''; return; }
+      const got = parseImport();
+      preview.innerHTML = got.length
+        ? `Найдено карточек: <b>${got.length}</b>. Первая: <b>${escapeHtml(got[0].term)}</b> → ${escapeHtml(got[0].definition)}`
+        : 'Пока не получается разобрать — проверьте разделители.';
+    };
+    importTa.oninput = paintPreview;
+    importBox.querySelectorAll('select, input').forEach((el) => { el.onchange = paintPreview; el.oninput = paintPreview; });
+    importTa.oninput = paintPreview;
     const importOk = document.createElement('button');
     importOk.type = 'button';
-    importOk.className = 'dk-btn';
+    importOk.className = 'dk-btn primary';
     importOk.textContent = 'Добавить карточки';
     importOk.onclick = () => {
-      const added = importTa.value.split('\n').map((l) => l.trim()).filter(Boolean).map(dkSplitLine).filter(Boolean)
-        .filter(([a, b]) => a && b).map(([a, b]) => ({ term: a, definition: b }));
-      if (!added.length) { alert('Не нашлось строк вида «слово — перевод».'); return; }
+      const added = parseImport();
+      if (!added.length) { alert('Не получилось разобрать текст. Проверьте разделители: в Quizlet по умолчанию Tab и новая строка.'); return; }
       for (let k = cards.length - 1; k >= 0; k--) if (!cards[k].term.trim() && !cards[k].definition.trim()) cards.splice(k, 1);
       cards.push(...added);
       importTa.value = '';
+      paintPreview();
       importBox.style.display = 'none';
       draw(); paintHead();
     };
     importBox.appendChild(importOk);
-    importBtn.onclick = () => { importBox.style.display = importBox.style.display === 'none' ? '' : 'none'; };
+    importBtn.onclick = () => { importBox.style.display = importBox.style.display === 'none' ? '' : 'none'; if (importBox.style.display === '') importTa.focus(); };
     wrap.insertBefore(importBox, list);
     draw(); paintHead();
 
@@ -2889,6 +2960,7 @@
       }
       const course = data.decks.filter((d) => !d.is_mine);
       const mine = data.decks.filter((d) => d.is_mine);
+      const allPage = subjectId === 'all';
       const card = (d) => {
         const c = document.createElement('div');
         c.className = 'dk-card';
@@ -2898,18 +2970,39 @@
         c.onclick = () => { stack.push({ level: 'deck', deckId: d.id, subjectId, title: d.title }); render(false); };
         return c;
       };
-      if (course.length) {
+      if (course.length && !allPage) {
         screen.insertAdjacentHTML('beforeend', '<div class="dk-section">Колоды курса</div>');
         course.forEach((d) => screen.appendChild(card(d)));
+      } else if (course.length) {
+        // На общей странице — колоды по курсам.
+        const bySubject = {};
+        course.forEach((d) => { (bySubject[d.subject_title || 'Курс'] = bySubject[d.subject_title || 'Курс'] || []).push(d); });
+        Object.keys(bySubject).forEach((t) => {
+          screen.insertAdjacentHTML('beforeend', `<div class="dk-section">📚 ${escapeHtml(t)}</div>`);
+          bySubject[t].forEach((d) => screen.appendChild(card(d)));
+        });
       }
       screen.insertAdjacentHTML('beforeend', '<div class="dk-section">Мои колоды</div>');
-      if (!mine.length) screen.insertAdjacentHTML('beforeend', '<p class="field-hint" style="margin:0 2px 8px;">Создайте свою колоду: слова, даты, формулы — всё, что нужно запомнить.</p>');
+      if (!mine.length) screen.insertAdjacentHTML('beforeend', `<p class="field-hint" style="margin:0 2px 8px;">Создайте свою колоду: слова, даты, формулы — всё, что нужно запомнить.${allPage ? ' Колоды из курсов тоже появляются здесь.' : ''}</p>`);
       mine.forEach((d) => screen.appendChild(card(d)));
       const add = document.createElement('button');
       add.className = 'dk-btn ghost';
       add.textContent = '+ Новая колода';
       add.onclick = () => { stack.push({ level: 'deck_edit', deckId: null, subjectId, title: 'Новая колода' }); render(false); };
       screen.appendChild(add);
+      const imp = document.createElement('button');
+      imp.className = 'dk-btn';
+      imp.textContent = '📥 Импорт из Quizlet';
+      imp.onclick = () => { stack.push({ level: 'deck_edit', deckId: null, subjectId, importOpen: true, title: 'Импорт из Quizlet' }); render(false); };
+      screen.appendChild(imp);
+      if (!allPage) {
+        const allLink = document.createElement('button');
+        allLink.className = 'dk-btn ghost';
+        allLink.style.border = 'none';
+        allLink.textContent = 'Все мои карточки →';
+        allLink.onclick = () => switchTab('cards');
+        screen.appendChild(allLink);
+      }
     }, isBack);
   }
 
@@ -2997,7 +3090,7 @@
     }, isBack);
   }
 
-  async function renderDeckEdit(deckId, subjectId, isBack) {
+  async function renderDeckEdit(deckId, subjectId, isBack, importOpen) {
     let deck = null;
     if (deckId) {
       try { deck = await apiGet('/api/decks/' + deckId); }
@@ -3006,6 +3099,7 @@
     swapScreen((screen) => {
       screen.appendChild(buildDeckEditor({
         deck,
+        openImport: !!importOpen,
         onSave: async (data) => {
           if (deckId) await apiPatch(`/api/decks/${deckId}`, data);
           else {
@@ -3546,7 +3640,7 @@
       } else if (current.level === 'deck') {
         renderDeck(current.deckId, current.subjectId, isBack);
       } else if (current.level === 'deck_edit') {
-        renderDeckEdit(current.deckId, current.subjectId, isBack);
+        renderDeckEdit(current.deckId, current.subjectId, isBack, current.importOpen);
       } else if (current.level === 'deck_study') {
         renderDeckStudy(current, isBack);
       } else if (current.level === 'sections') {
@@ -4737,10 +4831,11 @@
     activeTab = tab;
     document.getElementById('tabStudy').classList.toggle('active', tab === 'study');
     document.getElementById('tabChallenges').classList.toggle('active', tab === 'challenges');
+    document.getElementById('tabCards').classList.toggle('active', tab === 'cards');
     document.getElementById('tabRating').classList.toggle('active', tab === 'rating');
     document.getElementById('tabStats').classList.toggle('active', tab === 'stats');
     document.getElementById('tabProfile').classList.toggle('active', tab === 'profile');
-    const tabTitles = { study: 'Домашнее задание', challenges: 'Тренажёр', rating: 'Рейтинг', stats: 'Статистика', profile: 'Профиль' };
+    const tabTitles = { study: 'Домашнее задание', challenges: 'Тренажёр', cards: 'Карточки', rating: 'Рейтинг', stats: 'Статистика', profile: 'Профиль' };
     document.getElementById('headerTitle').textContent = tabTitles[tab] || 'Домашнее задание';
     if (tab === 'study') {
       if (currentCourseId && hwBuiltForCourse !== currentCourseId) {
@@ -4793,6 +4888,11 @@
         renderCrumbs();
         render(false);
       }
+    } else if (tab === 'cards') {
+      // Все карточки в одном месте: колоды всех курсов и свои.
+      stack = cardsStack;
+      renderCrumbs();
+      render(false);
     } else if (tab === 'rating' || tab === 'stats') {
       showLoading('Загружаем', false);
       getDefaultSubject().then((subject) => {
@@ -6123,9 +6223,7 @@
     if (new URLSearchParams(location.search).get('open') === 'cards') {
       removeBootLoader();
       setAppChromeVisible(true);
-      stack = [{ level: 'decks', subjectId: 'all', title: 'Карточки' }];
-      renderCrumbs();
-      render(false);
+      switchTab('cards');
       return;
     }
     const lessonParam = new URLSearchParams(location.search).get('lesson');
