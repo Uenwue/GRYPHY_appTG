@@ -911,9 +911,10 @@
   .delete-btn:active { transform: translateY(3px); border-bottom-width: 0; }
 
   .toast {
-    position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%);
-    background: var(--text); color: white; padding: 10px 18px; border-radius: 12px;
-    font-family: 'Involve', sans-serif; font-size: 13px; font-weight: 700; z-index: 20;
+    position: fixed; left: 50%; bottom: calc(96px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%);
+    background: var(--text); color: white; padding: 10px 18px; border-radius: 12px; max-width: calc(100% - 32px);
+    text-align: center; box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+    font-family: 'Involve', sans-serif; font-size: 13px; font-weight: 700; z-index: 80;
     animation: toast-in 0.25s var(--bounce) both;
   }
   @keyframes toast-in { from { opacity: 0; transform: translate(-50%, 8px); } to { opacity: 1; transform: translate(-50%, 0); } }
@@ -1084,6 +1085,7 @@
   let studentsGroupFilter = 'all';
   let studentsCourseTypeFilter = 'all';
   let currentUserRole = null;
+  let isPlatformOwner = false; // владелец платформы — ему доступна вкладка «Пользователи»
   let hasStudentAccess = false;
   let studentAppUrl = null;
   let studentInfoLoaded = false;
@@ -1233,7 +1235,12 @@
 
   async function renderCoursesList(isBack) {
     showLoadingMenu();
-    const { subjects } = await apiGet('/api/teacher/subjects');
+    const resp = await apiGet('/api/teacher/subjects');
+    isPlatformOwner = !!resp.is_owner;
+    const all = resp.subjects || [];
+    const active = all.filter((s) => !s.is_hidden);
+    const archived = all.filter((s) => s.is_hidden);
+    const canManage = currentUserRole === 'admin';
     swapScreen((screen) => {
       const root = document.createElement('div');
       root.className = 'st';
@@ -1241,7 +1248,7 @@
       const head = document.createElement('div');
       head.className = 'st-top';
       head.innerHTML = '<div class="st-title">Мои курсы</div>';
-      if (currentUserRole === 'admin') {
+      if (canManage) {
         const add = document.createElement('button');
         add.className = 'st-btn primary';
         add.textContent = '+ Новый курс';
@@ -1249,19 +1256,32 @@
         head.appendChild(add);
       }
       root.appendChild(head);
-      const list = document.createElement('div');
-      list.className = 'st-list';
-      if (!subjects.length) {
-        list.innerHTML = '<p class="field-hint">Пока нет ни одного курса. Нажмите «+ Новый курс».</p>';
-      }
-      subjects.forEach((sub, i) => {
+
+      const courseCard = (sub, i, isArchived) => {
         const [color] = LESSON_COLORS[i % LESSON_COLORS.length];
         const card = document.createElement('div');
         card.className = 'st-card';
-        card.innerHTML = `<div class="st-ava" style="--ev:${color};border-radius:14px;font-size:20px;">📚</div>` +
-          `<div class="st-body"><div class="st-name">${escapeHtml(sub.title)}</div><div class="st-line">${sub.id === currentSubjectId ? 'Открыт сейчас' : 'Нажмите, чтобы открыть'}</div></div>` +
-          '<div class="st-right"><span style="color:var(--text-soft);font-size:20px;">\u203a</span></div>';
+        if (isArchived) card.style.opacity = '0.72';
+        const line = isArchived ? 'В архиве · ученики не видят'
+          : (sub.id === currentSubjectId ? 'Открыт сейчас' : 'Нажмите, чтобы открыть');
+        card.innerHTML = `<div class="st-ava" style="--ev:${isArchived ? '#9AA5B1' : color};border-radius:14px;font-size:20px;">${isArchived ? '🗄' : '📚'}</div>` +
+          `<div class="st-body"><div class="st-name">${escapeHtml(sub.title)}</div><div class="st-line">${line}</div></div>`;
+        const right = document.createElement('div');
+        right.className = 'st-right';
+        right.style.cssText = 'display:flex;align-items:center;gap:4px;';
+        if (canManage) {
+          const more = document.createElement('button');
+          more.className = 'icon-btn';
+          more.title = 'Действия с курсом';
+          more.style.cssText = 'font-size:20px;font-weight:800;line-height:1;color:var(--text-soft);';
+          more.textContent = '⋯';
+          more.onclick = (e) => { e.stopPropagation(); courseActions(sub); };
+          right.appendChild(more);
+        }
+        if (!isArchived) right.insertAdjacentHTML('beforeend', '<span style="color:var(--text-soft);font-size:20px;">\u203a</span>');
+        card.appendChild(right);
         card.onclick = () => {
+          if (isArchived) { courseActions(sub); return; }
           currentSubjectId = sub.id;
           currentSubjectTitle = sub.title;
           const subjTitleEl = document.getElementById('subjTitle');
@@ -1269,10 +1289,92 @@
           stack = [{ level: 'menu', title: 'Меню' }];
           render(false);
         };
-        list.appendChild(card);
-      });
+        return card;
+      };
+
+      const list = document.createElement('div');
+      list.className = 'st-list';
+      if (!active.length) {
+        list.innerHTML = `<p class="field-hint">${archived.length ? 'Все курсы в архиве.' : 'Пока нет ни одного курса.'}${canManage ? ' Нажмите «+ Новый курс».' : ''}</p>`;
+      }
+      active.forEach((sub, i) => list.appendChild(courseCard(sub, i, false)));
       root.appendChild(list);
+
+      if (archived.length) {
+        const h = document.createElement('div');
+        h.className = 'set-hint';
+        h.style.cssText = 'margin:18px 2px 8px;font-weight:800;text-transform:uppercase;letter-spacing:0.03em;';
+        h.textContent = `Архив · ${archived.length}`;
+        root.appendChild(h);
+        const alist = document.createElement('div');
+        alist.className = 'st-list';
+        archived.forEach((sub, i) => alist.appendChild(courseCard(sub, i, true)));
+        root.appendChild(alist);
+      }
     }, isBack);
+  }
+
+  // Действия с курсом: переименовать, в архив / вернуть, удалить навсегда.
+  function courseActions(sub) {
+    const items = [];
+    if (!sub.is_hidden) {
+      items.push({ label: '✏️ Переименовать', onClick: () => renameCourse(sub) });
+      items.push({ label: '🗄 Отправить в архив', onClick: () => confirmAction(
+        `Отправить «${escapeHtml(sub.title)}» в архив? Ученики перестанут видеть курс, но всё содержимое и прогресс сохранятся — вернуть можно в любой момент.`,
+        'В архив', async () => {
+          await apiSend('PATCH', `/api/admin/subjects/${sub.id}/hidden`, { hidden: true });
+          if (currentSubjectId === sub.id) { currentSubjectId = null; currentSubjectTitle = ''; }
+          showToast('Курс в архиве');
+          renderCoursesList(false);
+        }) });
+    } else {
+      items.push({ label: '↩️ Вернуть из архива', onClick: async () => {
+        try {
+          await apiSend('PATCH', `/api/admin/subjects/${sub.id}/hidden`, { hidden: false });
+          showToast('Курс снова доступен ученикам');
+          renderCoursesList(false);
+        } catch (err) { showToast('Не получилось: ' + err.message); }
+      } });
+    }
+    items.push({ label: '🗑 Удалить навсегда', danger: true, onClick: async () => {
+      let counts = { sections: 0, topics: 0, tests: 0 };
+      try { counts = await apiGet(`/api/admin/subjects/${sub.id}/counts`); } catch (err) { /* покажем без цифр */ }
+      confirmDelete(
+        `Удалить курс «${escapeHtml(sub.title)}» целиком? Вместе с ним удалятся: разделов — ${counts.sections}, тем — ${counts.topics}, тестов — ${counts.tests} (и все задания, попытки учеников внутри). Отменить это нельзя. Если курс может пригодиться — лучше отправьте его в архив.`,
+        async () => {
+          await apiSend('DELETE', `/api/admin/subjects/${sub.id}`);
+          if (currentSubjectId === sub.id) { currentSubjectId = null; currentSubjectTitle = ''; }
+          showToast('Курс удалён');
+          renderCoursesList(false);
+        });
+    } });
+    scMenu(items);
+  }
+
+  function renameCourse(sub) {
+    lockBodyScroll();
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center;z-index:60;padding:20px;';
+    overlay.innerHTML = '<div style="background:var(--bg);border-radius:16px;padding:18px;max-width:340px;width:100%;">' +
+      '<div class="field-label">Название курса</div>' +
+      `<input class="field-input" id="rcTitle" style="margin-bottom:14px;" value="${escapeHtml(sub.title)}">` +
+      '<div style="display:flex;gap:8px;"><button class="back-btn" id="rcCancel" style="flex:1;">Отмена</button>' +
+      '<button class="save-btn" id="rcSave" style="flex:1;margin-top:0;">Сохранить</button></div></div>';
+    document.body.appendChild(overlay);
+    const close = () => { unlockBodyScroll(); overlay.remove(); };
+    overlay.querySelector('#rcCancel').onclick = close;
+    overlay.onclick = (e) => { if (e.target === overlay) close(); };
+    overlay.querySelector('#rcSave').onclick = async () => {
+      const title = overlay.querySelector('#rcTitle').value.trim();
+      if (!title) return;
+      try {
+        await apiSend('PATCH', `/api/admin/subjects/${sub.id}`, { title });
+        if (currentSubjectId === sub.id) currentSubjectTitle = title;
+        close();
+        showToast('Сохранено');
+        renderCoursesList(false);
+      } catch (err) { showToast('Не получилось: ' + err.message); }
+    };
   }
 
   function renderTopNav() {
@@ -1335,7 +1437,7 @@
         if (/^https?:\/\/t\.me\//i.test(supportUrlCache) && tg && tg.openTelegramLink) tg.openTelegramLink(supportUrlCache);
         else openExternalLink(supportUrlCache);
       } else {
-        showToast('Поддержка не настроена: нужна переменная MANAGER_CONTACT_URL на сервере');
+        infoDialog('Поддержка', 'Контакт поддержки пока не указан. Администратору: добавьте на сервере переменную MANAGER_CONTACT_URL — ссылку на Telegram менеджера (например, https://t.me/username).');
       }
     } catch (err) { showToast('Не получилось открыть поддержку'); }
   }
@@ -1461,7 +1563,22 @@
     t.className = 'toast';
     t.textContent = text;
     document.body.appendChild(t);
-    setTimeout(() => t.remove(), 1800);
+    setTimeout(() => t.remove(), Math.max(1800, Math.min(4500, text.length * 55)));
+  }
+
+  // Простое окно с сообщением по центру экрана (видно поверх всего).
+  function infoDialog(title, text) {
+    lockBodyScroll();
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center;z-index:90;padding:20px;';
+    overlay.innerHTML = '<div style="background:var(--bg);border-radius:16px;padding:18px;max-width:340px;width:100%;">' +
+      `<div style="font-weight:800;font-size:16px;margin-bottom:8px;">${escapeHtml(title)}</div>` +
+      `<div style="font-size:14px;line-height:1.45;color:var(--text-soft);margin-bottom:14px;">${escapeHtml(text)}</div>` +
+      '<button class="save-btn" style="width:100%;margin-top:0;">Понятно</button></div>';
+    const close = () => { unlockBodyScroll(); overlay.remove(); };
+    overlay.querySelector('button').onclick = close;
+    overlay.onclick = (e) => { if (e.target === overlay) close(); };
+    document.body.appendChild(overlay);
   }
 
   const ICONS = {
@@ -1899,6 +2016,70 @@
       };
     }
 
+    const isoOf = (dt) => `${dt.getFullYear()}-${pad2(dt.getMonth() + 1)}-${pad2(dt.getDate())}`;
+    const todayIso = isoOf(new Date());
+    let breakScope = 'default'; // 'default' | 'wd:0'..'wd:6' | 'date:YYYY-MM-DD'
+
+    // «Нет занятий» на дату или период. Если в эти дни уже стоят уроки —
+    // можно сразу их отменить (без списания), ученикам придёт сообщение.
+    function daysOffDialog() {
+      lockBodyScroll();
+      const ov = document.createElement('div');
+      ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center;z-index:60;padding:20px;';
+      ov.innerHTML = '<div style="background:var(--bg);border-radius:18px;padding:18px;max-width:340px;width:100%;">' +
+        '<div style="font-size:17px;font-weight:700;margin-bottom:4px;">Нет занятий</div>' +
+        '<div class="set-hint" style="margin-bottom:12px;">Ученики не смогут записаться на эти дни, регулярные уроки на них не создаются.</div>' +
+        '<div class="sched-grid" style="grid-template-columns:1fr 1fr;"><div class="field-label">С</div><div class="field-label">По (включительно)</div>' +
+        `<input type="date" class="field-input" id="doFrom" value="${todayIso}"><input type="date" class="field-input" id="doTo" value="${todayIso}"></div>` +
+        '<div id="doLessons" style="margin-top:12px;"></div>' +
+        '<div style="display:flex;gap:8px;margin-top:14px;"><button class="set-btn" id="doCancel" style="flex:1;">Отмена</button><button class="set-btn primary" id="doOk" style="flex:1;">Сохранить</button></div></div>';
+      document.body.appendChild(ov);
+      const close = () => { unlockBodyScroll(); ov.remove(); };
+      const fromEl = ov.querySelector('#doFrom'), toEl = ov.querySelector('#doTo'), box = ov.querySelector('#doLessons');
+      let cancelLessons = true, found = 0;
+      const check = async () => {
+        if (toEl.value < fromEl.value) toEl.value = fromEl.value;
+        box.innerHTML = '';
+        try {
+          const r = await apiGet(`/api/teacher/avail/days-off/count?date_from=${fromEl.value}&date_to=${toEl.value}`);
+          found = r.count || 0;
+        } catch (err) { found = 0; }
+        if (!found) return;
+        const row = document.createElement('div');
+        row.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--blue-tint);border-radius:12px;padding:10px 12px;';
+        row.innerHTML = `<span style="font-size:13px;font-weight:600;line-height:1.35;">На эти дни уже ${dashPlural(found, 'стоит', 'стоят', 'стоят')} ${found} ${dashPlural(found, 'урок', 'урока', 'уроков')}. Отменить без списания и написать ученикам?</span>`;
+        row.appendChild(buildSettingsToggle(cancelLessons, (v) => { cancelLessons = v; }));
+        box.appendChild(row);
+      };
+      fromEl.onchange = check; toEl.onchange = check;
+      check();
+      ov.querySelector('#doCancel').onclick = close;
+      ov.onclick = (e) => { if (e.target === ov) close(); };
+      ov.querySelector('#doOk').onclick = async () => {
+        try {
+          const res = await apiSend('POST', '/api/teacher/avail/days-off', { date_from: fromEl.value, date_to: toEl.value, cancel_lessons: found > 0 && cancelLessons });
+          data = { windows: res.windows, settings: res.settings };
+          close();
+          draw();
+          showToast(res.cancelled ? `Готово. Отменено уроков: ${res.cancelled}${res.notified ? `, ученики получили сообщение` : ''}` : 'Готово');
+        } catch (err) { showToast('Не получилось: ' + err.message); }
+      };
+    }
+
+    function pickDateDialog(title, onPick) {
+      lockBodyScroll();
+      const ov = document.createElement('div');
+      ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center;z-index:60;padding:20px;';
+      ov.innerHTML = '<div style="background:var(--bg);border-radius:18px;padding:18px;max-width:340px;width:100%;">' +
+        `<div style="font-size:17px;font-weight:700;margin-bottom:12px;">${title}</div>` +
+        `<input type="date" class="field-input" id="pdDate" value="${todayIso}">` +
+        '<div style="display:flex;gap:8px;margin-top:14px;"><button class="set-btn" id="pdCancel" style="flex:1;">Отмена</button><button class="set-btn primary" id="pdOk" style="flex:1;">Выбрать</button></div></div>';
+      document.body.appendChild(ov);
+      const close = () => { unlockBodyScroll(); ov.remove(); };
+      ov.querySelector('#pdCancel').onclick = close;
+      ov.querySelector('#pdOk').onclick = () => { const v = ov.querySelector('#pdDate').value; if (v) { close(); onPick(v); } };
+    }
+
     let previewDate = (() => { const t = new Date(); t.setDate(t.getDate() + 1); return `${t.getFullYear()}-${pad2(t.getMonth() + 1)}-${pad2(t.getDate())}`; })();
     let previewDur = null;
     let screenEl = null;
@@ -1947,27 +2128,57 @@
       });
       screenEl.appendChild(wc);
 
-      // 2. Конкретные даты
-      const dc = settingsCard('На конкретные даты');
-      dc.insertAdjacentHTML('beforeend', '<div class="set-hint">Заменяют обычный день недели на эту дату: другое время или выходной.</div>');
-      const byDate = {};
-      dated.forEach((w) => { (byDate[w.date] = byDate[w.date] || []).push(w); });
-      Object.keys(byDate).sort().forEach((d) => {
+      // 2. Особые дни: «нет занятий» (дата или период) и другое время на дату
+      const dc = settingsCard('Особые дни');
+      dc.insertAdjacentHTML('beforeend', '<div class="set-hint">Отпуск, праздник, другое время на конкретную дату — заменяет обычный день недели.</div>');
+      const upcoming = dated.filter((w) => w.date >= todayIso);
+      // Подряд идущие даты «нет занятий» показываем одним периодом.
+      const offDates = [...new Set(upcoming.filter((w) => w.is_off).map((w) => w.date))].sort();
+      const ranges = [];
+      offDates.forEach((d) => {
+        const last = ranges[ranges.length - 1];
+        if (last) {
+          const nx = new Date(last.to + 'T00:00:00'); nx.setDate(nx.getDate() + 1);
+          if (isoOf(nx) === d) { last.to = d; return; }
+        }
+        ranges.push({ from: d, to: d });
+      });
+      const rowsBox = document.createElement('div');
+      const addRow = (label, chips) => {
         const row = document.createElement('div');
-        row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);';
-        row.innerHTML = `<b style="width:70px;font-size:13px;">${fmtDate(d)}</b>`;
+        row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border);';
+        row.innerHTML = `<b style="min-width:92px;font-size:13px;">${label}</b>`;
         const box = document.createElement('div');
         box.style.cssText = 'display:flex;flex-wrap:wrap;gap:6px;flex:1;';
-        byDate[d].forEach((w) => box.appendChild(chip(w.is_off ? 'выходной \u2715' : `${w.start_time}\u2013${w.end_time} \u2715`, () => delWindow(w.id))));
+        chips.forEach((c) => box.appendChild(c));
         row.appendChild(box);
-        dc.appendChild(row);
+        rowsBox.appendChild(row);
+      };
+      ranges.forEach((r) => {
+        const ids = upcoming.filter((w) => w.is_off && w.date >= r.from && w.date <= r.to).map((w) => w.id);
+        const label = r.from === r.to ? fmtDate(r.from) : `${fmtDate(r.from)} – ${fmtDate(r.to)}`;
+        addRow(label, [chip('нет занятий \u2715', async () => {
+          for (const id of ids) { data = await apiSend('DELETE', `/api/teacher/avail/windows/${id}`); }
+          draw();
+        })]);
       });
-      const addDate = document.createElement('button');
-      addDate.className = 'set-btn';
-      addDate.style.cssText = 'width:100%;margin-top:10px;';
-      addDate.textContent = '+ Дата';
-      addDate.onclick = () => timeRangeDialog('Особая дата', (r) => addWindow(r.off ? { date: r.date, is_off: true } : { date: r.date, start_time: r.from, end_time: r.to }), true);
-      dc.appendChild(addDate);
+      const timed = {};
+      upcoming.filter((w) => !w.is_off).forEach((w) => { (timed[w.date] = timed[w.date] || []).push(w); });
+      Object.keys(timed).sort().forEach((d) => addRow(fmtDate(d), timed[d].map((w) => chip(`${w.start_time}\u2013${w.end_time} \u2715`, () => delWindow(w.id)))));
+      if (!ranges.length && !Object.keys(timed).length) rowsBox.innerHTML = '<div class="set-hint" style="margin:0 0 4px;">Пока нет — все дни по обычному расписанию.</div>';
+      dc.appendChild(rowsBox);
+      const dbtns = document.createElement('div');
+      dbtns.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px;';
+      const offBtn = document.createElement('button');
+      offBtn.className = 'set-btn';
+      offBtn.textContent = '+ Нет занятий';
+      offBtn.onclick = () => daysOffDialog();
+      const timeBtn = document.createElement('button');
+      timeBtn.className = 'set-btn';
+      timeBtn.textContent = '+ Другое время';
+      timeBtn.onclick = () => timeRangeDialog('Другое время на дату', (r) => addWindow(r.off ? { date: r.date, is_off: true } : { date: r.date, start_time: r.from, end_time: r.to }), true);
+      dbtns.appendChild(offBtn); dbtns.appendChild(timeBtn);
+      dc.appendChild(dbtns);
       screenEl.appendChild(dc);
 
       // 3. Длительности
@@ -2011,16 +2222,44 @@
       }
       screenEl.appendChild(tc);
 
-      // 4. Перерывы
+      // 4. Перерывы — общие и отдельно для дня недели / конкретной даты
       const bc = settingsCard('Перерывы');
-      const n = settings.break_after_n || 0;
+      const overrides = Object.assign({}, settings.break_overrides || {});
+      if (breakScope !== 'default' && !overrides[breakScope]) breakScope = 'default';
+      const scopeLabel = (k) => k === 'default' ? 'Обычно' : k.startsWith('wd:') ? WEEKDAY_SHORT[+k.slice(3)] : fmtDate(k.slice(5));
+      const scopeKeys = ['default', ...Object.keys(overrides).filter((k) => !k.startsWith('date:') || k.slice(5) >= todayIso)
+        .sort((a, b) => (a[0] === b[0] ? a.localeCompare(b) : (a.startsWith('wd:') ? -1 : 1)))];
+      const srow = document.createElement('div');
+      srow.style.cssText = 'display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;';
+      scopeKeys.forEach((k) => srow.appendChild(chip(scopeLabel(k), () => { breakScope = k; draw(); }, k === breakScope)));
+      srow.appendChild(chip('+ день или дата', () => {
+        const startWith = (key) => {
+          const base = { break_after_n: settings.break_after_n || 0, break_minutes: settings.break_minutes || 0, fixed_breaks: settings.fixed_breaks || [] };
+          breakScope = key;
+          saveSettings({ break_overrides: Object.assign({}, overrides, { [key]: overrides[key] || base }) });
+        };
+        scMenu([
+          ...WEEKDAY_SHORT.map((wd, i) => ({ label: `Каждый ${['понедельник', 'вторник', 'среду', 'четверг', 'пятницу', 'субботу', 'воскресенье'][i]}`, onClick: () => startWith('wd:' + i) })),
+          { label: '📅 Конкретная дата…', onClick: () => pickDateDialog('Перерывы на дату', (d) => startWith('date:' + d)) },
+        ]);
+      }));
+      bc.appendChild(srow);
+      bc.insertAdjacentHTML('beforeend', `<div class="set-hint">${breakScope === 'default'
+        ? 'Действуют во все дни, для которых не заданы свои перерывы.'
+        : breakScope.startsWith('wd:') ? `Только для дня «${scopeLabel(breakScope)}» каждую неделю (дата со своими перерывами важнее).` : `Только на ${scopeLabel(breakScope)}.`}</div>`);
+      const cfg = breakScope === 'default' ? settings : overrides[breakScope];
+      const saveBreaks = (patch) => {
+        if (breakScope === 'default') return saveSettings(patch);
+        return saveSettings({ break_overrides: Object.assign({}, overrides, { [breakScope]: Object.assign({}, cfg, patch) }) });
+      };
+      const n = cfg.break_after_n || 0;
       const seg = document.createElement('div');
       seg.className = 'sched-seg';
       [['none', 'Без перерывов'], ['after', 'После N занятий']].forEach(([k, l]) => {
         const b = document.createElement('button');
         b.className = (k === 'none' ? !n : !!n) ? 'on' : '';
         b.textContent = l;
-        b.onclick = () => saveSettings(k === 'none' ? { break_after_n: 0, break_minutes: 0 } : { break_after_n: n || 1, break_minutes: settings.break_minutes || 10 });
+        b.onclick = () => saveBreaks(k === 'none' ? { break_after_n: 0, break_minutes: 0 } : { break_after_n: n || 1, break_minutes: cfg.break_minutes || 10 });
         seg.appendChild(b);
       });
       bc.appendChild(seg);
@@ -2029,19 +2268,32 @@
         r.style.cssText = 'display:flex;align-items:center;gap:8px;margin-top:10px;font-size:13.5px;flex-wrap:wrap;';
         r.innerHTML = 'После <input type="number" min="1" class="field-input" id="brN" style="width:64px;"> занятий подряд — перерыв <input type="number" min="0" step="5" class="field-input" id="brM" style="width:74px;"> мин';
         r.querySelector('#brN').value = n;
-        r.querySelector('#brM').value = settings.break_minutes || 0;
-        r.querySelector('#brN').onchange = (e) => saveSettings({ break_after_n: Math.max(1, parseInt(e.target.value, 10) || 1) });
-        r.querySelector('#brM').onchange = (e) => saveSettings({ break_minutes: Math.max(0, parseInt(e.target.value, 10) || 0) });
+        r.querySelector('#brM').value = cfg.break_minutes || 0;
+        r.querySelector('#brN').onchange = (e) => saveBreaks({ break_after_n: Math.max(1, parseInt(e.target.value, 10) || 1) });
+        r.querySelector('#brM').onchange = (e) => saveBreaks({ break_minutes: Math.max(0, parseInt(e.target.value, 10) || 0) });
         bc.appendChild(r);
       }
-      bc.insertAdjacentHTML('beforeend', '<div class="set-title" style="margin-top:14px;font-size:11px;color:var(--text-soft);">В определённое время (каждый день)</div>');
+      bc.insertAdjacentHTML('beforeend', `<div class="set-title" style="margin-top:14px;font-size:11px;color:var(--text-soft);">В определённое время${breakScope === 'default' ? ' (каждый день)' : ''}</div>`);
       const fb = document.createElement('div');
       fb.style.cssText = 'display:flex;flex-wrap:wrap;gap:6px;';
-      (settings.fixed_breaks || []).forEach((x, idx) => fb.appendChild(chip(`${x.start}\u2013${x.end} \u2715`, () => {
-        const list = [...settings.fixed_breaks]; list.splice(idx, 1); saveSettings({ fixed_breaks: list });
+      const fixed = cfg.fixed_breaks || [];
+      fixed.forEach((x, idx) => fb.appendChild(chip(`${x.start}\u2013${x.end} \u2715`, () => {
+        const list = [...fixed]; list.splice(idx, 1); saveBreaks({ fixed_breaks: list });
       })));
-      fb.appendChild(chip('+ перерыв', () => timeRangeDialog('Перерыв каждый день', (r) => saveSettings({ fixed_breaks: [...(settings.fixed_breaks || []), { start: r.from, end: r.to }] }))));
+      fb.appendChild(chip('+ перерыв', () => timeRangeDialog('Перерыв', (r) => saveBreaks({ fixed_breaks: [...fixed, { start: r.from, end: r.to }] }))));
       bc.appendChild(fb);
+      if (breakScope !== 'default') {
+        const del = document.createElement('button');
+        del.className = 'set-btn';
+        del.style.cssText = 'width:100%;margin-top:12px;color:var(--red-dark);';
+        del.textContent = `Убрать особые перерывы (${scopeLabel(breakScope)})`;
+        del.onclick = () => {
+          const rest = Object.assign({}, overrides); delete rest[breakScope];
+          breakScope = 'default';
+          saveSettings({ break_overrides: rest });
+        };
+        bc.appendChild(del);
+      }
       screenEl.appendChild(bc);
 
       // 5. Как увидит ученик
@@ -2303,7 +2555,10 @@
     if (current.level === 'menu') {
       showLoadingMenu();
       try {
-        const { role, subjects } = await apiGet('/api/teacher/subjects');
+        const subjResp = await apiGet('/api/teacher/subjects');
+        const { role } = subjResp;
+        const subjects = (subjResp.subjects || []).filter((s) => !s.is_hidden);
+        isPlatformOwner = !!subjResp.is_owner;
         applyRoleStyle(role);
         await ensureStudentModeInfo();
 
@@ -6998,7 +7253,10 @@
       swapScreen((screen) => {
         const tabs = document.createElement('div');
         tabs.style.cssText = 'display:flex;gap:6px;margin-bottom:16px;';
-        [{ key: 'subjects', label: 'Предметы' }, { key: 'users', label: 'Пользователи' }, { key: 'export', label: 'Экспорт' }].forEach((t) => {
+        if (!isPlatformOwner && adminPanelTab === 'users') adminPanelTab = 'subjects';
+        // «Пользователи» — данные всей платформы, их видит только её владелец
+        // (у остальных сервер отвечает 403).
+        [{ key: 'subjects', label: 'Предметы' }, isPlatformOwner && { key: 'users', label: 'Пользователи' }, { key: 'export', label: 'Экспорт' }].filter(Boolean).forEach((t) => {
           const btn = document.createElement('button');
           const active = adminPanelTab === t.key;
           btn.textContent = t.label;
