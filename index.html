@@ -716,6 +716,29 @@
   }
   .lr-slot { padding: 10px 4px; border-radius: 12px; border: 1px solid var(--border); background: var(--bg); font-size: 15px; font-weight: 700; color: var(--text); cursor: pointer; }
   .lr-slot.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+  /* --- Календарь записи (месяц → день → время) --- */
+  .bk-card { background: var(--bg); border: 1px solid var(--border); border-radius: 18px; box-shadow: 0 4px 14px rgba(49, 44, 44, 0.06); padding: 14px 12px; margin-bottom: 12px; }
+  .bk-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .bk-nav b { font-size: 15.5px; font-weight: 800; text-transform: capitalize; }
+  .bk-arrow { width: 36px; height: 36px; border-radius: 12px; border: 1px solid var(--border); background: var(--bg); color: var(--text); font-size: 17px; font-weight: 800; cursor: pointer; }
+  .bk-arrow:disabled { opacity: 0.3; cursor: default; }
+  .bk-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+  .bk-wd { text-align: center; font-size: 11px; font-weight: 800; color: var(--text-soft); padding: 2px 0 6px; }
+  .bk-day { position: relative; aspect-ratio: 1 / 1; max-height: 46px; border-radius: 12px; border: 1.5px solid transparent; background: none; color: var(--text); font-family: inherit; font-size: 14.5px; font-weight: 700; cursor: pointer; padding: 0; }
+  .bk-day.past, .bk-day.none { color: var(--text-soft); opacity: 0.45; cursor: default; }
+  .bk-day.none { opacity: 0.6; }
+  .bk-day.today { border-color: var(--accent); background: var(--blue-tint); opacity: 1; }
+  .bk-day.on { background: var(--accent); border-color: var(--accent); color: #fff; opacity: 1; }
+  .bk-day .dot { position: absolute; left: 50%; bottom: 5px; width: 5px; height: 5px; margin-left: -2.5px; border-radius: 50%; background: var(--accent); }
+  .bk-day.on .dot { background: #fff; }
+  .bk-dayhead { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
+  .bk-dayhead b { font-size: 16px; font-weight: 800; }
+  .bk-dayhead span { font-size: 13px; font-weight: 700; color: var(--text-soft); white-space: nowrap; }
+  .bk-slots { display: grid; grid-template-columns: repeat(auto-fill, minmax(76px, 1fr)); gap: 8px; }
+  .bk-slot { padding: 9px 4px 7px; border-radius: 12px; border: 1px solid var(--border); background: var(--bg); color: var(--text); font-family: inherit; font-size: 15px; font-weight: 800; cursor: pointer; line-height: 1.1; }
+  .bk-slot small { display: block; font-size: 10.5px; font-weight: 600; color: var(--text-soft); margin-top: 3px; }
+  .bk-slot.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .bk-slot.on small { color: rgba(255,255,255,0.85); }
   .screen.leave, .screen.leave-back { position: absolute; top: 0; left: 0; right: 0; pointer-events: none; }
   .screen.leave { animation: screen-out 0.32s cubic-bezier(0.22, 0.8, 0.24, 1) forwards; }
   .screen.leave-back { animation: screen-out-back 0.32s cubic-bezier(0.22, 0.8, 0.24, 1) forwards; }
@@ -3089,26 +3112,35 @@
     const myRequests = await apiGet(`/api/subjects/${subjectId}/booking/my-requests`).catch(() => []);
     // Длительности занятий, которые учитель разрешил выбирать.
     const durations = await apiGet(`/api/subjects/${subjectId}/booking/durations`).catch(() => []);
+    const durLabel = (m) => m < 60 ? `${m} мин` : (m % 60 ? `${Math.floor(m / 60)} ч ${m % 60} мин` : `${m / 60} ч`);
     swapScreen((screen) => {
+      let selectedDuration = durations[0] || null;
       const hint = document.createElement('p');
       hint.className = 'field-hint';
       hint.style.marginBottom = '14px';
-      hint.textContent = 'Выберите дату и свободное время. Заявка уйдёт репетитору на подтверждение.';
+      const setHint = () => {
+        hint.textContent = `Выберите дату и свободное время.${selectedDuration ? ` Урок — ${durLabel(selectedDuration)}.` : ''} Заявка уйдёт на подтверждение.`;
+      };
+      setHint();
       screen.appendChild(hint);
 
-      const dateRow = document.createElement('div');
-      dateRow.style.cssText = 'display:flex;gap:6px;overflow-x:auto;padding-bottom:6px;margin-bottom:14px;';
-      screen.appendChild(dateRow);
+      const pickerBox = document.createElement('div');
+      const mountPicker = () => {
+        pickerBox.innerHTML = '';
+        const dq = selectedDuration ? '&duration=' + selectedDuration : '';
+        pickerBox.appendChild(buildSlotPicker({
+          loadMonth: (y, m) => apiGet(`/api/subjects/${subjectId}/booking/month?month=${y}-${bkPad(m)}${dq}`),
+          loadDay: async (iso) => (await apiGet(`/api/subjects/${subjectId}/booking/free-slots?date=${iso}${dq}`))
+            .map((s) => ({ start: s.time.slice(0, 5), end: bkAddMin(s.time.slice(0, 5), s.duration_minutes || 60), duration: s.duration_minutes })),
+          confirmLabel: (iso, s) => `Записаться: ${bkWhen(iso, s.start)}`,
+          onConfirm: async (iso, s) => {
+            await apiPost(`/api/subjects/${subjectId}/booking/request`, { date: iso, time: s.start, duration_minutes: s.duration });
+            renderBookingScreen(subjectId, false);
+          },
+        }));
+      };
 
-      const slotsBox = document.createElement('div');
-      slotsBox.style.cssText = 'display:flex;flex-wrap:wrap;gap:8px;margin-bottom:20px;';
-      screen.appendChild(slotsBox);
-
-      const today = new Date();
-      let selectedDateStr = null;
-      const dateButtons = [];
-      let selectedDuration = durations[0] || null;
-      // Выбор длительности занятия (если учитель настроил длительности).
+      // Выбор длительности занятия (если учитель настроил несколько).
       if (durations.length > 1) {
         const durRow = document.createElement('div');
         durRow.style.cssText = 'display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;';
@@ -3119,70 +3151,20 @@
         durations.forEach((m) => {
           const b = document.createElement('button');
           b.dataset.m = m;
-          b.textContent = m < 60 ? `${m} мин` : (m % 60 ? `${Math.floor(m / 60)} ч ${m % 60} мин` : `${m / 60} ч`);
-          b.onclick = () => { selectedDuration = m; paint(); const i = dateButtons.findIndex((x) => x.dataset.date === selectedDateStr); if (i >= 0) selectDate(selectedDateStr, dateButtons[i]); };
+          b.textContent = durLabel(m);
+          b.onclick = () => { if (selectedDuration === m) return; selectedDuration = m; paint(); setHint(); mountPicker(); };
           durRow.appendChild(b);
         });
         paint();
-        screen.insertBefore(durRow, dateRow);
+        screen.appendChild(durRow);
       }
-
-      async function selectDate(dateStr, btn) {
-        selectedDateStr = dateStr;
-        dateButtons.forEach((b) => { b.style.borderColor = 'var(--border)'; b.style.background = 'var(--bg)'; });
-        btn.style.borderColor = 'var(--accent)';
-        btn.style.background = 'var(--blue-tint)';
-        slotsBox.innerHTML = '<span class="field-hint">Загрузка…</span>';
-        try {
-          const slots = await apiGet(`/api/subjects/${subjectId}/booking/free-slots?date=${dateStr}${selectedDuration ? '&duration=' + selectedDuration : ''}`);
-          slotsBox.innerHTML = '';
-          if (!slots.length) {
-            slotsBox.innerHTML = '<span class="field-hint">На эту дату свободного времени нет.</span>';
-            return;
-          }
-          slots.forEach((s) => {
-            const timeBtn = document.createElement('button');
-            const endLabel = (() => { const [h, m] = s.time.split(':').map(Number); const e = h * 60 + m + (s.duration_minutes || 60); return `${String(Math.floor(e / 60) % 24).padStart(2, '0')}:${String(e % 60).padStart(2, '0')}`; })();
-            timeBtn.textContent = `${s.time} – ${endLabel}`;
-            timeBtn.style.cssText = 'padding:10px 14px;border-radius:12px;border:2px solid var(--border);background:var(--bg);color:var(--text);font-weight:700;font-size:13px;cursor:pointer;';
-            timeBtn.onclick = async () => {
-              timeBtn.disabled = true;
-              timeBtn.textContent = '…';
-              try {
-                await apiPost(`/api/subjects/${subjectId}/booking/request`, { date: dateStr, time: s.time, duration_minutes: s.duration_minutes });
-                renderBookingScreen(subjectId, false);
-              } catch (err) {
-                alert('Не получилось: ' + err.message);
-                timeBtn.disabled = false;
-                timeBtn.textContent = `${s.time} – ${endLabel}`;
-              }
-            };
-            slotsBox.appendChild(timeBtn);
-          });
-        } catch (err) {
-          slotsBox.innerHTML = '<span class="field-hint">Не удалось загрузить свободное время.</span>';
-        }
-      }
-
-      let firstDateStr = null;
-      for (let i = 0; i < 14; i++) {
-        const d = new Date(today.getFullYear(), today.getMonth(), today.getDate() + i);
-        const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-        if (i === 0) firstDateStr = dateStr;
-        const btn = document.createElement('button');
-        btn.dataset.date = dateStr;
-        btn.style.cssText = 'flex-shrink:0;min-width:52px;padding:8px 6px;border-radius:12px;border:2px solid var(--border);background:var(--bg);color:var(--text);font-weight:700;cursor:pointer;text-align:center;';
-        btn.innerHTML = `<div style="font-size:10px;color:var(--text-soft);">${d.toLocaleDateString('ru-RU', { weekday: 'short' })}</div><div style="font-size:15px;">${d.getDate()}</div>`;
-        btn.onclick = () => selectDate(dateStr, btn);
-        dateRow.appendChild(btn);
-        dateButtons.push(btn);
-      }
-      if (dateButtons.length) selectDate(firstDateStr, dateButtons[0]);
+      screen.appendChild(pickerBox);
+      mountPicker();
 
       if (myRequests.length) {
         const title = document.createElement('div');
         title.className = 'field-hint';
-        title.style.cssText = 'margin:0 0 8px;text-transform:uppercase;font-weight:800;letter-spacing:0.03em;';
+        title.style.cssText = 'margin:18px 0 8px;text-transform:uppercase;font-weight:800;letter-spacing:0.03em;';
         title.textContent = 'Мои заявки';
         screen.appendChild(title);
         const labels = { pending: ['Ожидает подтверждения', 'var(--text-soft)'], approved: ['Подтверждено', 'var(--green-dark)'], declined: ['Отклонено', 'var(--red-dark)'] };
@@ -3190,7 +3172,8 @@
           const [label, color] = labels[r.status] || [r.status, 'var(--text-soft)'];
           const row = document.createElement('div');
           row.style.cssText = 'display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;';
-          row.innerHTML = `<span>${r.requested_at.slice(0, 16).replace('T', ' ')}</span><span style="color:${color};font-weight:700;">${label}</span>`;
+          const at = r.requested_at.replace('T', ' ');
+          row.innerHTML = `<span>${bkWhen(at.slice(0, 10), at.slice(11, 16))}</span><span style="color:${color};font-weight:700;">${label}</span>`;
           screen.appendChild(row);
         });
       }
@@ -4583,6 +4566,165 @@
   // ===== Ответ на напоминание о занятии: перенос или «не смогу» =====
   const LR_WEEKDAYS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
   const LR_MONTHS = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
+  const BK_MONTHS_NOM = ['январь', 'февраль', 'март', 'апрель', 'май', 'июнь', 'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь'];
+  const BK_WEEKDAYS_FULL = ['Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота', 'Воскресенье'];
+  const bkPad = (n) => String(n).padStart(2, '0');
+  const bkIso = (d) => `${d.getFullYear()}-${bkPad(d.getMonth() + 1)}-${bkPad(d.getDate())}`;
+  function bkAddMin(hm, min) {
+    const [h, m] = hm.split(':').map(Number);
+    const e = h * 60 + m + min;
+    return `${bkPad(Math.floor(e / 60) % 24)}:${bkPad(e % 60)}`;
+  }
+  function bkHours(min) {
+    if (!min) return '';
+    if (min < 60) return `≈ ${min} мин`;
+    const h = Math.round(min / 30) / 2;
+    return `≈ ${String(h).replace('.', ',')} ч`;
+  }
+
+  // Выбор времени: месяц с точками у дней, где есть свободные окна → карточка
+  // дня с окнами → кнопка подтверждения. opts:
+  //   loadMonth(y, m) → {days: {'YYYY-MM-DD': {count, minutes}}, off: [...]}
+  //   loadDay(date)   → [{start, end}]
+  //   confirmLabel(date, slot) → текст кнопки;  onConfirm(date, slot) → Promise
+  //   monthsAhead — на сколько месяцев вперёд можно листать (по умолчанию 3)
+  function buildSlotPicker(opts) {
+    const wrap = document.createElement('div');
+    const cal = document.createElement('div');
+    cal.className = 'bk-card';
+    const dayCard = document.createElement('div');
+    dayCard.className = 'bk-card';
+    dayCard.style.display = 'none';
+    const btn = document.createElement('button');
+    btn.className = 'submit-btn';
+    btn.style.display = 'none';
+    wrap.appendChild(cal); wrap.appendChild(dayCard); wrap.appendChild(btn);
+
+    const now = new Date();
+    const todayIso = bkIso(now);
+    const first = { y: now.getFullYear(), m: now.getMonth() + 1 };
+    const maxAhead = opts.monthsAhead == null ? 3 : opts.monthsAhead;
+    let view = { y: first.y, m: first.m };
+    let month = { days: {}, off: [] };
+    let selDate = null, selSlot = null, loadSeq = 0, autoJumped = false;
+    const monthIdx = (v) => v.y * 12 + v.m;
+
+    function drawCal(loading) {
+      cal.innerHTML = '';
+      const nav = document.createElement('div');
+      nav.className = 'bk-nav';
+      const prev = document.createElement('button');
+      prev.className = 'bk-arrow'; prev.textContent = '\u2190';
+      prev.disabled = monthIdx(view) <= monthIdx(first);
+      prev.onclick = () => { view = view.m === 1 ? { y: view.y - 1, m: 12 } : { y: view.y, m: view.m - 1 }; loadMonth(); };
+      const next = document.createElement('button');
+      next.className = 'bk-arrow'; next.textContent = '\u2192';
+      next.disabled = monthIdx(view) >= monthIdx(first) + maxAhead;
+      next.onclick = () => { view = view.m === 12 ? { y: view.y + 1, m: 1 } : { y: view.y, m: view.m + 1 }; loadMonth(); };
+      const title = document.createElement('b');
+      title.textContent = `${BK_MONTHS_NOM[view.m - 1]} ${view.y}`;
+      nav.appendChild(prev); nav.appendChild(title); nav.appendChild(next);
+      cal.appendChild(nav);
+      const grid = document.createElement('div');
+      grid.className = 'bk-grid';
+      LR_WEEKDAYS.forEach((w) => grid.insertAdjacentHTML('beforeend', `<div class="bk-wd">${w.toUpperCase()}</div>`));
+      const firstWd = (new Date(view.y, view.m - 1, 1).getDay() + 6) % 7;
+      for (let i = 0; i < firstWd; i++) grid.appendChild(document.createElement('div'));
+      const nDays = new Date(view.y, view.m, 0).getDate();
+      for (let d = 1; d <= nDays; d++) {
+        const iso = `${view.y}-${bkPad(view.m)}-${bkPad(d)}`;
+        const b = document.createElement('button');
+        b.className = 'bk-day';
+        b.textContent = d;
+        const info = month.days[iso];
+        if (iso < todayIso) b.classList.add('past');
+        else if (!info && !loading) b.classList.add('none');
+        if (iso === todayIso) b.classList.add('today');
+        if (iso === selDate) b.classList.add('on');
+        if (info) b.insertAdjacentHTML('beforeend', '<span class="dot"></span>');
+        if (info) b.onclick = () => selectDay(iso);
+        grid.appendChild(b);
+      }
+      cal.appendChild(grid);
+      if (loading) cal.insertAdjacentHTML('beforeend', '<div class="field-hint" style="text-align:center;margin-top:8px;">Загрузка…</div>');
+      else if (!Object.keys(month.days).length) cal.insertAdjacentHTML('beforeend', '<div class="field-hint" style="text-align:center;margin-top:10px;">В этом месяце свободного времени нет.</div>');
+    }
+
+    async function loadMonth() {
+      const seq = ++loadSeq;
+      month = { days: {}, off: [] };
+      drawCal(true);
+      try { month = await opts.loadMonth(view.y, view.m); } catch (err) { month = { days: {}, off: [] }; }
+      if (seq !== loadSeq) return;
+      const days = Object.keys(month.days || {}).sort();
+      // В текущем месяце окон нет — один раз сами листаем на следующий.
+      if (!days.length && !autoJumped && monthIdx(view) < monthIdx(first) + maxAhead) {
+        autoJumped = true;
+        view = view.m === 12 ? { y: view.y + 1, m: 1 } : { y: view.y, m: view.m + 1 };
+        return loadMonth();
+      }
+      autoJumped = true;
+      drawCal(false);
+      if (selDate && month.days[selDate]) selectDay(selDate);
+      else if (days.length) selectDay(days[0]);
+      else { dayCard.style.display = 'none'; btn.style.display = 'none'; }
+    }
+
+    async function selectDay(iso) {
+      selDate = iso; selSlot = null;
+      drawCal(false);
+      const [y, m, d] = iso.split('-').map(Number);
+      const wd = (new Date(y, m - 1, d).getDay() + 6) % 7;
+      dayCard.style.display = '';
+      dayCard.innerHTML = `<div class="bk-dayhead"><b>${BK_WEEKDAYS_FULL[wd]}, ${d} ${LR_MONTHS[m - 1]}</b><span>${bkHours((month.days[iso] || {}).minutes)}</span></div><div class="field-hint">Загрузка…</div>`;
+      btn.style.display = 'none';
+      const seq = loadSeq;
+      let slots = [];
+      try { slots = await opts.loadDay(iso); } catch (err) { slots = null; }
+      if (seq !== loadSeq || selDate !== iso) return;
+      const body = dayCard.lastElementChild;
+      if (!slots) { body.textContent = 'Не удалось загрузить время.'; return; }
+      if (!slots.length) { body.textContent = 'На этот день свободного времени уже нет.'; return; }
+      body.className = 'bk-slots';
+      body.textContent = '';
+      slots.forEach((s) => {
+        const b = document.createElement('button');
+        b.className = 'bk-slot';
+        b.innerHTML = `${s.start}<small>до ${s.end}</small>`;
+        b.onclick = () => {
+          selSlot = s;
+          body.querySelectorAll('.bk-slot').forEach((x) => x.classList.toggle('on', x === b));
+          btn.style.display = '';
+          btn.disabled = false;
+          btn.textContent = opts.confirmLabel ? opts.confirmLabel(iso, s) : 'Записаться';
+        };
+        body.appendChild(b);
+      });
+    }
+
+    btn.onclick = async () => {
+      if (!selDate || !selSlot) return;
+      btn.disabled = true;
+      const label = btn.textContent;
+      btn.textContent = 'Отправляю…';
+      try { await opts.onConfirm(selDate, selSlot); }
+      catch (err) {
+        btn.disabled = false; btn.textContent = label;
+        alert(err.message || 'Не получилось');
+        loadMonth();
+      }
+    };
+
+    loadMonth();
+    wrap.reload = loadMonth;
+    return wrap;
+  }
+
+  function bkWhen(iso, time) {
+    const [y, m, d] = iso.split('-').map(Number);
+    return `${LR_WEEKDAYS[(new Date(y, m - 1, d).getDay() + 6) % 7]}, ${d} ${LR_MONTHS[m - 1]} в ${time}`;
+  }
+
   function lrWhen(iso) {
     const [y, m, d] = iso.slice(0, 10).split('-').map(Number);
     const wd = (new Date(y, m - 1, d).getDay() + 6) % 7;
@@ -4659,7 +4801,7 @@
         title.textContent = 'Выберите новое время';
         body.appendChild(title);
         if (!slots.length) {
-          body.insertAdjacentHTML('beforeend', '<div class="form-card">Преподаватель пока не указал свободное время на ближайшие две недели. Напишите ему, чтобы договориться, или отметьте, что не сможете прийти.</div>');
+          body.insertAdjacentHTML('beforeend', '<div class="form-card">Преподаватель пока не указал свободное время на ближайший месяц. Напишите ему, чтобы договориться, или отметьте, что не сможете прийти.</div>');
           const c = document.createElement('button');
           c.className = 'submit-btn';
           c.style.cssText = 'margin-top:12px;background:var(--bg);color:var(--text);border:1px solid var(--border);';
@@ -4667,47 +4809,29 @@
           c.onclick = () => renderLessonResponse(lessonId, 'cancel');
           body.appendChild(c);
         } else {
+          // Время, которое предложил преподаватель, — тем же календарём, что и при записи.
           const byDay = {};
-          slots.forEach((s) => { (byDay[s.slice(0, 10)] = byDay[s.slice(0, 10)] || []).push(s); });
-          let chosen = null;
-          const saveBtn = document.createElement('button');
-          saveBtn.className = 'submit-btn';
-          saveBtn.style.marginTop = '14px';
-          saveBtn.textContent = 'Выберите время';
-          saveBtn.disabled = true;
-          Object.keys(byDay).sort().forEach((day) => {
-            const dc = document.createElement('div');
-            dc.className = 'form-card';
-            dc.style.marginBottom = '10px';
-            const [y, m, d] = day.split('-').map(Number);
-            dc.innerHTML = `<div style="font-weight:700;margin-bottom:8px;">${LR_WEEKDAYS[(new Date(y, m - 1, d).getDay() + 6) % 7]}, ${d} ${LR_MONTHS[m - 1]}</div>`;
-            const grid = document.createElement('div');
-            grid.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fill,minmax(72px,1fr));gap:8px;';
-            byDay[day].forEach((s) => {
-              const b = document.createElement('button');
-              b.className = 'lr-slot';
-              b.textContent = s.slice(11, 16);
-              b.onclick = () => {
-                chosen = s;
-                body.querySelectorAll('.lr-slot').forEach((x) => x.classList.toggle('on', x === b));
-                saveBtn.disabled = false;
-                saveBtn.textContent = 'Перенести на ' + lrWhen(s);
-              };
-              grid.appendChild(b);
-            });
-            dc.appendChild(grid);
-            body.appendChild(dc);
-          });
-          saveBtn.onclick = async () => {
-            if (!chosen) return;
-            saveBtn.disabled = true;
-            try {
+          slots.forEach((s) => { (byDay[s.slice(0, 10)] = byDay[s.slice(0, 10)] || []).push(s.slice(11, 16)); });
+          const dur = l.duration_minutes || 60;
+          const lastDay = Object.keys(byDay).sort().pop();
+          const nowD = new Date();
+          const ahead = lastDay ? (Number(lastDay.slice(0, 4)) * 12 + Number(lastDay.slice(5, 7))) - (nowD.getFullYear() * 12 + nowD.getMonth() + 1) : 0;
+          body.appendChild(buildSlotPicker({
+            monthsAhead: Math.max(0, ahead),
+            loadMonth: async (y, m) => {
+              const days = {};
+              Object.keys(byDay).filter((d) => d.startsWith(`${y}-${bkPad(m)}`)).forEach((d) => { days[d] = { count: byDay[d].length, minutes: byDay[d].length * dur }; });
+              return { days, off: [] };
+            },
+            loadDay: async (iso) => (byDay[iso] || []).map((hm) => ({ start: hm, end: bkAddMin(hm, dur) })),
+            confirmLabel: (iso, s) => `Перенести на ${bkWhen(iso, s.start)}`,
+            onConfirm: async (iso, s) => {
+              const chosen = `${iso} ${s.start}:00`;
               await apiPost(`/api/me/lessons/${lessonId}/reschedule`, { scheduled_at: chosen });
               body.innerHTML = `<div class="form-card">✅ Занятие перенесено на <b>${lrWhen(chosen)}</b>. Преподаватель получил уведомление.</div>`;
               addGoApp();
-            } catch (err) { saveBtn.disabled = false; alert(err.message || 'Не получилось'); renderLessonResponse(lessonId, 'reschedule'); }
-          };
-          body.appendChild(saveBtn);
+            },
+          }));
           const c = document.createElement('button');
           c.className = 'submit-btn';
           c.style.cssText = 'margin-top:10px;background:var(--bg);color:var(--text);border:1px solid var(--border);';
@@ -4730,65 +4854,31 @@
   // Запись на пробное занятие из каталога: дата → свободное окно →
   // заявка уходит преподавателю на подтверждение.
   function openTrialBooking(t) {
-    const pad2 = (n) => String(n).padStart(2, '0');
     const overlay = document.createElement('div');
     overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.35);display:flex;align-items:flex-end;justify-content:center;z-index:60;';
     const box = document.createElement('div');
-    box.style.cssText = 'background:var(--bg);border-radius:20px 20px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom,0px));width:100%;max-width:480px;max-height:85vh;overflow-y:auto;';
+    box.style.cssText = 'background:var(--page-bg);border-radius:20px 20px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom,0px));width:100%;max-width:480px;max-height:90vh;overflow-y:auto;';
     box.innerHTML = `<div style="font-size:18px;font-weight:700;margin-bottom:2px;">🎁 Пробное занятие</div>` +
-      `<div class="field-hint" style="margin-bottom:12px;">${escapeHtml(t.name)} · ${t.trial.duration} мин · ${Number(t.trial.price) ? t.trial.price + ' ' + t.trial.currency : 'бесплатно'}</div>`;
-    const dates = document.createElement('div');
-    dates.style.cssText = 'display:flex;gap:6px;overflow-x:auto;padding-bottom:6px;margin-bottom:12px;';
-    const slots = document.createElement('div');
-    slots.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px;min-height:40px;';
-    box.appendChild(dates);
-    box.appendChild(slots);
+      `<div class="field-hint" style="margin-bottom:12px;">${escapeHtml(t.name)} · ${t.trial.duration} мин · ${Number(t.trial.price) ? t.trial.price + ' ' + t.trial.currency : 'бесплатно'}. Выберите дату и время — заявка уйдёт на подтверждение.</div>`;
     const close = document.createElement('button');
     close.className = 'submit-btn';
-    close.style.cssText = 'margin-top:14px;background:var(--bg);color:var(--text);border:1px solid var(--border);';
+    close.style.cssText = 'margin-top:10px;background:var(--bg);color:var(--text);border:1px solid var(--border);';
     close.textContent = 'Закрыть';
     close.onclick = () => overlay.remove();
+    box.appendChild(buildSlotPicker({
+      loadMonth: (y, m) => apiGet(`/api/catalog/${t.tutor_id}/trial-month?month=${y}-${bkPad(m)}`),
+      loadDay: (iso) => apiGet(`/api/catalog/${t.tutor_id}/trial-slots?date=${iso}`),
+      confirmLabel: (iso, s) => `Записаться: ${bkWhen(iso, s.start)}`,
+      onConfirm: async (iso, s) => {
+        await apiPost('/api/catalog/trial-request', { tutor_id: t.tutor_id, subject_id: (t.subjects[0] || {}).subject_id, date: iso, time: s.start });
+        box.innerHTML = `<div style="font-size:18px;font-weight:700;margin-bottom:8px;">✅ Заявка отправлена</div><div class="field-hint" style="font-size:14px;">Пробное занятие у ${escapeHtml(t.name)}: ${bkWhen(iso, s.start)}. Преподаватель подтвердит время — придёт сообщение в боте.</div>`;
+        box.appendChild(close);
+      },
+    }));
     box.appendChild(close);
     overlay.appendChild(box);
     overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
     document.body.appendChild(overlay);
-
-    const today = new Date();
-    const btns = [];
-    const loadDay = async (dateStr, btn) => {
-      btns.forEach((b) => b.classList.toggle('on', b === btn));
-      slots.innerHTML = '<span class="field-hint">Загрузка…</span>';
-      try {
-        const list = await apiGet(`/api/catalog/${t.tutor_id}/trial-slots?date=${dateStr}`);
-        slots.innerHTML = list.length ? '' : '<span class="field-hint">В этот день свободного времени нет.</span>';
-        list.forEach((s) => {
-          const b = document.createElement('button');
-          b.className = 'lr-slot';
-          b.textContent = `${s.start} \u2013 ${s.end}`;
-          b.onclick = async () => {
-            b.disabled = true;
-            try {
-              await apiPost('/api/catalog/trial-request', { tutor_id: t.tutor_id, subject_id: (t.subjects[0] || {}).subject_id, date: dateStr, time: s.start });
-              box.innerHTML = `<div style="font-size:18px;font-weight:700;margin-bottom:8px;">✅ Заявка отправлена</div><div class="field-hint" style="font-size:14px;">Пробное занятие у ${escapeHtml(t.name)}: ${dateStr.split('-').reverse().join('.')} в ${s.start}. Преподаватель подтвердит время — придёт сообщение в боте.</div>`;
-              box.appendChild(close);
-            } catch (err) { b.disabled = false; alert(err.message || 'Не получилось'); }
-          };
-          slots.appendChild(b);
-        });
-      } catch (err) { slots.innerHTML = '<span class="field-hint">Не удалось загрузить время.</span>'; }
-    };
-    for (let i = 0; i < 14; i++) {
-      const d = new Date(today.getFullYear(), today.getMonth(), today.getDate() + i);
-      const ds = `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
-      const b = document.createElement('button');
-      b.className = 'lr-slot';
-      b.style.cssText = 'flex-shrink:0;min-width:54px;padding:6px;';
-      b.innerHTML = `<div style="font-size:10px;font-weight:600;opacity:0.8;">${d.toLocaleDateString('ru-RU', { weekday: 'short' })}</div><div>${d.getDate()}</div>`;
-      b.onclick = () => loadDay(ds, b);
-      dates.appendChild(b);
-      btns.push(b);
-      if (i === 1) setTimeout(() => loadDay(ds, b), 0);
-    }
   }
 
   // Полоса с логотипом для экранов без обычной шапки («Мои курсы»,
