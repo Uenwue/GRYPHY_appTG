@@ -1031,6 +1031,33 @@
   .nt-editor-row { display: flex; gap: 8px; }
   .nt-btn { flex: 1; font-family: inherit; font-size: 14px; font-weight: 700; padding: 10px; border-radius: 12px; border: 1px solid var(--border); background: var(--bg); color: var(--text); cursor: pointer; }
   .nt-btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .nt-pic-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 14px; }
+  .nt-pic img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 12px; display: block; background: var(--bg-soft, rgba(0,0,0,0.04)); }
+  .nt-fc-count { text-align: center; font-size: 12.5px; font-weight: 700; color: var(--text-soft); margin-bottom: 8px; }
+  .nt-fc { display: block; width: 100%; height: 190px; perspective: 900px; border: none; background: none; padding: 0; cursor: pointer; font-family: inherit; }
+  .nt-fc-inner { position: relative; width: 100%; height: 100%; transition: transform 0.45s ease; transform-style: preserve-3d; }
+  .nt-fc.flipped .nt-fc-inner { transform: rotateY(180deg); }
+  .nt-fc-face { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; text-align: center; padding: 16px; border-radius: 18px; border: 2px solid var(--border); background: var(--bg); color: var(--text); font-size: 20px; font-weight: 700; backface-visibility: hidden; -webkit-backface-visibility: hidden; box-sizing: border-box; }
+  .nt-fc-face.back { transform: rotateY(180deg); background: var(--blue-tint); border-color: var(--accent); color: var(--accent-dark); }
+  .nt-fc-tip { text-align: center; font-size: 12px; color: var(--text-soft); margin: 8px 0 12px; }
+  .nt-fc-done { text-align: center; font-size: 16px; padding: 18px 0; }
+  .nt-ws { display: grid; gap: 3px; margin-bottom: 12px; user-select: none; }
+  .nt-ws-cell { aspect-ratio: 1 / 1; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--text); font-family: inherit; font-size: clamp(11px, 3.6vw, 16px); font-weight: 700; padding: 0; cursor: pointer; }
+  .nt-ws-cell.start { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .nt-ws-cell.found { background: rgba(88, 204, 2, 0.22); border-color: #58A700; color: #3E7F00; }
+  .nt-ws-cell.miss { background: rgba(255, 75, 75, 0.2); }
+  .nt-ws-words { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+  .nt-ws-word { font-size: 13px; font-weight: 700; padding: 3px 10px; border-radius: 20px; border: 1px solid var(--border); }
+  .nt-ws-word.found { text-decoration: line-through; color: #3E7F00; border-color: #58A700; background: rgba(88, 204, 2, 0.12); }
+  .nt-voice { display: flex; flex-direction: column; gap: 10px; align-items: stretch; margin-bottom: 14px; }
+  .nt-rec-dot { width: 14px; height: 14px; border-radius: 50%; background: #EA2B2B; margin: 0 auto; animation: nt-pulse 1s ease-in-out infinite; }
+  .nt-rec-time { text-align: center; font-size: 22px; font-weight: 800; font-variant-numeric: tabular-nums; }
+  @keyframes nt-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
+  .nt-file { text-align: center; font-size: 13px; font-weight: 700; color: var(--accent-dark); cursor: pointer; padding: 6px; }
+  .nt-media { margin-bottom: 14px; }
+  .nt-media iframe { width: 100%; aspect-ratio: 16 / 9; border: 0; border-radius: 12px; display: block; }
+  .nt-media audio { width: 100%; }
+  .nt-media a { font-weight: 700; color: var(--accent-dark); }
   .nt-slot.filled.ok, .nt-slot.ok { border-color: #58A700; border-style: solid; background: rgba(88, 204, 2, 0.14); color: #3E7F00; }
   .nt-slot.filled.bad, .nt-slot.bad { border-color: #EA2B2B; border-style: solid; background: rgba(255, 75, 75, 0.12); color: #C22020; text-decoration: line-through; }
   .type-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
@@ -1038,6 +1065,79 @@
   .type-grid button.active { border-color: var(--accent); background: var(--blue-tint); color: var(--accent-dark); }
   .type-grid button small { display: block; font-size: 16px; margin-bottom: 2px; }
 
+
+  /* --- Карточки (как в Quizlet) --- */
+  .dk-card { background: var(--bg); border: 1px solid var(--border); border-radius: 18px; padding: 14px 16px; margin-bottom: 10px; cursor: pointer; box-shadow: 0 2px 10px rgba(0,0,0,0.04); }
+  .dk-card-title { font-size: 16px; font-weight: 700; color: var(--text); }
+  .dk-card-sub { font-size: 12.5px; color: var(--text-soft); margin-top: 2px; }
+  .dk-bar { display: flex; height: 6px; border-radius: 6px; overflow: hidden; background: var(--border); margin-top: 10px; }
+  .dk-bar i { display: block; height: 100%; }
+  .dk-bar .l { background: #58CC02; } .dk-bar .m { background: #FFC800; }
+  .dk-section { font-size: 12px; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; color: var(--text-soft); margin: 16px 2px 8px; }
+  .dk-due { display: flex; align-items: center; gap: 12px; background: var(--accent); color: #fff; border: none; width: 100%; border-radius: 18px; padding: 14px 16px; font-family: inherit; text-align: left; cursor: pointer; margin-bottom: 6px; }
+  .dk-due b { font-size: 16px; display: block; } .dk-due span { font-size: 12.5px; opacity: 0.9; }
+  .dk-modes { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 12px 0; }
+  .dk-mode { background: var(--bg); border: 1px solid var(--border); border-radius: 16px; padding: 14px 12px; text-align: left; font-family: inherit; cursor: pointer; color: var(--text); }
+  .dk-mode b { display: block; font-size: 15px; margin-top: 4px; } .dk-mode small { display: block; font-size: 11.5px; color: var(--text-soft); margin-top: 2px; line-height: 1.3; }
+  .dk-mode .ic { font-size: 22px; }
+  .dk-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .dk-stat { background: var(--bg); border: 1px solid var(--border); border-radius: 14px; padding: 10px; text-align: center; }
+  .dk-stat b { display: block; font-size: 20px; } .dk-stat span { font-size: 11.5px; color: var(--text-soft); }
+  .dk-term-row { display: grid; grid-template-columns: 8px 1fr 1fr; gap: 10px; align-items: start; padding: 10px 2px; border-bottom: 1px solid var(--border); font-size: 14px; }
+  .dk-term-row .dot { width: 8px; height: 8px; border-radius: 50%; margin-top: 6px; background: var(--border); }
+  .dk-term-row .dot.m { background: #FFC800; } .dk-term-row .dot.l { background: #58CC02; }
+  .dk-term-row .t { font-weight: 700; } .dk-term-row .d { color: var(--text-soft); white-space: pre-line; }
+  .dk-toolbar { display: flex; gap: 8px; flex-wrap: wrap; margin: 6px 0 4px; }
+  .dk-chip { font-family: inherit; font-size: 12.5px; font-weight: 700; padding: 7px 12px; border-radius: 20px; border: 1px solid var(--border); background: var(--bg); color: var(--text); cursor: pointer; }
+  .dk-chip.on { background: var(--blue-tint); border-color: var(--accent); color: var(--accent-dark); }
+  .dk-progress { height: 6px; border-radius: 6px; background: var(--border); overflow: hidden; margin: 4px 0 14px; }
+  .dk-progress i { display: block; height: 100%; background: var(--accent); transition: width 0.3s ease; }
+  .dk-count { text-align: center; font-size: 12.5px; font-weight: 700; color: var(--text-soft); margin-bottom: 8px; }
+  .dk-flash { perspective: 1000px; height: 300px; margin-bottom: 14px; touch-action: pan-y; user-select: none; }
+  .dk-flash-inner { position: relative; width: 100%; height: 100%; transition: transform 0.5s ease; transform-style: preserve-3d; cursor: pointer; }
+  .dk-flash.flipped .dk-flash-inner { transform: rotateY(180deg); }
+  .dk-face { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; text-align: center; padding: 22px; box-sizing: border-box; border-radius: 22px; background: var(--bg); border: 1px solid var(--border); box-shadow: 0 8px 24px rgba(0,0,0,0.08); font-size: 24px; font-weight: 700; color: var(--text); backface-visibility: hidden; -webkit-backface-visibility: hidden; white-space: pre-line; word-break: break-word; }
+  .dk-face.back { transform: rotateY(180deg); background: var(--blue-tint); border-color: var(--accent); color: var(--accent-dark); }
+  .dk-face small { position: absolute; top: 12px; left: 0; right: 0; font-size: 11px; font-weight: 700; color: var(--text-soft); text-transform: uppercase; letter-spacing: 0.05em; }
+  .dk-flash.gone-right { animation: dk-right 0.3s ease forwards; } .dk-flash.gone-left { animation: dk-left 0.3s ease forwards; }
+  @keyframes dk-right { to { transform: translateX(120%) rotate(12deg); opacity: 0; } }
+  @keyframes dk-left { to { transform: translateX(-120%) rotate(-12deg); opacity: 0; } }
+  .dk-answer-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .dk-btn { display: block; width: 100%; font-family: inherit; font-size: 15px; font-weight: 700; padding: 13px; border-radius: 14px; border: 1px solid var(--border); background: var(--bg); color: var(--text); cursor: pointer; margin-top: 10px; }
+  .dk-btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .dk-btn.ghost { color: var(--accent-dark); }
+  .dk-btn.danger { color: var(--red-dark, #EA2B2B); }
+  .dk-btn.again { border-color: #F2A5A5; color: #C22020; margin-top: 0; } .dk-btn.know { border-color: #9BD66A; color: #3E7F00; margin-top: 0; }
+  .dk-tip { text-align: center; font-size: 12px; color: var(--text-soft); margin: -4px 0 12px; }
+  .dk-q { background: var(--bg); border: 1px solid var(--border); border-radius: 20px; padding: 22px 18px; font-size: 20px; font-weight: 700; text-align: center; margin-bottom: 14px; white-space: pre-line; word-break: break-word; }
+  .dk-q small { display: block; font-size: 11px; color: var(--text-soft); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px; font-weight: 700; }
+  .dk-opt { display: block; width: 100%; text-align: left; font-family: inherit; font-size: 15px; font-weight: 600; padding: 13px 14px; border-radius: 14px; border: 1px solid var(--border); background: var(--bg); color: var(--text); margin-bottom: 8px; cursor: pointer; white-space: pre-line; }
+  .dk-opt.ok { border-color: #58A700; background: rgba(88, 204, 2, 0.14); color: #3E7F00; }
+  .dk-opt.bad { border-color: #EA2B2B; background: rgba(255, 75, 75, 0.12); color: #C22020; }
+  .dk-input { width: 100%; box-sizing: border-box; font-family: inherit; font-size: 15px; padding: 12px 14px; border-radius: 14px; border: 1px solid var(--border); background: var(--bg); color: var(--text); margin-bottom: 8px; resize: none; }
+  .dk-input:focus { outline: none; border-color: var(--accent); }
+  .dk-feedback { border-radius: 14px; padding: 12px 14px; font-size: 14px; margin-bottom: 8px; }
+  .dk-feedback.ok { background: rgba(88, 204, 2, 0.14); color: #3E7F00; } .dk-feedback.bad { background: rgba(255, 75, 75, 0.12); color: #C22020; }
+  .dk-match { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .dk-tile { min-height: 84px; font-family: inherit; font-size: 13.5px; font-weight: 700; padding: 8px; border-radius: 14px; border: 1px solid var(--border); background: var(--bg); color: var(--text); cursor: pointer; word-break: break-word; transition: opacity 0.25s ease, transform 0.25s ease; }
+  .dk-tile.sel { border-color: var(--accent); background: var(--blue-tint); }
+  .dk-tile.bad { border-color: #EA2B2B; background: rgba(255, 75, 75, 0.12); animation: dk-shake 0.3s; }
+  .dk-tile.done { opacity: 0; transform: scale(0.85); pointer-events: none; }
+  @keyframes dk-shake { 25% { transform: translateX(-4px); } 75% { transform: translateX(4px); } }
+  .dk-timer { text-align: center; font-size: 22px; font-weight: 800; font-variant-numeric: tabular-nums; margin-bottom: 10px; }
+  .dk-done { text-align: center; padding: 18px 8px; }
+  .dk-done .big { font-size: 44px; } .dk-done b { display: block; font-size: 20px; margin: 6px 0; } .dk-done span { color: var(--text-soft); font-size: 14px; }
+  .dk-editor { background: var(--bg); border: 1px solid var(--border); border-radius: 18px; padding: 16px; }
+  .dk-label { display: block; font-size: 12.5px; font-weight: 700; color: var(--text-soft); margin: 4px 0 6px; }
+  .dk-list-head { display: flex; justify-content: space-between; align-items: center; font-size: 13px; font-weight: 800; margin: 12px 2px 8px; }
+  .dk-link { background: none; border: none; font-family: inherit; font-size: 13px; font-weight: 700; color: var(--accent-dark); cursor: pointer; padding: 0; }
+  .dk-import { margin-bottom: 10px; }
+  .dk-hint { font-size: 12.5px; color: var(--text-soft); margin-bottom: 8px; line-height: 1.4; }
+  .dk-row { display: grid; grid-template-columns: 22px 1fr 26px; gap: 6px; align-items: start; margin-bottom: 8px; }
+  .dk-row-num { font-size: 12px; font-weight: 800; color: var(--text-soft); padding-top: 12px; text-align: center; }
+  .dk-row-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .dk-row-fields .dk-cell { margin: 0; font-size: 14px; padding: 10px 12px; overflow: hidden; }
+  .dk-row-rm { background: none; border: none; color: var(--text-soft); font-size: 15px; cursor: pointer; padding-top: 10px; }
   .toast {
     position: fixed; left: 50%; bottom: calc(96px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%);
     background: var(--text); color: white; padding: 10px 18px; border-radius: 12px; max-width: calc(100% - 32px);
@@ -1372,8 +1472,12 @@
       icon: '<path d="M2 6.5C2 5.67 2.67 5 3.5 5H8L9.5 6.5H16.5C17.33 6.5 18 7.17 18 8V14.5C18 15.33 17.33 16 16.5 16H3.5C2.67 16 2 15.33 2 14.5V6.5Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>' },
     { level: 'sections', extra: { sectionsKind: 'homework' }, title: 'ДЗ', primary: true,
       icon: '<path d="M4 3.5C4 2.67 4.67 2 5.5 2H12L16 6V16.5C16 17.33 15.33 18 14.5 18H5.5C4.67 18 4 17.33 4 16.5V3.5Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M7 10H13M7 13H11" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>' },
+    { level: 'decks', title: 'Карточки',
+      icon: '<rect x="3" y="5" width="11" height="12" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M6.5 3H15C16.1 3 17 3.9 17 5V14" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>' },
     { level: 'tests', title: 'Тесты', primary: true,
       icon: '<path d="M6 3H14L14 17L10 14.5L6 17V3Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>' },
+    { level: 'reviews', title: 'Проверка ответов', navLabel: 'Проверка', standalone: true,
+      icon: '<path d="M4 3.5C4 2.67 4.67 2 5.5 2H14.5C15.33 2 16 2.67 16 3.5V16.5C16 17.33 15.33 18 14.5 18H5.5C4.67 18 4 17.33 4 16.5V3.5Z" stroke="currentColor" stroke-width="1.6"/><path d="M7 10L9.2 12.2L13.5 7.8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>' },
     { level: 'library', title: 'Библиотека заданий', navLabel: 'Библиотека', standalone: true,
       icon: '<path d="M3 3.5H6.5V16.5H3V3.5Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M8.5 3.5H12V16.5H8.5V3.5Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M13.5 4.6L16.8 3.8L18.4 15.5L15.1 16.3L13.5 4.6Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>' },
     { level: 'students', title: 'Ученики', primary: true,
@@ -1457,7 +1561,7 @@
   // преподавателей, которые они сами разрешили брать. Задания копируются в
   // выбранную тему (копия не зависит от оригинала).
   // =====================================================================
-  const TASK_TYPE_LABELS = { text: 'Текстовый ответ', multi: 'Несколько верных', single: 'Один верный', buttons: 'Один верный', gaps: 'Заполнить пропуски', dragwords: 'Перетащить слова', order: 'Составить предложение', scramble: 'Слово из букв', match: 'Сопоставление', correction: 'Исправить ошибки' };
+  const TASK_TYPE_LABELS = { text: 'Текстовый ответ', multi: 'Несколько верных', single: 'Один верный', buttons: 'Один верный', gaps: 'Заполнить пропуски', dragwords: 'Перетащить слова', order: 'Составить предложение', scramble: 'Слово из букв', match: 'Сопоставление', correction: 'Исправить ошибки', picmatch: 'Слова к картинкам', flashcards: 'Флеш-карточки', wordsearch: 'Филворд', open: 'Свободный ответ', voice: 'Голосовой ответ' };
   const taskTypeLabel = (t) => TASK_TYPE_LABELS[t] || (t ? t : 'Один верный');
   const libState = { scope: 'mine', q: '', type: '', tag: '', subjectId: '', selecting: false, selected: new Map() };
 
@@ -1819,7 +1923,7 @@
   // Всё управляется касаниями: нажали слово — оно встало в пропуск,
   // нажали ещё раз — вернулось обратно.
   // =====================================================================
-  const NT_TYPES = ['gaps', 'dragwords', 'order', 'scramble', 'match', 'correction'];
+  const NT_TYPES = ['gaps', 'dragwords', 'order', 'scramble', 'match', 'correction', 'flashcards', 'wordsearch', 'picmatch', 'open', 'voice'];
   const NT_HINTS = {
     gaps: 'Впишите пропущенные слова.',
     dragwords: 'Нажмите на слово, чтобы поставить его в ближайший пропуск. Нажмите на пропуск, чтобы вернуть слово.',
@@ -1827,6 +1931,11 @@
     scramble: 'Нажимайте на буквы по порядку, чтобы составить слово.',
     match: 'Для каждого слова слева выберите пару: нажмите на строку, затем на вариант снизу.',
     correction: 'Найдите ошибки: нажмите на неверное слово и впишите правильный вариант.',
+    picmatch: 'Подпишите картинки: нажмите на слово, и оно встанет под ближайшую картинку.',
+    flashcards: 'Вспомните перевод, переверните карточку и честно отметьте, знали ли вы его.',
+    wordsearch: 'Найдите слова: нажмите на первую букву слова, затем на последнюю.',
+    open: '',
+    voice: '',
   };
   function ntEsc(s) {
     return String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -2065,13 +2174,514 @@
         showResult: () => { locked = true; editor.style.display = 'none'; },
       };
     }
+    else if (type === 'picmatch') {
+      const imgs = view.images || [];
+      const grid = document.createElement('div');
+      grid.className = 'nt-pic-grid';
+      el.appendChild(grid);
+      const sb = slotsAndBank(imgs.length, view.words || [], (slot, s) => {
+        const cell = document.createElement('div');
+        cell.className = 'nt-pic';
+        const img = document.createElement('img');
+        img.src = API_BASE_URL + '/api/image/' + encodeURIComponent(imgs[s]);
+        img.alt = '';
+        img.loading = 'lazy';
+        cell.appendChild(img);
+        slot.style.width = '100%';
+        slot.style.margin = '6px 0 0';
+        cell.appendChild(slot);
+        grid.appendChild(cell);
+      });
+      el.appendChild(sb.bank);
+      api = { el, getAnswer: sb.values, isComplete: sb.complete, showResult: (d, c) => { sb.lock(); sb.mark(d, c); } };
+    } else if (type === 'flashcards') {
+      const cards = view.cards || [];
+      let idx = 0, known = 0, flipped = false, done = false;
+      const box = document.createElement('div');
+      el.appendChild(box);
+      const draw = () => {
+        box.innerHTML = '';
+        if (done || idx >= cards.length) {
+          done = true;
+          box.innerHTML = `<div class="nt-fc-done">Готово! Знаю: <b>${known}</b> из ${cards.length}</div>`;
+          const again = document.createElement('button');
+          again.type = 'button'; again.className = 'nt-btn'; again.textContent = '↻ Пройти ещё раз';
+          again.onclick = () => { idx = 0; known = 0; done = false; flipped = false; draw(); changed(); };
+          box.appendChild(again);
+          return;
+        }
+        box.insertAdjacentHTML('beforeend', `<div class="nt-fc-count">${idx + 1} / ${cards.length}</div>`);
+        const card = document.createElement('button');
+        card.type = 'button';
+        card.className = 'nt-fc' + (flipped ? ' flipped' : '');
+        card.innerHTML = `<div class="nt-fc-inner"><div class="nt-fc-face">${ntEsc(cards[idx][0])}</div><div class="nt-fc-face back">${ntEsc(cards[idx][1])}</div></div>`;
+        card.onclick = () => { flipped = !flipped; card.classList.toggle('flipped', flipped); };
+        box.appendChild(card);
+        box.insertAdjacentHTML('beforeend', '<div class="nt-fc-tip">Нажмите на карточку, чтобы перевернуть</div>');
+        const row = document.createElement('div');
+        row.className = 'nt-editor-row';
+        const no = document.createElement('button');
+        no.type = 'button'; no.className = 'nt-btn'; no.textContent = '🤔 Не знаю';
+        const yes = document.createElement('button');
+        yes.type = 'button'; yes.className = 'nt-btn primary'; yes.textContent = '✅ Знаю';
+        no.onclick = () => { idx++; flipped = false; draw(); changed(); };
+        yes.onclick = () => { known++; idx++; flipped = false; draw(); changed(); };
+        row.appendChild(no); row.appendChild(yes);
+        box.appendChild(row);
+      };
+      draw();
+      api = {
+        el,
+        getAnswer: () => ({ known }),
+        isComplete: () => done,
+        showResult: () => { const b = box.querySelector('.nt-btn'); if (b) b.remove(); },
+      };
+    } else if (type === 'wordsearch') {
+      const rows = view.grid || [];
+      const words = view.words || [];
+      const n = rows.length;
+      const found = new Set();
+      const foundCells = new Set();
+      let start = null, locked = false;
+      const list = document.createElement('div');
+      list.className = 'nt-ws-words';
+      const table = document.createElement('div');
+      table.className = 'nt-ws';
+      table.style.gridTemplateColumns = `repeat(${n}, 1fr)`;
+      el.appendChild(table);
+      el.appendChild(list);
+      const cellEls = [];
+      rows.forEach((row, r) => [...row].forEach((ch, c) => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'nt-ws-cell';
+        b.textContent = ch;
+        b.onclick = () => tap(r, c);
+        table.appendChild(b);
+        cellEls.push(b);
+      }));
+      const cellEl = (r, c) => cellEls[r * n + c];
+      const paintList = () => {
+        list.innerHTML = words.map((w) => `<span class="nt-ws-word${found.has(w) ? ' found' : ''}">${ntEsc(w)}</span>`).join('');
+      };
+      function tap(r, c) {
+        if (locked) return;
+        if (!start) { start = [r, c]; cellEl(r, c).classList.add('start'); return; }
+        const [r0, c0] = start;
+        cellEl(r0, c0).classList.remove('start');
+        start = null;
+        const dr = Math.sign(r - r0), dc = Math.sign(c - c0);
+        const len = Math.max(Math.abs(r - r0), Math.abs(c - c0)) + 1;
+        const straight = (r0 === r || c0 === c || Math.abs(r - r0) === Math.abs(c - c0)) && len > 1;
+        if (!straight) return;
+        const cells = [];
+        for (let i = 0; i < len; i++) cells.push([r0 + dr * i, c0 + dc * i]);
+        const str = cells.map(([a, b]) => rows[a][b]).join('');
+        const rev = [...str].reverse().join('');
+        const hit = words.find((w) => !found.has(w) && (w === str || w === rev));
+        if (hit) {
+          found.add(hit);
+          cells.forEach(([a, b]) => { foundCells.add(a + ':' + b); cellEl(a, b).classList.add('found'); });
+          paintList(); changed();
+        } else {
+          cells.forEach(([a, b]) => { const e = cellEl(a, b); e.classList.add('miss'); setTimeout(() => e.classList.remove('miss'), 450); });
+        }
+      }
+      paintList();
+      api = {
+        el,
+        getAnswer: () => [...found],
+        isComplete: () => found.size > 0,
+        showResult: () => { locked = true; },
+      };
+    } else if (type === 'open') {
+      const minWords = view.min_words || 0;
+      const ta = document.createElement('textarea');
+      ta.className = 'nt-input wide';
+      ta.rows = 6;
+      ta.placeholder = 'Ваш ответ…';
+      ta.style.resize = 'vertical';
+      const cnt = document.createElement('div');
+      cnt.className = 'nt-hint';
+      const words = () => (ta.value.trim() ? ta.value.trim().split(/\s+/).length : 0);
+      const paint = () => { cnt.textContent = `Слов: ${words()}` + (minWords ? ` (нужно не меньше ${minWords})` : ''); };
+      ta.oninput = () => { paint(); changed(); };
+      paint();
+      el.appendChild(ta);
+      el.appendChild(cnt);
+      hint.textContent = 'Напишите развёрнутый ответ — его проверит преподаватель.';
+      api = {
+        el,
+        getAnswer: () => ta.value.trim(),
+        isComplete: () => words() > 0 && words() >= minWords,
+        showResult: () => { ta.disabled = true; },
+      };
+    } else if (type === 'voice') {
+      const maxSec = view.max_seconds || 120;
+      hint.textContent = `Запишите голосовой ответ (до ${Math.round(maxSec / 60 * 10) / 10} мин) — его послушает преподаватель.`;
+      const box = document.createElement('div');
+      box.className = 'nt-voice';
+      el.appendChild(box);
+      let blob = null, rec = null, timer = null, secs = 0, stream = null;
+      const canRecord = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia && window.MediaRecorder);
+      const stopStream = () => { if (stream) stream.getTracks().forEach((t) => t.stop()); stream = null; };
+      const draw = (state) => {
+        box.innerHTML = '';
+        if (state === 'rec') {
+          box.innerHTML = `<div class="nt-rec-dot"></div><div class="nt-rec-time">${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}</div>`;
+          const stop = document.createElement('button');
+          stop.type = 'button'; stop.className = 'nt-btn primary'; stop.textContent = '⏹ Остановить';
+          stop.onclick = () => rec && rec.state !== 'inactive' && rec.stop();
+          box.appendChild(stop);
+          return;
+        }
+        if (blob) {
+          const au = document.createElement('audio');
+          au.controls = true;
+          au.src = URL.createObjectURL(blob);
+          au.style.width = '100%';
+          box.appendChild(au);
+        }
+        if (canRecord) {
+          const b = document.createElement('button');
+          b.type = 'button'; b.className = 'nt-btn' + (blob ? '' : ' primary');
+          b.textContent = blob ? '🎙 Перезаписать' : '🎙 Начать запись';
+          b.onclick = startRec;
+          box.appendChild(b);
+        }
+        // Запасной путь: выбрать или записать файл системным диктофоном.
+        const fileLbl = document.createElement('label');
+        fileLbl.className = 'nt-file';
+        fileLbl.textContent = canRecord ? 'или загрузить аудиофайл' : '🎙 Записать или выбрать аудио';
+        const fi = document.createElement('input');
+        fi.type = 'file'; fi.accept = 'audio/*'; fi.setAttribute('capture', '');
+        fi.style.display = 'none';
+        fi.onchange = () => { if (fi.files[0]) { blob = fi.files[0]; draw(); changed(); } };
+        fileLbl.appendChild(fi);
+        box.appendChild(fileLbl);
+      };
+      async function startRec() {
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        } catch (err) {
+          alert('Нет доступа к микрофону. Разрешите его в настройках или загрузите аудиофайл.');
+          return;
+        }
+        const chunks = [];
+        rec = new MediaRecorder(stream);
+        rec.ondataavailable = (e) => { if (e.data && e.data.size) chunks.push(e.data); };
+        rec.onstop = () => {
+          clearInterval(timer);
+          stopStream();
+          blob = new Blob(chunks, { type: rec.mimeType || 'audio/webm' });
+          draw(); changed();
+        };
+        secs = 0;
+        rec.start();
+        draw('rec');
+        timer = setInterval(() => {
+          secs++;
+          const t = box.querySelector('.nt-rec-time');
+          if (t) t.textContent = `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}`;
+          if (secs >= maxSec && rec.state !== 'inactive') rec.stop();
+        }, 1000);
+      }
+      draw();
+      api = {
+        el,
+        getAnswer: () => blob,
+        isComplete: () => !!blob,
+        showResult: () => { box.querySelectorAll('button, label').forEach((x) => x.remove()); },
+      };
+    }
     return api;
+  }
+
+  // Аудио или видео к заданию (показывается над заданием).
+  function ntMediaEl(media) {
+    if (!media) return null;
+    const box = document.createElement('div');
+    box.className = 'nt-media';
+    if (media.kind === 'youtube' && media.video_id) {
+      box.innerHTML = `<iframe src="https://www.youtube-nocookie.com/embed/${encodeURIComponent(media.video_id)}" allow="encrypted-media; picture-in-picture" allowfullscreen></iframe>`;
+    } else if (media.kind === 'audio' && media.file_id) {
+      box.innerHTML = `<audio controls preload="none" src="${API_BASE_URL}/api/media/${encodeURIComponent(media.file_id)}"></audio>`;
+    } else if (media.url) {
+      box.innerHTML = `<a href="${ntEsc(media.url)}" target="_blank" rel="noopener">▶️ Открыть материал к заданию</a>`;
+    } else return null;
+    return box;
   }
 
   // Правильный ответ нового вида заданий — текстом для блока «Правильный ответ».
   function ntCorrectText(type, correct) {
     if (Array.isArray(correct)) return correct.join(type === 'correction' ? '; ' : ', ');
     return String(correct == null ? '' : correct);
+  }
+
+
+  // =====================================================================
+  // ПРОВЕРКА ОТВЕТОВ — свободные и голосовые ответы учеников
+  // =====================================================================
+  let reviewsTab = 'pending';
+  async function renderReviews(isBack) {
+    showLoadingMenu();
+    const data = await apiGet('/api/teacher/reviews?status=' + reviewsTab);
+    swapScreen((screen) => {
+      const seg = document.createElement('div');
+      seg.className = 'sched-seg';
+      seg.style.marginBottom = '12px';
+      [['pending', `Ждут проверки${data.pending ? ' · ' + data.pending : ''}`], ['checked', 'Проверенные']].forEach(([k, l]) => {
+        const b = document.createElement('button');
+        b.className = reviewsTab === k ? 'on' : '';
+        b.textContent = l;
+        b.onclick = () => { if (reviewsTab !== k) { reviewsTab = k; renderReviews(false); } };
+        seg.appendChild(b);
+      });
+      screen.appendChild(seg);
+      if (!data.items.length) {
+        screen.insertAdjacentHTML('beforeend', `<p class="field-hint" style="text-align:center;margin:24px 0;">${reviewsTab === 'pending' ? 'Все ответы проверены 🎉' : 'Пока ничего не проверено.'}</p>`);
+        return;
+      }
+      data.items.forEach((r) => {
+        const card = settingsCard('');
+        const when = (r.created_at || '').slice(0, 16).replace(/^(\d{4})-(\d\d)-(\d\d)/, '$3.$2.$1');
+        card.insertAdjacentHTML('beforeend',
+          `<div style="display:flex;justify-content:space-between;gap:8px;align-items:baseline;"><b style="font-size:15px;">${escapeHtml(r.student)}</b><span class="set-hint" style="margin:0;white-space:nowrap;">${when}</span></div>` +
+          `<div class="set-hint" style="margin:2px 0 8px;">${escapeHtml(r.subject || '')} → ${escapeHtml(r.topic || '')}</div>` +
+          `<div style="font-size:13.5px;font-weight:700;margin-bottom:8px;">${escapeHtml(r.question || '')}</div>`);
+        if (r.audio_file_id) {
+          card.insertAdjacentHTML('beforeend', `<audio controls preload="none" style="width:100%;margin-bottom:8px;" src="${API_BASE_URL}/api/media/${encodeURIComponent(r.audio_file_id)}"></audio>`);
+        }
+        if (r.answer) {
+          card.insertAdjacentHTML('beforeend', `<div style="white-space:pre-line;font-size:14px;line-height:1.45;background:var(--bg-soft);border-radius:12px;padding:10px 12px;margin-bottom:10px;">${escapeHtml(r.answer)}</div>`);
+        }
+        if (r.status === 'checked') {
+          card.insertAdjacentHTML('beforeend', `<div style="font-size:13.5px;font-weight:700;color:${r.verdict === 'correct' ? '#3E7F00' : 'var(--red-dark)'};">${r.verdict === 'correct' ? '✅ Верно' : '📝 На доработку'}</div>` +
+            (r.comment ? `<div class="set-hint" style="margin-top:4px;">💬 ${escapeHtml(r.comment)}</div>` : ''));
+        } else {
+          const ta = document.createElement('textarea');
+          ta.className = 'field-input';
+          ta.rows = 2;
+          ta.placeholder = 'Комментарий ученику (необязательно)';
+          ta.style.marginBottom = '8px';
+          card.appendChild(ta);
+          const row = document.createElement('div');
+          row.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:8px;';
+          const send = async (verdict, btn) => {
+            btn.disabled = true;
+            try {
+              await apiSend('POST', `/api/teacher/reviews/${r.id}`, { verdict, comment: ta.value.trim() });
+              showToast(verdict === 'correct' ? 'Засчитано — ученик получит сообщение' : 'Отправлено на доработку');
+              card.style.transition = 'opacity 0.25s ease';
+              card.style.opacity = '0';
+              setTimeout(() => card.remove(), 260);
+            } catch (err) { btn.disabled = false; showToast('Не получилось: ' + err.message); }
+          };
+          const bad = document.createElement('button');
+          bad.className = 'set-btn';
+          bad.textContent = '📝 На доработку';
+          bad.onclick = () => send('wrong', bad);
+          const good = document.createElement('button');
+          good.className = 'set-btn primary';
+          good.textContent = '✅ Верно';
+          good.onclick = () => send('correct', good);
+          row.appendChild(bad); row.appendChild(good);
+          card.appendChild(row);
+        }
+        screen.appendChild(card);
+      });
+    }, isBack);
+  }
+
+
+  // ===== Редактор колоды карточек (общий для ученика и преподавателя) =====
+  // opts: { deck: {title, description, cards}|null, onSave(data) -> Promise, onDelete?() }
+  function dkSplitLine(line) {
+    const seps = ['\t', ' — ', ' – ', ' - ', ' = ', ';', ' : ', ':', '—', '–', '-', '='];
+    for (const s of seps) {
+      const i = line.indexOf(s);
+      if (i > 0) return [line.slice(0, i).trim(), line.slice(i + s.length).trim()];
+    }
+    return null;
+  }
+  function buildDeckEditor(opts) {
+    const deck = opts.deck || { title: '', description: '', cards: [] };
+    const cards = (deck.cards || []).map((c) => ({ id: c.id, term: c.term, definition: c.definition }));
+    if (!cards.length) cards.push({ term: '', definition: '' }, { term: '', definition: '' });
+    const wrap = document.createElement('div');
+    wrap.className = 'dk-editor';
+    wrap.innerHTML = '<label class="dk-label">Название колоды</label>';
+    const title = document.createElement('input');
+    title.className = 'dk-input';
+    title.placeholder = 'Например: Неправильные глаголы';
+    title.value = deck.title || '';
+    wrap.appendChild(title);
+    wrap.insertAdjacentHTML('beforeend', '<label class="dk-label">Описание (необязательно)</label>');
+    const desc = document.createElement('input');
+    desc.className = 'dk-input';
+    desc.placeholder = 'О чём эта колода';
+    desc.value = deck.description || '';
+    wrap.appendChild(desc);
+
+    const listHead = document.createElement('div');
+    listHead.className = 'dk-list-head';
+    wrap.appendChild(listHead);
+    const list = document.createElement('div');
+    wrap.appendChild(list);
+    const paintHead = () => { listHead.innerHTML = `<span>Карточки · ${cards.filter((c) => c.term.trim() && c.definition.trim()).length}</span>`; listHead.appendChild(importBtn); };
+    const draw = () => {
+      list.innerHTML = '';
+      cards.forEach((c, i) => {
+        const row = document.createElement('div');
+        row.className = 'dk-row';
+        row.innerHTML = `<div class="dk-row-num">${i + 1}</div>`;
+        const fields = document.createElement('div');
+        fields.className = 'dk-row-fields';
+        [['term', 'Термин (слово)'], ['definition', 'Определение (перевод)']].forEach(([k, ph]) => {
+          const inp = document.createElement('textarea');
+          inp.className = 'dk-input dk-cell';
+          inp.rows = 1;
+          inp.placeholder = ph;
+          inp.value = c[k] || '';
+          inp.oninput = () => { c[k] = inp.value; inp.style.height = 'auto'; inp.style.height = inp.scrollHeight + 'px'; paintHead(); };
+          fields.appendChild(inp);
+          setTimeout(() => { inp.style.height = 'auto'; inp.style.height = inp.scrollHeight + 'px'; }, 0);
+        });
+        row.appendChild(fields);
+        const rm = document.createElement('button');
+        rm.type = 'button';
+        rm.className = 'dk-row-rm';
+        rm.textContent = '✕';
+        rm.onclick = () => { cards.splice(i, 1); draw(); paintHead(); };
+        row.appendChild(rm);
+        list.appendChild(row);
+      });
+    };
+    const importBtn = document.createElement('button');
+    importBtn.type = 'button';
+    importBtn.className = 'dk-link';
+    importBtn.textContent = '📥 Вставить списком';
+    const importBox = document.createElement('div');
+    importBox.className = 'dk-import';
+    importBox.style.display = 'none';
+    importBox.innerHTML = '<div class="dk-hint">Каждая карточка с новой строки: слово и перевод через тире, двоеточие, знак = или табуляцию (можно скопировать из таблицы или Quizlet).<br>Например: <b>go — идти</b></div>';
+    const importTa = document.createElement('textarea');
+    importTa.className = 'dk-input';
+    importTa.rows = 6;
+    importTa.placeholder = 'apple — яблоко\nbanana — банан';
+    importBox.appendChild(importTa);
+    const importOk = document.createElement('button');
+    importOk.type = 'button';
+    importOk.className = 'dk-btn';
+    importOk.textContent = 'Добавить карточки';
+    importOk.onclick = () => {
+      const added = importTa.value.split('\n').map((l) => l.trim()).filter(Boolean).map(dkSplitLine).filter(Boolean)
+        .filter(([a, b]) => a && b).map(([a, b]) => ({ term: a, definition: b }));
+      if (!added.length) { alert('Не нашлось строк вида «слово — перевод».'); return; }
+      for (let k = cards.length - 1; k >= 0; k--) if (!cards[k].term.trim() && !cards[k].definition.trim()) cards.splice(k, 1);
+      cards.push(...added);
+      importTa.value = '';
+      importBox.style.display = 'none';
+      draw(); paintHead();
+    };
+    importBox.appendChild(importOk);
+    importBtn.onclick = () => { importBox.style.display = importBox.style.display === 'none' ? '' : 'none'; };
+    wrap.insertBefore(importBox, list);
+    draw(); paintHead();
+
+    const add = document.createElement('button');
+    add.type = 'button';
+    add.className = 'dk-btn ghost';
+    add.textContent = '+ Карточка';
+    add.onclick = () => { cards.push({ term: '', definition: '' }); draw(); paintHead(); const last = list.querySelector('.dk-row:last-child textarea'); if (last) last.focus(); };
+    wrap.appendChild(add);
+
+    const save = document.createElement('button');
+    save.type = 'button';
+    save.className = 'dk-btn primary';
+    save.textContent = 'Сохранить колоду';
+    save.onclick = async () => {
+      const t = title.value.trim();
+      if (!t) { alert('Введите название колоды'); return; }
+      const clean = cards.filter((c) => c.term.trim() && c.definition.trim()).map((c) => ({ id: c.id, term: c.term.trim(), definition: c.definition.trim() }));
+      if (!clean.length) { alert('Добавьте хотя бы одну карточку'); return; }
+      save.disabled = true;
+      try { await opts.onSave({ title: t, description: desc.value.trim(), cards: clean }); }
+      catch (err) { alert('Не получилось сохранить: ' + err.message); }
+      save.disabled = false;
+    };
+    wrap.appendChild(save);
+    if (opts.onDelete) {
+      const del = document.createElement('button');
+      del.type = 'button';
+      del.className = 'dk-btn danger';
+      del.textContent = '🗑 Удалить колоду';
+      del.onclick = () => opts.onDelete();
+      wrap.appendChild(del);
+    }
+    return wrap;
+  }
+
+  // =====================================================================
+  // КАРТОЧКИ КУРСА (как в Quizlet): колоды, которые видят все ученики курса.
+  // =====================================================================
+  async function renderTeacherDecks(isBack) {
+    if (!currentSubjectId) { goCoursesList(); return; }
+    showLoadingMenu();
+    const decks = await apiGet(`/api/teacher/subjects/${currentSubjectId}/decks`);
+    swapScreen((screen) => {
+      screen.insertAdjacentHTML('beforeend', '<div class="set-hint" style="margin:0 2px 12px;">Колоды карточек для учеников курса: слова, даты, формулы. Ученики учат их в режимах «Карточки», «Заучивание», «Письмо» и «Подбор», а программа сама напоминает повторить (интервальное повторение). Ученики могут делать и свои колоды.</div>');
+      const add = document.createElement('button');
+      add.className = 'set-btn primary';
+      add.style.cssText = 'width:100%;margin-bottom:12px;';
+      add.textContent = '+ Новая колода';
+      add.onclick = () => { stack.push({ level: 'deck_edit', deckId: null, title: 'Новая колода' }); renderCrumbs(); render(false); };
+      screen.appendChild(add);
+      if (!decks.length) screen.insertAdjacentHTML('beforeend', '<p class="field-hint" style="text-align:center;margin:18px 0;">Пока нет ни одной колоды.</p>');
+      decks.forEach((d) => {
+        const c = document.createElement('div');
+        c.className = 'dk-card';
+        if (d.is_hidden) c.style.opacity = '0.6';
+        c.style.display = 'flex';
+        c.style.alignItems = 'center';
+        c.style.gap = '10px';
+        c.innerHTML = `<div style="flex:1;min-width:0;"><div class="dk-card-title">${escapeHtml(d.title)}</div><div class="dk-card-sub">${d.count} ${dashPlural(d.count, 'карточка', 'карточки', 'карточек')}${d.is_hidden ? ' · скрыта от учеников' : ''}</div></div>`;
+        const more = document.createElement('button');
+        more.className = 'course-more';
+        more.textContent = '⋯';
+        more.onclick = (e) => {
+          e.stopPropagation();
+          scMenu([
+            { label: '✏️ Изменить', onClick: () => { stack.push({ level: 'deck_edit', deckId: d.id, title: d.title }); renderCrumbs(); render(false); } },
+            { label: d.is_hidden ? '👁 Показать ученикам' : '🙈 Скрыть от учеников', onClick: async () => { await apiSend('PATCH', `/api/decks/${d.id}`, { is_hidden: !d.is_hidden }); renderTeacherDecks(false); } },
+            { label: '🗑 Удалить', danger: true, onClick: () => confirmDelete(`Удалить колоду «${escapeHtml(d.title)}»? Прогресс учеников по ней тоже удалится.`, async () => { await apiSend('DELETE', `/api/decks/${d.id}`); renderTeacherDecks(false); }) },
+          ]);
+        };
+        c.appendChild(more);
+        c.onclick = () => { stack.push({ level: 'deck_edit', deckId: d.id, title: d.title }); renderCrumbs(); render(false); };
+        screen.appendChild(c);
+      });
+    }, isBack);
+  }
+
+  async function renderTeacherDeckEdit(deckId, isBack) {
+    showLoadingMenu();
+    const deck = deckId ? await apiGet(`/api/decks/${deckId}`) : null;
+    swapScreen((screen) => {
+      screen.appendChild(buildDeckEditor({
+        deck,
+        onSave: async (data) => {
+          if (deckId) await apiSend('PATCH', `/api/decks/${deckId}`, data);
+          else await apiSend('POST', `/api/teacher/subjects/${currentSubjectId}/decks`, data);
+          showToast('Колода сохранена');
+          stack.pop(); renderCrumbs(); render(true);
+        },
+        onDelete: deckId ? () => confirmDelete('Удалить колоду? Прогресс учеников по ней тоже удалится.', async () => {
+          await apiSend('DELETE', `/api/decks/${deckId}`);
+          stack.pop(); renderCrumbs(); render(true);
+        }) : null,
+      }));
+    }, isBack);
   }
 
   // Цвета плашки курса (если нет фото-обложки).
@@ -3815,6 +4425,21 @@
     }
     if (current.level === 'courses_list') {
       try { await renderCoursesList(isBack); }
+      catch (err) { showErrorMsg(err, isBack); }
+      return;
+    }
+    if (current.level === 'decks') {
+      try { await renderTeacherDecks(isBack); }
+      catch (err) { showErrorMsg(err, isBack); }
+      return;
+    }
+    if (current.level === 'deck_edit') {
+      try { await renderTeacherDeckEdit(current.deckId, isBack); }
+      catch (err) { showErrorMsg(err, isBack); }
+      return;
+    }
+    if (current.level === 'reviews') {
+      try { await renderReviews(isBack); }
       catch (err) { showErrorMsg(err, isBack); }
       return;
     }
@@ -10469,6 +11094,8 @@
         ['text', '✍️', 'Текстовый ответ'], ['buttons', '🔘', 'Один верный'], ['multi', '☑️', 'Несколько верных'],
         ['gaps', '⌨️', 'Заполнить пропуски'], ['dragwords', '🧩', 'Перетащить слова'], ['match', '🔗', 'Сопоставление'],
         ['order', '🔀', 'Составить предложение'], ['scramble', '🔠', 'Слово из букв'], ['correction', '📝', 'Исправить ошибки'],
+        ['picmatch', '🖼', 'Слова к картинкам'], ['flashcards', '🎴', 'Флеш-карточки'], ['wordsearch', '🔍', 'Филворд'],
+        ['open', '📄', 'Свободный ответ'], ['voice', '🎙', 'Голосовой ответ'],
       ];
       typeOptions.forEach(([val, icon, label]) => {
         const b = document.createElement('button');
@@ -10632,6 +11259,56 @@
         }
       }
 
+      // Аудио или видео к заданию (для любого вида): ссылка YouTube или аудиофайл.
+      let taskMedia = existing && existing.media ? Object.assign({}, existing.media) : null;
+      const mediaField = document.createElement('div');
+      mediaField.className = 'field';
+      card.appendChild(mediaField);
+      const drawMedia = () => {
+        mediaField.innerHTML = '<label class="field-label">Аудио или видео (необязательно)</label>';
+        if (taskMedia) {
+          const row = document.createElement('div');
+          row.style.cssText = 'display:flex;align-items:center;gap:8px;';
+          const label = taskMedia.kind === 'audio' ? '🎧 ' + (taskMedia.name || 'аудиофайл') : (taskMedia.kind === 'youtube' ? '▶️ YouTube: ' : '🔗 ') + (taskMedia.url || '');
+          row.innerHTML = `<span style="flex:1;min-width:0;font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(label)}</span>`;
+          const rm = document.createElement('button');
+          rm.type = 'button'; rm.className = 'option-remove'; rm.innerHTML = ICONS.trash;
+          rm.onclick = () => { taskMedia = null; drawMedia(); };
+          row.appendChild(rm);
+          mediaField.appendChild(row);
+          return;
+        }
+        const url = document.createElement('input');
+        url.className = 'field-input';
+        url.placeholder = 'Ссылка на YouTube или другое видео';
+        url.style.marginBottom = '6px';
+        url.onchange = () => { const v = url.value.trim(); if (/^https?:\/\//i.test(v)) { taskMedia = { url: v, kind: /youtu\.?be/i.test(v) ? 'youtube' : 'link' }; drawMedia(); } else if (v) showToast('Ссылка должна начинаться с https://'); };
+        mediaField.appendChild(url);
+        const up = document.createElement('button');
+        up.type = 'button'; up.className = 'add-option-btn';
+        up.textContent = '🎧 Загрузить аудиофайл';
+        const fi = document.createElement('input');
+        fi.type = 'file'; fi.accept = 'audio/*'; fi.style.display = 'none';
+        fi.onchange = async () => {
+          const file = fi.files[0];
+          if (!file) return;
+          up.textContent = 'Загружаю…'; up.disabled = true;
+          try {
+            const fd = new FormData();
+            fd.append('file', file);
+            const res = await fetch(API_BASE_URL + '/api/teacher/upload-media', { method: 'POST', headers: { 'X-Telegram-Init-Data': authData() }, body: fd });
+            const d = await res.json().catch(() => ({}));
+            if (!res.ok) throw new Error(d.message || ('ошибка ' + res.status));
+            taskMedia = { kind: 'audio', file_id: d.file_id, name: d.name || file.name };
+          } catch (err) { showToast('Не получилось загрузить: ' + err.message); }
+          drawMedia();
+        };
+        up.onclick = () => fi.click();
+        mediaField.appendChild(up);
+        mediaField.appendChild(fi);
+      };
+      drawMedia();
+
       const answerArea = document.createElement('div');
       card.appendChild(answerArea);
 
@@ -10642,6 +11319,8 @@
       const NT_QUESTION_HINTS = {
         gaps: 'Заполните пропуски', dragwords: 'Вставьте слова в пропуски', match: 'Соедините пары',
         order: 'Составьте предложение', scramble: 'Составьте слово', correction: 'Найдите и исправьте ошибки',
+        picmatch: 'Подпишите картинки', flashcards: 'Выучите слова', wordsearch: 'Найдите слова',
+        open: 'Напишите ответ на вопрос', voice: 'Ответьте голосом',
       };
 
       function ntTextarea(value, placeholder, onInput) {
@@ -10777,6 +11456,125 @@
           add.textContent = '+ Пара';
           add.onclick = () => { ntPayload.pairs.push(['', '']); draw(); };
           f.appendChild(add);
+        } else if (type === 'flashcards') {
+          f.innerHTML = '<label class="field-label">Карточки</label><div class="field-hint" style="margin:0 0 8px">Лицевая сторона — слово, обратная — перевод или определение. Ученик переворачивает карточку и сам отмечает «Знаю / Не знаю».</div>';
+          if (!Array.isArray(ntPayload.cards) || !ntPayload.cards.length) ntPayload.cards = [['', ''], ['', '']];
+          const list = document.createElement('div');
+          f.appendChild(list);
+          const draw = () => {
+            list.innerHTML = '';
+            ntPayload.cards.forEach((pr, idx) => {
+              const row = document.createElement('div');
+              row.style.cssText = 'display:grid;grid-template-columns:1fr 1fr auto;gap:6px;margin-bottom:6px;align-items:center;';
+              [0, 1].forEach((k) => {
+                const inp = document.createElement('input');
+                inp.className = 'field-input';
+                inp.placeholder = k ? 'обратная сторона' : 'лицевая сторона';
+                inp.value = pr[k] || '';
+                inp.oninput = () => { ntPayload.cards[idx][k] = inp.value; };
+                row.appendChild(inp);
+              });
+              const rm = document.createElement('button');
+              rm.type = 'button'; rm.className = 'option-remove'; rm.innerHTML = ICONS.trash;
+              rm.onclick = () => { ntPayload.cards.splice(idx, 1); draw(); };
+              row.appendChild(rm);
+              list.appendChild(row);
+            });
+          };
+          draw();
+          const add = document.createElement('button');
+          add.type = 'button'; add.className = 'add-option-btn';
+          add.textContent = '+ Карточка';
+          add.onclick = () => { ntPayload.cards.push(['', '']); draw(); };
+          f.appendChild(add);
+        } else if (type === 'wordsearch') {
+          f.innerHTML = '<label class="field-label">Слова для поиска</label><div class="field-hint" style="margin:0 0 8px">Каждое слово с новой строки или через запятую, от 2 до 12 букв, без пробелов. Сетку букв программа составит сама — каждый раз новую.</div>';
+          const ta = ntTextarea((ntPayload.words || []).join('\n'), 'apple\nbanana\norange', (v) => { ntPayload.words = v.split(/[\n,]+/).map((x) => x.trim()).filter(Boolean); });
+          f.appendChild(ta);
+        } else if (type === 'picmatch') {
+          f.innerHTML = '<label class="field-label">Картинки и подписи</label><div class="field-hint" style="margin:0 0 8px">Загрузите картинку и напишите к ней слово. Ученик подпишет картинки словами из «банка».</div>';
+          if (!Array.isArray(ntPayload.items) || !ntPayload.items.length) ntPayload.items = [['', ''], ['', '']];
+          const list = document.createElement('div');
+          f.appendChild(list);
+          const draw = () => {
+            list.innerHTML = '';
+            ntPayload.items.forEach((it, idx) => {
+              const row = document.createElement('div');
+              row.style.cssText = 'display:grid;grid-template-columns:64px 1fr auto;gap:8px;margin-bottom:8px;align-items:center;';
+              const pic = document.createElement('button');
+              pic.type = 'button';
+              pic.style.cssText = 'width:64px;height:64px;border-radius:12px;border:2px dashed var(--border);background:var(--bg) center/cover no-repeat;cursor:pointer;font-size:22px;';
+              if (it[0]) { pic.style.backgroundImage = `url(${API_BASE_URL}/api/image/${encodeURIComponent(it[0])})`; pic.style.borderStyle = 'solid'; }
+              else pic.textContent = '🖼';
+              const fi = document.createElement('input');
+              fi.type = 'file'; fi.accept = 'image/*'; fi.style.display = 'none';
+              fi.onchange = async () => {
+                const file = fi.files[0];
+                if (!file) return;
+                pic.textContent = '…';
+                try {
+                  const fd = new FormData();
+                  fd.append('image', await shrinkImage(file, 1000), 'pic.jpg');
+                  const res = await fetch(API_BASE_URL + '/api/teacher/upload-image', { method: 'POST', headers: { 'X-Telegram-Init-Data': authData() }, body: fd });
+                  const d = await res.json().catch(() => ({}));
+                  if (!res.ok) throw new Error(d.message || ('ошибка ' + res.status));
+                  ntPayload.items[idx][0] = d.file_id;
+                } catch (err) { showToast('Не получилось загрузить: ' + err.message); }
+                draw();
+              };
+              pic.onclick = () => fi.click();
+              row.appendChild(pic);
+              row.appendChild(fi);
+              const inp = document.createElement('input');
+              inp.className = 'field-input';
+              inp.placeholder = 'слово';
+              inp.value = it[1] || '';
+              inp.oninput = () => { ntPayload.items[idx][1] = inp.value; };
+              row.appendChild(inp);
+              const rm = document.createElement('button');
+              rm.type = 'button'; rm.className = 'option-remove'; rm.innerHTML = ICONS.trash;
+              rm.onclick = () => { ntPayload.items.splice(idx, 1); draw(); };
+              row.appendChild(rm);
+              list.appendChild(row);
+            });
+          };
+          draw();
+          const add = document.createElement('button');
+          add.type = 'button'; add.className = 'add-option-btn';
+          add.textContent = '+ Картинка';
+          add.onclick = () => { ntPayload.items.push(['', '']); draw(); };
+          f.appendChild(add);
+        } else if (type === 'open') {
+          f.innerHTML = '<label class="field-label">Свободный ответ</label><div class="field-hint" style="margin:0 0 8px">Ученик пишет развёрнутый ответ (эссе, сочинение). Ответ придёт вам в «Проверку ответов» и уведомлением в бот.</div>';
+          const lbl = document.createElement('label');
+          lbl.className = 'field-label';
+          lbl.textContent = 'Минимум слов (0 — без ограничения)';
+          f.appendChild(lbl);
+          const mw = document.createElement('input');
+          mw.type = 'number'; mw.min = '0'; mw.className = 'field-input';
+          mw.value = ntPayload.min_words || 0;
+          mw.oninput = () => { ntPayload.min_words = parseInt(mw.value, 10) || 0; };
+          f.appendChild(mw);
+          const l2 = document.createElement('label');
+          l2.className = 'field-label';
+          l2.style.marginTop = '12px';
+          l2.textContent = 'Пример хорошего ответа (необязательно, только для вас)';
+          f.appendChild(l2);
+          f.appendChild(ntTextarea(ntPayload.sample, '', (v) => { ntPayload.sample = v; }));
+        } else if (type === 'voice') {
+          f.innerHTML = '<label class="field-label">Голосовой ответ</label><div class="field-hint" style="margin:0 0 8px">Ученик записывает ответ голосом прямо в приложении. Запись придёт вам в «Проверку ответов».</div>';
+          const lbl = document.createElement('label');
+          lbl.className = 'field-label';
+          lbl.textContent = 'Максимальная длина записи';
+          f.appendChild(lbl);
+          const sel = document.createElement('select');
+          sel.className = 'field-input';
+          [[30, '30 секунд'], [60, '1 минута'], [120, '2 минуты'], [180, '3 минуты'], [300, '5 минут']].forEach(([v, l]) => sel.insertAdjacentHTML('beforeend', `<option value="${v}">${l}</option>`));
+          sel.value = String(ntPayload.max_seconds || 120);
+          if (!sel.value) sel.value = '120';
+          ntPayload.max_seconds = parseInt(sel.value, 10);
+          sel.onchange = () => { ntPayload.max_seconds = parseInt(sel.value, 10); };
+          f.appendChild(sel);
         }
       }
 
@@ -10915,6 +11713,11 @@
         if (isNt) {
           payload = JSON.parse(JSON.stringify(ntPayload));
           if (type === 'match') payload.pairs = (payload.pairs || []).filter((p) => (p[0] || '').trim() && (p[1] || '').trim());
+          if (type === 'flashcards') payload.cards = (payload.cards || []).filter((p) => (p[0] || '').trim() && (p[1] || '').trim());
+          if (type === 'picmatch') {
+            payload.items = (payload.items || []).filter((p) => p[0] || (p[1] || '').trim());
+            if (payload.items.some((p) => !p[0] || !(p[1] || '').trim())) { showToast('У каждой картинки должна быть подпись (и наоборот)'); return; }
+          }
           options = []; answer = null;
         } else if (type === 'text') {
           answer = textAnswerInput.value.trim();
@@ -10934,6 +11737,7 @@
           image_file_id: imageFileId, table_data: tableData,
         };
         if (isNt) { taskData.payload = payload; delete taskData.options; delete taskData.answer; }
+        taskData.media = taskMedia;
 
         saveBtn.disabled = true;
         try {
@@ -11034,8 +11838,9 @@
 
   // Предпросмотр нового вида задания: тот же виджет, что у ученика; ответ
   // проверяется сервером, но нигде не сохраняется.
-  async function renderNtPreview(task, isBack) {
-    const { view } = await apiGet(`/api/teacher/tasks/${task.id}/view`);
+  async function renderNtPreview(task, isBack, base) {
+    base = base || '/api/teacher/tasks';
+    const { view } = await apiGet(`${base}/${task.id}/view`);
     swapScreen((screen) => {
       const banner = document.createElement('p');
       banner.className = 'preview-banner';
@@ -11049,6 +11854,8 @@
       card.appendChild(q);
       if (task.description) card.insertAdjacentHTML('beforeend', `<p class="task-description">${renderMarkdownText(task.description)}</p>`);
       if (task.image_file_id) renderTaskImage(card, task.image_file_id);
+      const mediaEl = ntMediaEl(task.media);
+      if (mediaEl) card.appendChild(mediaEl);
       const btn = document.createElement('button');
       btn.className = 'submit-btn';
       btn.textContent = 'Проверить';
@@ -11056,21 +11863,27 @@
       const widget = buildNewTaskWidget(task.type, view, () => { btn.disabled = !widget.isComplete(); });
       card.appendChild(widget.el);
       btn.onclick = async () => {
+        if (['open', 'voice'].includes(task.type)) {
+          widget.showResult();
+          btn.remove();
+          card.insertAdjacentHTML('beforeend', '<div class="feedback mid"><p class="feedback-title">📨 Ответ ушёл бы вам на проверку</p><p class="feedback-body">В предпросмотре он никуда не отправляется. Ответы учеников появятся в «Проверке ответов».</p></div>');
+          return;
+        }
         btn.disabled = true;
         try {
-          const r = await apiSend('POST', `/api/teacher/tasks/${task.id}/try`, { answer: widget.getAnswer() });
+          const r = await apiSend('POST', `${base}/${task.id}/try`, { answer: widget.getAnswer() });
           widget.showResult(r.details, r.correct_answer);
           btn.remove();
           const fb = document.createElement('div');
           fb.className = 'feedback ' + (r.correct ? 'ok' : (r.status === 'partial' ? 'mid' : 'bad'));
-          fb.innerHTML = `<p class="feedback-title">${r.correct ? '✅ Верно!' : (r.status === 'partial' ? '🟡 Частично верно' : '❌ Неверно')}</p>` +
+          fb.innerHTML = `<p class="feedback-title">${r.correct ? '✅ Верно!' : (r.status === 'partial' ? '🟡 Частично верно' : '❌ Неверно')}${r.score != null ? ` · ${r.score} ${dashPlural(r.score, 'балл', 'балла', 'баллов')}` : ''}</p>` +
             (!r.correct && !['gaps', 'dragwords', 'match'].includes(task.type) ? `<p class="feedback-body">Правильный ответ: ${escapeHtml(ntCorrectText(task.type, r.correct_answer))}</p>` : '') +
             (task.explanation ? `<p class="feedback-explain">${renderMarkdownText(task.explanation)}</p>` : '');
           card.appendChild(fb);
           const again = document.createElement('button');
           again.className = 'skip-btn';
           again.textContent = '↻ Ещё раз';
-          again.onclick = () => renderNtPreview(task, false);
+          again.onclick = () => renderNtPreview(task, false, base);
           card.appendChild(again);
         } catch (err) { btn.disabled = false; showToast('Не получилось: ' + err.message); }
       };
@@ -11107,7 +11920,7 @@
         const prefix = part === 'A' ? 'А' : 'В';
         return Object.assign({}, q, {
           title: prefix + counters[part] + ': ' + q.question,
-          sub: (q.type === 'text' ? 'Текстовый ответ' : (q.type === 'multi' ? 'Несколько верных' : 'Один верный')) + ' · ' + (q.max_score || 1) + ' балл(ов)',
+          sub: (q.type_label || (q.type === 'text' ? 'Текстовый ответ' : (q.type === 'multi' ? 'Несколько верных' : 'Один верный'))) + ' · ' + (q.max_score || 1) + ' балл(ов)',
         });
       });
 
@@ -11268,6 +12081,7 @@
     try {
       const questions = await apiGet(`/api/teacher/tests/${testId}/questions`);
       const q = questions.find(x => x.id === qId);
+      if (NT_TYPES.includes(q.type)) { await renderNtPreview(q, isBack, '/api/teacher/testquestions'); return; }
       renderQuestionPreview(q, isBack, () => { stack.pop(); renderCrumbs(); render(true); });
     } catch (err) { showErrorMsg(err, isBack); }
   }
@@ -11288,10 +12102,10 @@
     let part = existing ? (existing.part || 'A') : (templateFrom ? (templateFrom.part || 'A') : 'A');
     let maxScore = existing ? (existing.max_score || 1) : (templateFrom ? (templateFrom.max_score || 1) : 1);
     let optionRows = [];
-    if (existing && existing.type !== 'text') {
+    if (existing && (existing.type === 'buttons' || existing.type === 'multi')) {
       const correctSet = new Set(Array.isArray(existing.answer) ? existing.answer : [existing.answer]);
       optionRows = existing.options.map(o => ({ text: o, correct: correctSet.has(o) }));
-    } else if (!existing && templateFrom && templateFrom.type !== 'text') {
+    } else if (!existing && templateFrom && (templateFrom.type === 'buttons' || templateFrom.type === 'multi')) {
       optionRows = templateFrom.options.map(o => ({ text: o, correct: false }));
     }
 
@@ -11355,11 +12169,17 @@
       typeField.className = 'field';
       typeField.innerHTML = '<label class="field-label">Тип вопроса</label>';
       const seg = document.createElement('div');
-      seg.className = 'segmented';
-      const typeOptions = [['text', 'Текстовый ответ'], ['buttons', 'Один верный'], ['multi', 'Несколько верных']];
-      typeOptions.forEach(([val, label]) => {
+      seg.className = 'type-grid';
+      // В тестах — только виды с автоматической проверкой.
+      const typeOptions = [
+        ['text', '✍️', 'Текстовый ответ'], ['buttons', '🔘', 'Один верный'], ['multi', '☑️', 'Несколько верных'],
+        ['gaps', '⌨️', 'Заполнить пропуски'], ['dragwords', '🧩', 'Перетащить слова'], ['match', '🔗', 'Сопоставление'],
+        ['order', '🔀', 'Составить предложение'], ['scramble', '🔠', 'Слово из букв'], ['correction', '📝', 'Исправить ошибки'],
+        ['picmatch', '🖼', 'Слова к картинкам'], ['wordsearch', '🔍', 'Филворд'],
+      ];
+      typeOptions.forEach(([val, icon, label]) => {
         const b = document.createElement('button');
-        b.type = 'button'; b.textContent = label;
+        b.type = 'button'; b.innerHTML = `<small>${icon}</small>${label}`;
         if (val === type) b.classList.add('active');
         b.onclick = () => { type = val; rerenderOptionsArea(); seg.querySelectorAll('button').forEach(x => x.classList.remove('active')); b.classList.add('active'); };
         seg.appendChild(b);
@@ -11504,12 +12324,328 @@
         tableArea.appendChild(field);
       }
 
+      // Аудио или видео к заданию (для любого вида): ссылка YouTube или аудиофайл.
+      let taskMedia = existing && existing.media ? Object.assign({}, existing.media) : null;
+      const mediaField = document.createElement('div');
+      mediaField.className = 'field';
+      card.appendChild(mediaField);
+      const drawMedia = () => {
+        mediaField.innerHTML = '<label class="field-label">Аудио или видео (необязательно)</label>';
+        if (taskMedia) {
+          const row = document.createElement('div');
+          row.style.cssText = 'display:flex;align-items:center;gap:8px;';
+          const label = taskMedia.kind === 'audio' ? '🎧 ' + (taskMedia.name || 'аудиофайл') : (taskMedia.kind === 'youtube' ? '▶️ YouTube: ' : '🔗 ') + (taskMedia.url || '');
+          row.innerHTML = `<span style="flex:1;min-width:0;font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(label)}</span>`;
+          const rm = document.createElement('button');
+          rm.type = 'button'; rm.className = 'option-remove'; rm.innerHTML = ICONS.trash;
+          rm.onclick = () => { taskMedia = null; drawMedia(); };
+          row.appendChild(rm);
+          mediaField.appendChild(row);
+          return;
+        }
+        const url = document.createElement('input');
+        url.className = 'field-input';
+        url.placeholder = 'Ссылка на YouTube или другое видео';
+        url.style.marginBottom = '6px';
+        url.onchange = () => { const v = url.value.trim(); if (/^https?:\/\//i.test(v)) { taskMedia = { url: v, kind: /youtu\.?be/i.test(v) ? 'youtube' : 'link' }; drawMedia(); } else if (v) showToast('Ссылка должна начинаться с https://'); };
+        mediaField.appendChild(url);
+        const up = document.createElement('button');
+        up.type = 'button'; up.className = 'add-option-btn';
+        up.textContent = '🎧 Загрузить аудиофайл';
+        const fi = document.createElement('input');
+        fi.type = 'file'; fi.accept = 'audio/*'; fi.style.display = 'none';
+        fi.onchange = async () => {
+          const file = fi.files[0];
+          if (!file) return;
+          up.textContent = 'Загружаю…'; up.disabled = true;
+          try {
+            const fd = new FormData();
+            fd.append('file', file);
+            const res = await fetch(API_BASE_URL + '/api/teacher/upload-media', { method: 'POST', headers: { 'X-Telegram-Init-Data': authData() }, body: fd });
+            const d = await res.json().catch(() => ({}));
+            if (!res.ok) throw new Error(d.message || ('ошибка ' + res.status));
+            taskMedia = { kind: 'audio', file_id: d.file_id, name: d.name || file.name };
+          } catch (err) { showToast('Не получилось загрузить: ' + err.message); }
+          drawMedia();
+        };
+        up.onclick = () => fi.click();
+        mediaField.appendChild(up);
+        mediaField.appendChild(fi);
+      };
+      drawMedia();
+
       const answerArea = document.createElement('div');
       card.appendChild(answerArea);
       let textAnswerInput;
+      // Настройки новых видов заданий (пропуски, пары и т.д.).
+      const ntPayload = JSON.parse(JSON.stringify((existing && existing.payload) || (templateFrom && templateFrom.payload) || {}));
+      const qLabelEl = qFieldObj.wrapper.querySelector('.field-label');
+      const NT_QUESTION_HINTS = {
+        gaps: 'Заполните пропуски', dragwords: 'Вставьте слова в пропуски', match: 'Соедините пары',
+        order: 'Составьте предложение', scramble: 'Составьте слово', correction: 'Найдите и исправьте ошибки',
+      };
+
+      function ntTextarea(value, placeholder, onInput) {
+        const ta = document.createElement('textarea');
+        ta.className = 'field-textarea';
+        ta.rows = 4;
+        ta.placeholder = placeholder;
+        ta.value = value || '';
+        ta.oninput = () => onInput(ta.value);
+        return ta;
+      }
+
+      function buildNtConstructor() {
+        const f = document.createElement('div');
+        f.className = 'field';
+        answerArea.appendChild(f);
+        const counter = document.createElement('div');
+        counter.className = 'field-hint';
+        if (type === 'gaps' || type === 'dragwords') {
+          f.innerHTML = '<label class="field-label">Текст с пропусками</label><div class="field-hint" style="margin:0 0 8px">Выделите слово и нажмите «Сделать пропуском» — или сами возьмите его в квадратные скобки: She [goes] to school. Несколько верных вариантов — через черту: I [am|\'m] ready.</div>';
+          const count = () => { counter.textContent = 'Пропусков: ' + ((ntPayload.text || '').match(/\[[^\[\]]+\]/g) || []).length; };
+          const ta = ntTextarea(ntPayload.text, 'She [goes] to school every day.', (v) => { ntPayload.text = v; count(); });
+          f.appendChild(ta);
+          const btn = document.createElement('button');
+          btn.type = 'button'; btn.className = 'add-option-btn';
+          btn.textContent = '[ ] Сделать пропуском';
+          btn.onclick = () => {
+            const s = ta.selectionStart ?? ta.value.length, e = ta.selectionEnd ?? ta.value.length;
+            const sel = ta.value.slice(s, e).trim();
+            if (!sel) { showToast('Сначала выделите слово в тексте'); return; }
+            ta.value = ta.value.slice(0, s) + '[' + sel + ']' + ta.value.slice(e);
+            ntPayload.text = ta.value; count(); ta.focus();
+          };
+          f.appendChild(btn);
+          f.appendChild(counter);
+          count();
+          if (type === 'dragwords') {
+            const lbl = document.createElement('label');
+            lbl.className = 'field-label';
+            lbl.style.marginTop = '12px';
+            lbl.textContent = 'Лишние слова (необязательно)';
+            f.appendChild(lbl);
+            const ex = document.createElement('input');
+            ex.className = 'field-input';
+            ex.placeholder = 'Через запятую: went, going';
+            ex.value = (ntPayload.extra || []).join(', ');
+            ex.oninput = () => { ntPayload.extra = ex.value.split(',').map((x) => x.trim()).filter(Boolean); };
+            f.appendChild(ex);
+            f.insertAdjacentHTML('beforeend', '<div class="field-hint">Слова из пропусков попадут в «банк» сами, лишние — для сложности.</div>');
+          }
+        } else if (type === 'correction') {
+          f.innerHTML = '<label class="field-label">Текст с ошибками</label><div class="field-hint" style="margin:0 0 8px">Выделите неверное слово и нажмите «Отметить ошибку» — или напишите так: She {go=>goes} to school.</div>';
+          const count = () => { counter.textContent = 'Ошибок: ' + ((ntPayload.text || '').match(/\{[^{}]*?=>[^{}]*?\}/g) || []).length; };
+          const ta = ntTextarea(ntPayload.text, 'She {go=>goes} to school {everyday=>every day}.', (v) => { ntPayload.text = v; count(); });
+          f.appendChild(ta);
+          const btn = document.createElement('button');
+          btn.type = 'button'; btn.className = 'add-option-btn';
+          btn.textContent = '✏️ Отметить ошибку';
+          const fixRow = document.createElement('div');
+          fixRow.style.cssText = 'display:none;gap:8px;align-items:center;margin:8px 0;';
+          btn.onclick = () => {
+            const s = ta.selectionStart ?? 0, e = ta.selectionEnd ?? 0;
+            const sel = ta.value.slice(s, e).trim();
+            if (!sel) { showToast('Сначала выделите неверное слово'); return; }
+            fixRow.style.display = 'flex';
+            fixRow.innerHTML = `<span style="font-size:13px;white-space:nowrap;">«${escapeHtml(sel)}» →</span>`;
+            const inp = document.createElement('input');
+            inp.className = 'field-input';
+            inp.placeholder = 'как правильно';
+            inp.style.flex = '1';
+            const ok = document.createElement('button');
+            ok.type = 'button'; ok.className = 'add-option-btn'; ok.textContent = 'OK';
+            ok.onclick = () => {
+              const fix = inp.value.trim();
+              if (!fix) return;
+              ta.value = ta.value.slice(0, s) + '{' + sel + '=>' + fix + '}' + ta.value.slice(e);
+              ntPayload.text = ta.value; fixRow.style.display = 'none'; count();
+            };
+            inp.onkeydown = (ev) => { if (ev.key === 'Enter') { ev.preventDefault(); ok.click(); } };
+            fixRow.appendChild(inp); fixRow.appendChild(ok);
+            setTimeout(() => inp.focus(), 20);
+          };
+          f.appendChild(btn);
+          f.appendChild(fixRow);
+          f.appendChild(counter);
+          count();
+        } else if (type === 'order') {
+          f.innerHTML = '<label class="field-label">Правильное предложение</label>';
+          const inp = document.createElement('input');
+          inp.className = 'field-input';
+          inp.placeholder = 'I have never been to London.';
+          inp.value = ntPayload.sentence || '';
+          inp.oninput = () => { ntPayload.sentence = inp.value; };
+          f.appendChild(inp);
+          f.insertAdjacentHTML('beforeend', '<div class="field-hint">Ученик увидит слова вперемешку и соберёт предложение по порядку.</div>');
+        } else if (type === 'scramble') {
+          f.innerHTML = '<label class="field-label">Слово</label>';
+          const inp = document.createElement('input');
+          inp.className = 'field-input';
+          inp.placeholder = 'environment';
+          inp.value = ntPayload.word || '';
+          inp.oninput = () => { ntPayload.word = inp.value; };
+          f.appendChild(inp);
+          f.insertAdjacentHTML('beforeend', '<div class="field-hint">Ученик увидит буквы вперемешку. Заглавная первая буква не подсказывается.</div>');
+        } else if (type === 'match') {
+          f.innerHTML = '<label class="field-label">Пары</label><div class="field-hint" style="margin:0 0 8px">Слева — то, что видит ученик, справа — правильная пара. Правые варианты перемешаются.</div>';
+          if (!Array.isArray(ntPayload.pairs) || !ntPayload.pairs.length) ntPayload.pairs = [['', ''], ['', '']];
+          const list = document.createElement('div');
+          f.appendChild(list);
+          const draw = () => {
+            list.innerHTML = '';
+            ntPayload.pairs.forEach((pr, idx) => {
+              const row = document.createElement('div');
+              row.style.cssText = 'display:grid;grid-template-columns:1fr 1fr auto;gap:6px;margin-bottom:6px;align-items:center;';
+              [0, 1].forEach((k) => {
+                const inp = document.createElement('input');
+                inp.className = 'field-input';
+                inp.placeholder = k ? 'пара' : 'слово';
+                inp.value = pr[k] || '';
+                inp.oninput = () => { ntPayload.pairs[idx][k] = inp.value; };
+                row.appendChild(inp);
+              });
+              const rm = document.createElement('button');
+              rm.type = 'button'; rm.className = 'option-remove'; rm.innerHTML = ICONS.trash;
+              rm.onclick = () => { ntPayload.pairs.splice(idx, 1); draw(); };
+              row.appendChild(rm);
+              list.appendChild(row);
+            });
+          };
+          draw();
+          const add = document.createElement('button');
+          add.type = 'button'; add.className = 'add-option-btn';
+          add.textContent = '+ Пара';
+          add.onclick = () => { ntPayload.pairs.push(['', '']); draw(); };
+          f.appendChild(add);
+        } else if (type === 'flashcards') {
+          f.innerHTML = '<label class="field-label">Карточки</label><div class="field-hint" style="margin:0 0 8px">Лицевая сторона — слово, обратная — перевод или определение. Ученик переворачивает карточку и сам отмечает «Знаю / Не знаю».</div>';
+          if (!Array.isArray(ntPayload.cards) || !ntPayload.cards.length) ntPayload.cards = [['', ''], ['', '']];
+          const list = document.createElement('div');
+          f.appendChild(list);
+          const draw = () => {
+            list.innerHTML = '';
+            ntPayload.cards.forEach((pr, idx) => {
+              const row = document.createElement('div');
+              row.style.cssText = 'display:grid;grid-template-columns:1fr 1fr auto;gap:6px;margin-bottom:6px;align-items:center;';
+              [0, 1].forEach((k) => {
+                const inp = document.createElement('input');
+                inp.className = 'field-input';
+                inp.placeholder = k ? 'обратная сторона' : 'лицевая сторона';
+                inp.value = pr[k] || '';
+                inp.oninput = () => { ntPayload.cards[idx][k] = inp.value; };
+                row.appendChild(inp);
+              });
+              const rm = document.createElement('button');
+              rm.type = 'button'; rm.className = 'option-remove'; rm.innerHTML = ICONS.trash;
+              rm.onclick = () => { ntPayload.cards.splice(idx, 1); draw(); };
+              row.appendChild(rm);
+              list.appendChild(row);
+            });
+          };
+          draw();
+          const add = document.createElement('button');
+          add.type = 'button'; add.className = 'add-option-btn';
+          add.textContent = '+ Карточка';
+          add.onclick = () => { ntPayload.cards.push(['', '']); draw(); };
+          f.appendChild(add);
+        } else if (type === 'wordsearch') {
+          f.innerHTML = '<label class="field-label">Слова для поиска</label><div class="field-hint" style="margin:0 0 8px">Каждое слово с новой строки или через запятую, от 2 до 12 букв, без пробелов. Сетку букв программа составит сама — каждый раз новую.</div>';
+          const ta = ntTextarea((ntPayload.words || []).join('\n'), 'apple\nbanana\norange', (v) => { ntPayload.words = v.split(/[\n,]+/).map((x) => x.trim()).filter(Boolean); });
+          f.appendChild(ta);
+        } else if (type === 'picmatch') {
+          f.innerHTML = '<label class="field-label">Картинки и подписи</label><div class="field-hint" style="margin:0 0 8px">Загрузите картинку и напишите к ней слово. Ученик подпишет картинки словами из «банка».</div>';
+          if (!Array.isArray(ntPayload.items) || !ntPayload.items.length) ntPayload.items = [['', ''], ['', '']];
+          const list = document.createElement('div');
+          f.appendChild(list);
+          const draw = () => {
+            list.innerHTML = '';
+            ntPayload.items.forEach((it, idx) => {
+              const row = document.createElement('div');
+              row.style.cssText = 'display:grid;grid-template-columns:64px 1fr auto;gap:8px;margin-bottom:8px;align-items:center;';
+              const pic = document.createElement('button');
+              pic.type = 'button';
+              pic.style.cssText = 'width:64px;height:64px;border-radius:12px;border:2px dashed var(--border);background:var(--bg) center/cover no-repeat;cursor:pointer;font-size:22px;';
+              if (it[0]) { pic.style.backgroundImage = `url(${API_BASE_URL}/api/image/${encodeURIComponent(it[0])})`; pic.style.borderStyle = 'solid'; }
+              else pic.textContent = '🖼';
+              const fi = document.createElement('input');
+              fi.type = 'file'; fi.accept = 'image/*'; fi.style.display = 'none';
+              fi.onchange = async () => {
+                const file = fi.files[0];
+                if (!file) return;
+                pic.textContent = '…';
+                try {
+                  const fd = new FormData();
+                  fd.append('image', await shrinkImage(file, 1000), 'pic.jpg');
+                  const res = await fetch(API_BASE_URL + '/api/teacher/upload-image', { method: 'POST', headers: { 'X-Telegram-Init-Data': authData() }, body: fd });
+                  const d = await res.json().catch(() => ({}));
+                  if (!res.ok) throw new Error(d.message || ('ошибка ' + res.status));
+                  ntPayload.items[idx][0] = d.file_id;
+                } catch (err) { showToast('Не получилось загрузить: ' + err.message); }
+                draw();
+              };
+              pic.onclick = () => fi.click();
+              row.appendChild(pic);
+              row.appendChild(fi);
+              const inp = document.createElement('input');
+              inp.className = 'field-input';
+              inp.placeholder = 'слово';
+              inp.value = it[1] || '';
+              inp.oninput = () => { ntPayload.items[idx][1] = inp.value; };
+              row.appendChild(inp);
+              const rm = document.createElement('button');
+              rm.type = 'button'; rm.className = 'option-remove'; rm.innerHTML = ICONS.trash;
+              rm.onclick = () => { ntPayload.items.splice(idx, 1); draw(); };
+              row.appendChild(rm);
+              list.appendChild(row);
+            });
+          };
+          draw();
+          const add = document.createElement('button');
+          add.type = 'button'; add.className = 'add-option-btn';
+          add.textContent = '+ Картинка';
+          add.onclick = () => { ntPayload.items.push(['', '']); draw(); };
+          f.appendChild(add);
+        } else if (type === 'open') {
+          f.innerHTML = '<label class="field-label">Свободный ответ</label><div class="field-hint" style="margin:0 0 8px">Ученик пишет развёрнутый ответ (эссе, сочинение). Ответ придёт вам в «Проверку ответов» и уведомлением в бот.</div>';
+          const lbl = document.createElement('label');
+          lbl.className = 'field-label';
+          lbl.textContent = 'Минимум слов (0 — без ограничения)';
+          f.appendChild(lbl);
+          const mw = document.createElement('input');
+          mw.type = 'number'; mw.min = '0'; mw.className = 'field-input';
+          mw.value = ntPayload.min_words || 0;
+          mw.oninput = () => { ntPayload.min_words = parseInt(mw.value, 10) || 0; };
+          f.appendChild(mw);
+          const l2 = document.createElement('label');
+          l2.className = 'field-label';
+          l2.style.marginTop = '12px';
+          l2.textContent = 'Пример хорошего ответа (необязательно, только для вас)';
+          f.appendChild(l2);
+          f.appendChild(ntTextarea(ntPayload.sample, '', (v) => { ntPayload.sample = v; }));
+        } else if (type === 'voice') {
+          f.innerHTML = '<label class="field-label">Голосовой ответ</label><div class="field-hint" style="margin:0 0 8px">Ученик записывает ответ голосом прямо в приложении. Запись придёт вам в «Проверку ответов».</div>';
+          const lbl = document.createElement('label');
+          lbl.className = 'field-label';
+          lbl.textContent = 'Максимальная длина записи';
+          f.appendChild(lbl);
+          const sel = document.createElement('select');
+          sel.className = 'field-input';
+          [[30, '30 секунд'], [60, '1 минута'], [120, '2 минуты'], [180, '3 минуты'], [300, '5 минут']].forEach(([v, l]) => sel.insertAdjacentHTML('beforeend', `<option value="${v}">${l}</option>`));
+          sel.value = String(ntPayload.max_seconds || 120);
+          if (!sel.value) sel.value = '120';
+          ntPayload.max_seconds = parseInt(sel.value, 10);
+          sel.onchange = () => { ntPayload.max_seconds = parseInt(sel.value, 10); };
+          f.appendChild(sel);
+        }
+      }
 
       function rerenderOptionsArea() {
         answerArea.innerHTML = '';
+        const isNt = NT_TYPES.includes(type);
+        if (qLabelEl) qLabelEl.textContent = isNt ? 'Задание (инструкция для ученика)' : 'Вопрос';
+        qInput.placeholder = isNt ? (NT_QUESTION_HINTS[type] || '') : 'Текст вопроса';
+        if (isNt) { buildNtConstructor(); return; }
         if (type === 'text') {
           const f = document.createElement('div');
           f.className = 'field';
@@ -11604,11 +12740,20 @@
       saveBtn.className = 'save-btn';
       saveBtn.textContent = existing ? 'Сохранить изменения' : 'Добавить вопрос';
       saveBtn.onclick = async () => {
-        const question = qInput.value.trim();
+        const isNt = NT_TYPES.includes(type);
+        const question = qInput.value.trim() || (isNt ? NT_QUESTION_HINTS[type] : '');
         if (!question) { showToast('Введите текст вопроса'); return; }
 
-        let answer, options;
-        if (type === 'text') {
+        let answer, options, payload = null;
+        if (isNt) {
+          payload = JSON.parse(JSON.stringify(ntPayload));
+          if (type === 'match') payload.pairs = (payload.pairs || []).filter((p) => (p[0] || '').trim() && (p[1] || '').trim());
+          if (type === 'picmatch') {
+            payload.items = (payload.items || []).filter((p) => p[0] || (p[1] || '').trim());
+            if (payload.items.some((p) => !p[0] || !(p[1] || '').trim())) { showToast('У каждой картинки должна быть подпись (и наоборот)'); return; }
+          }
+          options = []; answer = null;
+        } else if (type === 'text') {
           answer = textAnswerInput.value.trim();
           if (!answer) { showToast('Введите правильный ответ'); return; }
           options = [];
@@ -11626,6 +12771,8 @@
           image_file_id: imageFileId, table_data: tableData,
           part, max_score: Math.max(1, parseInt(scoreInput.value, 10) || 1),
         };
+        if (isNt) { qData.payload = payload; delete qData.options; delete qData.answer; }
+        qData.media = taskMedia;
 
         saveBtn.disabled = true;
         try {
