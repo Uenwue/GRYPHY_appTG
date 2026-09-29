@@ -364,6 +364,10 @@
   .tg-chip { font-family: inherit; font-size: 13px; font-weight: 700; border: 1px solid var(--border); background: var(--bg-soft); color: var(--text); border-radius: 999px; padding: 5px 11px; cursor: pointer; }
   .tg-chip.on { background: var(--blue-tint); border-color: var(--accent); color: var(--accent-dark); }
   .tg-chip.on span { margin-left: 4px; opacity: 0.7; }
+  .tg-ph { white-space:nowrap; display:flex; align-items:center; justify-content:center; gap:10px; height:40px; padding:0 22px; border-radius:12px; background:#54A9EB; color:#fff; font-size:15px; font-weight:600; animation: tgPh 1.2s ease-in-out infinite alternate; }
+  @keyframes tgPh { from { opacity: .65; } to { opacity: 1; } }
+  #tgWidget { position: relative; }
+  #tgWidget .tg-ph + .tg-clip { position:absolute; inset:0; display:flex; justify-content:center; }
 </style>
 <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
 <style>
@@ -1830,6 +1834,7 @@
     if (document.body) start(); else document.addEventListener('DOMContentLoaded', start);
   })();
   </script>
+<link rel="preconnect" href="https://telegram.org"><link rel="preconnect" href="https://oauth.telegram.org"><link rel="preload" as="script" href="https://telegram.org/js/telegram-widget.js?22">
 </head>
 <body class="has-side-nav">
 <!-- Заставка на время загрузки: прячет промежуточные экраны («Меню», «Загружаем…»), пока не откроется кабинет. -->
@@ -1998,30 +2003,59 @@
         location.reload();
       } catch (err) { showErr('Не получилось войти: ' + err.message); }
     };
-    let botName = 'navats_bot';
+    // Кнопку Telegram вставляем СРАЗУ — с именем бота из прошлого входа
+    // (или из адреса сервера), не дожидаясь ответа /api/auth/config. Раньше
+    // кнопка появлялась только после этого запроса, и пока сервер
+    // «просыпался», экран входа несколько секунд был без кнопки.
+    const BOT_KEY = 'navats-bot-name';
+    let botName = window.NAVATS_BOT_NAME || '';
+    try { botName = botName || localStorage.getItem(BOT_KEY) || ''; } catch (err) {}
+    const widgetBox = ov.querySelector('#tgWidget');
+    const mountWidget = (name) => {
+      widgetBox.innerHTML = '';
+      const ph = document.createElement('div');
+      ph.className = 'tg-ph';
+      ph.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="#fff"><path d="M9.8 15.4l-.4 5.3c.6 0 .8-.3 1.1-.6l2.7-2.5 5.5 4c1 .6 1.7.3 2-.9l3.6-17c.3-1.5-.6-2.1-1.6-1.7L1.5 9.9C.1 10.4.1 11.3 1.3 11.6l5.5 1.7L19.5 5.3c.6-.4 1.2-.2.7.2"/></svg><span>Войти через Telegram</span>';
+      widgetBox.appendChild(ph);
+      const s = document.createElement('script');
+      s.async = true;
+      s.src = 'https://telegram.org/js/telegram-widget.js?22';
+      s.setAttribute('data-telegram-login', name);
+      s.setAttribute('data-size', 'large');
+      s.setAttribute('data-radius', '12');
+      s.setAttribute('data-request-access', 'write');
+      s.setAttribute('data-lang', window.NAVATS_LANG === 'en' ? 'en' : 'ru');
+      s.setAttribute('data-onauth', 'onTelegramAuth(user)');
+      s.onerror = () => { ph.remove(); showErr('Не загрузилась кнопка входа Telegram. Проверьте интернет или VPN.'); };
+      const clip = document.createElement('span');
+      clip.className = 'tg-clip';
+      clip.appendChild(s);
+      widgetBox.appendChild(clip);
+      // Как только Telegram вставит свою кнопку (iframe) и она загрузится — убираем заглушку.
+      const watch = new MutationObserver(() => {
+        const fr = clip.querySelector('iframe');
+        if (!fr) return;
+        watch.disconnect();
+        fr.addEventListener('load', () => ph.remove());
+        setTimeout(() => ph.remove(), 4000);
+      });
+      watch.observe(clip, { childList: true, subtree: true });
+    };
+    if (botName) mountWidget(botName);
     try {
       const cfg = await (await fetch(API_BASE_URL + '/api/auth/config')).json();
-      if (cfg && cfg.bot_username) botName = cfg.bot_username;
+      if (cfg && cfg.bot_username && cfg.bot_username !== botName) {
+        botName = cfg.bot_username;
+        try { localStorage.setItem(BOT_KEY, botName); } catch (err) {}
+        mountWidget(botName);
+      }
       if (cfg && cfg.vk_login) ov.querySelector('#wlVkWrap').style.display = '';
       // Ссылки на документы, если они заданы на сервере.
       const link = (url, text) => url ? `<a href="${url.replace(/"/g, '&quot;')}" target="_blank" rel="noopener">${text}</a>` : text;
       const ct = ov.querySelector('#wlConsentText');
       if (ct && cfg) ct.innerHTML = `Принимаю условия ${link(cfg.terms_url, 'пользовательского соглашения')} и даю согласие на ${link(cfg.privacy_url, 'обработку персональных данных')}`;
     } catch (err) { /* останется имя по умолчанию */ }
-    const s = document.createElement('script');
-    s.async = true;
-    s.src = 'https://telegram.org/js/telegram-widget.js?22';
-    s.setAttribute('data-telegram-login', botName);
-    s.setAttribute('data-size', 'large');
-    s.setAttribute('data-radius', '12');
-    s.setAttribute('data-request-access', 'write');
-    s.setAttribute('data-lang', window.NAVATS_LANG === 'en' ? 'en' : 'ru');
-    s.setAttribute('data-onauth', 'onTelegramAuth(user)');
-    s.onerror = () => showErr('Не загрузилась кнопка входа Telegram. Проверьте интернет или VPN.');
-    const clip = document.createElement('span');
-    clip.className = 'tg-clip';
-    clip.appendChild(s);
-    ov.querySelector('#tgWidget').appendChild(clip);
+    if (!widgetBox.querySelector('.tg-clip')) mountWidget(botName || 'navats_bot');
   }
   if (tg) { tg.ready(); tg.expand(); try { if (tg.disableVerticalSwipes) tg.disableVerticalSwipes(); } catch (e) {} }
 
@@ -4704,7 +4738,7 @@
 
   function renderRowList(items, iconType, iconClass, onOpen, onEdit, onDelete, emptyText, addLabel, onAdd, onPreview, extra) {
     extra = extra || {};
-    const { onLock, onHide, onReorder, onToggleExplanations, onMove, onVideo, onAccess } = extra;
+    const { onLock, onHide, onReorder, onToggleExplanations, onMove, onVideo, onAccess, secondAdd } = extra;
     return swapScreen((screen) => {
       const list = document.createElement('div');
       list.className = 'list';
@@ -4714,7 +4748,21 @@
         addBtn.className = 'add-row-btn';
         addBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 20 20" fill="none"><path d="M10 4V16M4 10H16" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg> ' + addLabel;
         addBtn.onclick = onAdd;
-        list.appendChild(addBtn);
+        if (secondAdd) {
+          const row2 = document.createElement('div');
+          row2.style.cssText = 'display:flex;gap:8px;';
+          addBtn.style.flex = '1';
+          const b2 = document.createElement('button');
+          b2.className = 'add-row-btn';
+          b2.style.flex = '1';
+          b2.textContent = secondAdd.label;
+          b2.onclick = secondAdd.onClick;
+          row2.appendChild(addBtn);
+          row2.appendChild(b2);
+          list.appendChild(row2);
+        } else {
+          list.appendChild(addBtn);
+        }
       }
 
       // Пустой список — короткая подсказка ПОД кнопкой «Добавить», без
@@ -5501,6 +5549,82 @@
     return card;
   }
 
+  // Профиль преподавателя. Если учитель работает от школы или компании —
+  // указывает её название и выбирает, что показывать ученикам: своё имя,
+  // название или и то и другое. В каждом курсе это можно переопределить.
+  const DISPLAY_AS_LABELS = { teacher: 'Моё имя', org: 'Название школы / компании', both: 'И имя, и название' };
+  function teacherShownAs(name, org, mode) {
+    name = (name || '').trim(); org = (org || '').trim();
+    if (mode === 'org' && org) return org;
+    if (mode === 'both' && org && name) return name + ' · ' + org;
+    return name || org;
+  }
+  function buildTeacherProfileCard(profile, onSaved) {
+    profile = profile || {};
+    const card = settingsCard('Профиль преподавателя');
+    card.insertAdjacentHTML('beforeend', '<div class="set-hint">Так ученики видят, от кого курс и занятия: в приложении, напоминаниях и календаре.</div>');
+    let orgType = profile.org_type || '';
+    let mode = profile.display_as || 'teacher';
+    const wrap = document.createElement('div');
+    wrap.innerHTML =
+      '<div class="field-label">Ваше имя и фамилия</div>' +
+      '<input class="field-input" id="tpName" placeholder="Например: Анна Иванова" style="margin-bottom:12px;">' +
+      '<div class="field-label">Вы работаете</div>' +
+      '<div class="sched-seg" id="tpType" style="margin-bottom:12px;"><button data-t="">Сам(а)</button><button data-t="school">От школы</button><button data-t="company">От компании</button></div>' +
+      '<div id="tpOrgBox">' +
+      '<div class="field-label" id="tpOrgLabel">Название</div>' +
+      '<input class="field-input" id="tpOrg" style="margin-bottom:12px;">' +
+      '<div class="field-label">Что видят ученики по умолчанию</div>' +
+      '<div id="tpMode" style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px;"></div>' +
+      '<div class="set-hint" style="margin-bottom:8px;">В настройках каждого курса это можно поменять отдельно.</div>' +
+      '</div>' +
+      '<div class="set-hint" id="tpPreview" style="margin:4px 0 10px;"></div>';
+    card.appendChild(wrap);
+    const nameIn = wrap.querySelector('#tpName');
+    const orgIn = wrap.querySelector('#tpOrg');
+    nameIn.value = profile.name && !['Новый кабинет', 'Моя школа'].includes(profile.name) ? profile.name : '';
+    orgIn.value = profile.org_name || '';
+    const modeBox = wrap.querySelector('#tpMode');
+    const paint = () => {
+      wrap.querySelectorAll('#tpType button').forEach((b) => b.classList.toggle('on', b.dataset.t === orgType));
+      wrap.querySelector('#tpOrgBox').style.display = orgType ? '' : 'none';
+      wrap.querySelector('#tpOrgLabel').textContent = orgType === 'company' ? 'Название компании' : 'Название школы';
+      orgIn.placeholder = orgType === 'company' ? 'Например: ООО «Лингво»' : 'Например: Школа английского Navarts';
+      modeBox.innerHTML = '';
+      Object.keys(DISPLAY_AS_LABELS).forEach((k) => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'set-choice inline' + (mode === k ? ' on' : '');
+        b.textContent = DISPLAY_AS_LABELS[k];
+        b.onclick = () => { mode = k; paint(); };
+        modeBox.appendChild(b);
+      });
+      const shown = teacherShownAs(nameIn.value, orgType ? orgIn.value : '', orgType ? mode : 'teacher');
+      wrap.querySelector('#tpPreview').innerHTML = shown ? 'Ученики увидят: <b>' + escapeHtml(shown) + '</b>' : '';
+    };
+    wrap.querySelectorAll('#tpType button').forEach((b) => { b.type = 'button'; b.onclick = () => { orgType = b.dataset.t; paint(); }; });
+    nameIn.oninput = paint;
+    orgIn.oninput = paint;
+    paint();
+    const save = document.createElement('button');
+    save.className = 'set-btn primary';
+    save.style.width = '100%';
+    save.textContent = 'Сохранить профиль';
+    save.onclick = async () => {
+      save.disabled = true;
+      try {
+        await apiSend('POST', '/api/teacher/profile', {
+          name: nameIn.value.trim(), org_type: orgType, org_name: orgType ? orgIn.value.trim() : '', display_as: orgType ? mode : 'teacher',
+        });
+        showToast('Профиль сохранён');
+        if (onSaved) onSaved();
+      } catch (err) { showToast(err.message || 'Не получилось'); }
+      save.disabled = false;
+    };
+    card.appendChild(save);
+    return card;
+  }
+
   async function renderPersonalSettingsScreen(isBack) {
     await ensureStudentModeInfo();
     const [calendarLinks, profile, cur, gstatus, avail] = await Promise.all([
@@ -5518,6 +5642,9 @@
       h.className = 'set-page-title';
       h.textContent = 'Настройки';
       screen.appendChild(h);
+
+      // --- Профиль преподавателя: имя, школа/компания, что видят ученики ---
+      screen.appendChild(buildTeacherProfileCard(profile));
 
       // --- Язык интерфейса ---
       const langCard = settingsCard('Язык интерфейса');
@@ -5929,6 +6056,16 @@
       const kind = current.sectionsKind || 'trainer';
       try {
         const sections = await apiGet(`/api/teacher/subjects/${currentSubjectId}/sections?kind=${kind}`);
+        // Разделы необязательны: если раздел один — сразу показываем его темы
+        // (как у ученика). Второй раздел можно добавить прямо со списка тем.
+        if (sections.length === 1) {
+          stack[stack.length - 1] = Object.assign({}, current, {
+            level: 'topics', sectionId: sections[0].id, onlySection: true, sectionsKind: kind,
+            sectionTitle: sections[0].title, title: current.title,
+          });
+          render(isBack);
+          return;
+        }
         const sectionsLabeled = await withAccessLabels('section', sections.map((x) => Object.assign({}, x, x.description ? { sub: x.description.length > 90 ? x.description.slice(0, 90) + '…' : x.description } : {})));
         renderRowList(
           sectionsLabeled, 'section', 'blue',
@@ -5946,6 +6083,15 @@
           }),
           null,
           {
+            secondAdd: sections.length ? null : {
+              label: '+ Тема без раздела',
+              onClick: () => promptRename('Название новой темы', '', async (val) => {
+                const sec = await apiSend('POST', `/api/teacher/subjects/${currentSubjectId}/sections`, { title: 'Темы', is_homework: kind === 'homework' });
+                const secId = sec && (sec.id || sec.section_id);
+                if (secId) await apiSend('POST', `/api/teacher/sections/${secId}/topics`, { title: val });
+                render(false);
+              }),
+            },
             onLock: async (item) => {
               if (item.is_locked) {
                 await apiSend('PATCH', `/api/teacher/sections/${item.id}`, { is_locked: false });
@@ -5989,13 +6135,30 @@
             await apiSend('DELETE', `/api/teacher/topics/${item.id}`);
             render(false);
           }),
-          'В этом разделе пока нет тем.', 'Добавить тему',
+          current.onlySection ? 'Пока нет ни одной темы.' : 'В этом разделе пока нет тем.', 'Добавить тему',
           () => promptRename('Название новой темы', '', async (val) => {
             await apiSend('POST', `/api/teacher/sections/${current.sectionId}/topics`, { title: val });
             render(false);
           }),
           null,
           {
+            // Раздел в курсе один — он «невидимый»: темы показаны сразу.
+            // Отсюда же можно разбить курс на разделы.
+            secondAdd: current.onlySection ? {
+              label: '+ Добавить раздел',
+              onClick: () => promptRename('Название нового раздела', '', async (val) => {
+                const kind = current.sectionsKind || 'trainer';
+                await apiSend('POST', `/api/teacher/subjects/${currentSubjectId}/sections`, { title: val, is_homework: kind === 'homework' });
+                if ((current.sectionTitle || '') === 'Темы') {
+                  const first = prompt('Как назвать раздел с уже созданными темами?', 'Раздел 1');
+                  if (first && first.trim()) {
+                    try { await apiSend('PATCH', `/api/teacher/sections/${current.sectionId}`, { title: first.trim() }); } catch (e) {}
+                  }
+                }
+                stack[stack.length - 1] = { level: 'sections', sectionsKind: kind, title: current.title };
+                render(false);
+              }),
+            } : null,
             onLock: async (item) => {
               if (item.is_locked) {
                 await apiSend('PATCH', `/api/teacher/topics/${item.id}`, { is_locked: false });
@@ -6726,12 +6889,13 @@
   async function renderSubjectBlocks(isBack) {
     showLoadingMenu();
     try {
-      const [blocks, seqUnlock, ratingSetting, descSetting, examSetting] = await Promise.all([
+      const [blocks, seqUnlock, ratingSetting, descSetting, examSetting, displaySetting] = await Promise.all([
         apiGet(`/api/teacher/subjects/${currentSubjectId}/blocks`),
         apiGet(`/api/teacher/subjects/${currentSubjectId}/sequential-unlock`),
         apiGet(`/api/teacher/subjects/${currentSubjectId}/rating`).catch(() => ({ enabled: false })),
         apiGet(`/api/teacher/subjects/${currentSubjectId}/description`).catch(() => ({ description: '' })),
         apiGet(`/api/teacher/subjects/${currentSubjectId}/exams`).catch(() => ({ enabled: false })),
+        apiGet(`/api/teacher/subjects/${currentSubjectId}/display-as`).catch(() => null),
       ]);
       swapScreen((screen) => {
         courseBlocksCache[currentSubjectId] = blocks;
@@ -6879,6 +7043,46 @@
         };
         descCard.appendChild(descSaveBtn);
         screen.appendChild(descCard);
+
+        // --- Кто ведёт курс: что видит ученик ---
+        if (displaySetting && displaySetting.profile) {
+          const prof = displaySetting.profile;
+          const whoCard = document.createElement('div');
+          whoCard.className = 'form-card';
+          whoCard.style.marginTop = '16px';
+          whoCard.innerHTML = '<div class="field-label" style="margin-bottom:4px;">Кто ведёт курс</div><div class="field-hint" style="margin-bottom:12px;">Что ученик видит на карточке курса, в напоминаниях и календаре.</div>';
+          const opts = document.createElement('div');
+          opts.style.cssText = 'display:flex;flex-direction:column;gap:6px;';
+          whoCard.appendChild(opts);
+          const prev = document.createElement('div');
+          prev.className = 'field-hint';
+          prev.style.marginTop = '10px';
+          whoCard.appendChild(prev);
+          let cur = displaySetting.display_as || '';
+          const paintWho = () => {
+            opts.innerHTML = '';
+            const choices = [['', 'Как в профиле (' + (DISPLAY_AS_LABELS[prof.display_as] || 'Моё имя').toLowerCase() + ')']]
+              .concat(prof.org_name ? Object.keys(DISPLAY_AS_LABELS).map((k) => [k, DISPLAY_AS_LABELS[k]]) : []);
+            choices.forEach(([k, label]) => {
+              const b = document.createElement('button');
+              b.type = 'button';
+              b.className = 'set-choice inline' + (cur === k ? ' on' : '');
+              b.textContent = label;
+              b.onclick = async () => {
+                const old = cur;
+                cur = k; paintWho();
+                try { await apiSend('PATCH', `/api/teacher/subjects/${currentSubjectId}/display-as`, { display_as: k || null }); showToast('Сохранено'); }
+                catch (err) { cur = old; paintWho(); showToast('Не получилось: ' + err.message); }
+              };
+              opts.appendChild(b);
+            });
+            const shown = teacherShownAs(prof.name, prof.org_name, cur || prof.display_as);
+            prev.innerHTML = (shown ? 'Ученики увидят: <b>' + escapeHtml(shown) + '</b>' : '') +
+              (prof.org_name ? '' : '<br>Школу или компанию можно указать в Настройках → «Профиль преподавателя».');
+          };
+          paintWho();
+          screen.appendChild(whoCard);
+        }
       }, isBack);
     } catch (err) { showErrorMsg(err, isBack); }
   }
@@ -8663,7 +8867,7 @@
             more.onclick = (e) => {
               e.stopPropagation();
               const items = u.members.map((m) => ({ label: '👤 Открыть: ' + m.display_name, onClick: () => openMember(m) }));
-              items.push({ label: '➕ Разовый урок', onClick: () => promptAddLesson(() => renderAllStudents(false)) });
+              items.push({ label: '➕ Разовый урок', onClick: () => promptAddLesson(() => renderAllStudents(false), u.members.length === 1 ? { id: u.members[0].telegram_id, name: u.members[0].display_name } : null) });
               if (u.kind === 'single') {
                 items.push({
                   label: u.archived ? '↩️ Вернуть из архива' : '🗄 В архив', danger: !u.archived,
@@ -8674,6 +8878,28 @@
                       renderAllStudents(false);
                     } catch (err) { showToast('Не получилось: ' + err.message); }
                   },
+                });
+                if (first.telegram_id < 0 && first.telegram_id > -5000000000000) {
+                  items.push({
+                    label: '✏️ Изменить имя',
+                    onClick: () => {
+                      const val = prompt('Имя ученика:', first.display_name || '');
+                      if (val === null || !val.trim()) return;
+                      apiSend('POST', `/api/teacher/students/${first.telegram_id}/rename`, { name: val.trim() })
+                        .then(() => { showToast('Имя сохранено'); renderAllStudents(false); })
+                        .catch((err) => showToast('Не получилось: ' + err.message));
+                    },
+                  });
+                }
+                items.push({
+                  label: '🗑 Удалить ученика', danger: true,
+                  onClick: () => scConfirm(`Удалить ученика «${first.display_name}»? Удалятся его занятия, расписание, оплаты и абонементы в вашем кабинете. Это нельзя отменить.`, async () => {
+                    try {
+                      await apiSend('DELETE', `/api/teacher/students/${first.telegram_id}`);
+                      showToast('Ученик удалён');
+                      renderAllStudents(false);
+                    } catch (err) { showToast('Не получилось: ' + err.message); }
+                  }),
                 });
               }
               scMenu(items);
@@ -9603,11 +9829,41 @@
     }, isBack);
   }
 
+  // Один раз за сеанс: если учитель ещё не заполнил профиль (имя / школа),
+  // просим это сделать — иначе ученики видят «Новый кабинет».
+  let profileAsked = false;
+  async function maybeAskTeacherProfile() {
+    if (profileAsked) return;
+    profileAsked = true;
+    try { if (sessionStorage.getItem('tp_asked')) return; sessionStorage.setItem('tp_asked', '1'); } catch (e) {}
+    let prof;
+    try { prof = await apiGet('/api/teacher/public-profile'); } catch (e) { return; }
+    // Спрашиваем, пока учитель ни разу не сохранил профиль (или имя — заглушка).
+    const placeholder = !prof || !prof.saved || ((!prof.name || ['Новый кабинет', 'Моя школа'].includes(prof.name)) && !prof.org_name);
+    if (!placeholder) return;
+    lockBodyScroll();
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center;z-index:60;padding:20px;';
+    const box = document.createElement('div');
+    box.style.cssText = 'background:var(--bg);border-radius:18px;padding:6px;max-width:400px;width:100%;max-height:90vh;overflow-y:auto;';
+    const close = () => { unlockBodyScroll(); overlay.remove(); };
+    box.appendChild(buildTeacherProfileCard(prof, close));
+    const later = document.createElement('button');
+    later.className = 'set-btn';
+    later.style.cssText = 'width:calc(100% - 24px);margin:0 12px 12px;';
+    later.textContent = 'Позже';
+    later.onclick = close;
+    box.appendChild(later);
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+  }
+
   async function renderDashboard(isBack) {
     showLoadingMenu();
     try {
       dashWeekOffset = 0;
       const s = await apiGet('/api/teacher/dashboard');
+      setTimeout(maybeAskTeacherProfile, 800);
       if (s.currency) setTutorCurrency(s.currency);
       swapScreen((screen) => {
         const root = document.createElement('div');
@@ -10821,71 +11077,145 @@
     } catch (err) { selectEl.parentElement.style.display = 'none'; }
   }
 
-  function promptAddLesson(onDone) {
+  // Разовый урок — форма в стиле «занятие в календаре»: ученик выбирается из
+  // списка (или уже известен, если окно открыто из карточки ученика), дата и
+  // время, длительность, ссылка. Никаких Telegram id вводить не нужно —
+  // ученики «без Telegram» выбираются так же, как и все остальные.
+  async function promptAddLesson(onDone, preset) {
+    onDone = onDone || (() => {});
+    let students = [];
+    if (!preset || !preset.id) {
+      try { students = (await apiGet('/api/teacher/all-students')).filter((x) => !x.archived); } catch (err) {}
+    }
     lockBodyScroll();
     const overlay = document.createElement('div');
     overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center;z-index:60;padding:20px;';
     const box = document.createElement('div');
-    box.style.cssText = 'background:var(--bg);border-radius:16px;padding:18px;max-width:340px;width:100%;max-height:90vh;overflow-y:auto;';
+    box.style.cssText = 'background:var(--bg);border-radius:16px;padding:18px;max-width:360px;width:100%;max-height:90vh;overflow-y:auto;';
     overlay.appendChild(box);
     document.body.appendChild(overlay);
-    _buildStudentLookupField(box);
-    box.innerHTML +=
-      '<div class="field-label">Дата</div>' +
-      '<input class="field-input" id="lsDate" type="date" style="margin-bottom:10px;">' +
-      '<div class="field-label">Время</div>' +
-      '<input class="field-input" id="lsTime" type="time" style="margin-bottom:10px;">' +
-      '<div class="field-label">Длительность (минут)</div>' +
-      '<input class="field-input" id="lsDuration" type="number" value="60" min="10" step="5" style="margin-bottom:10px;">' +
+    const pad = (n) => String(n).padStart(2, '0');
+    const d0 = new Date(Date.now() + 60 * 60 * 1000);
+    d0.setMinutes(0, 0, 0);
+    const defaultWhen = `${d0.getFullYear()}-${pad(d0.getMonth() + 1)}-${pad(d0.getDate())}T${pad(d0.getHours())}:00`;
+    const tag = (x) => (x.telegram_id <= -5000000000000 ? ' · ВКонтакте' : x.telegram_id < 0 ? ' · без Telegram' : '');
+    box.innerHTML =
+      '<div style="font-size:18px;font-weight:700;margin-bottom:12px;">➕ Новое занятие</div>' +
+      '<div class="field-label">Ученик</div>' +
+      (preset && preset.id
+        ? `<div class="field-input" style="margin-bottom:14px;display:flex;align-items:center;">${escapeHtml(preset.name || 'Ученик')}</div>`
+        : '<input class="field-input" id="lsFind" placeholder="Начните вводить имя" autocomplete="off" style="margin-bottom:6px;">' +
+          '<div id="lsList" style="display:flex;flex-direction:column;gap:6px;max-height:190px;overflow-y:auto;margin-bottom:14px;"></div>') +
+      '<div class="field-label">Дата и время</div>' +
+      `<input class="field-input" id="lsWhen" type="datetime-local" value="${defaultWhen}" style="margin-bottom:14px;">` +
+      '<div class="field-label">Длительность</div>' +
+      '<div id="lsDurChips" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px;"></div>' +
+      '<input class="field-input" id="lsDuration" type="number" value="60" min="10" max="600" step="5" style="margin-bottom:14px;">' +
+      '<div class="field-label">Ссылка на занятие (необязательно)</div>' +
+      '<input class="field-input" id="lsLink" placeholder="https://… — иначе общая ссылка из настроек" style="margin-bottom:14px;">' +
       '<label style="display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600;margin-bottom:12px;cursor:pointer;"><input type="checkbox" id="lsTrial" style="width:18px;height:18px;"> 🎁 Пробное занятие</label>' +
       '<div id="lsPackageWrap" style="display:none;margin-bottom:14px;">' +
       '<div class="field-label">Списывать с абонемента</div>' +
       '<select class="field-input" id="lsPackage"></select>' +
       '</div>' +
+      '<button class="set-btn" id="lsRegular" style="width:100%;margin-bottom:12px;">🔁 Сделать регулярным (дни недели, срок)</button>' +
       '<div id="lsErr" style="color:var(--red-dark);font-size:12.5px;font-weight:700;margin-bottom:8px;display:none;"></div>' +
       '<div style="display:flex;gap:8px;">' +
       '<button class="back-btn" id="lsCancel" style="flex:1;">Отмена</button>' +
       '<button class="save-btn" id="lsSave" style="flex:1;margin-top:0;">Добавить</button>' +
       '</div>';
 
-    let resolvedId = null;
-    const packageSelect = overlay.querySelector('#lsPackage');
-    _wireStudentLookup(overlay, () => resolvedId, (v) => { resolvedId = v; }, (id) => _populatePackageSelect(packageSelect, id));
+    let chosen = preset && preset.id ? { telegram_id: preset.id, display_name: preset.name || '' } : null;
+    const packageSelect = box.querySelector('#lsPackage');
+    const errBox = box.querySelector('#lsErr');
+    const saveBtn = box.querySelector('#lsSave');
+    const durInput = box.querySelector('#lsDuration');
     const closeOverlay = () => { unlockBodyScroll(); overlay.remove(); };
-    overlay.querySelector('#lsCancel').onclick = closeOverlay;
-    const dateInput = overlay.querySelector('#lsDate');
-    const timeInput = overlay.querySelector('#lsTime');
-    const durationInput = overlay.querySelector('#lsDuration');
-    const errBox = overlay.querySelector('#lsErr');
-    const saveBtn = overlay.querySelector('#lsSave');
+    overlay.onclick = (e) => { if (e.target === overlay) closeOverlay(); };
+    box.querySelector('#lsCancel').onclick = closeOverlay;
+
+    const chipsBox = box.querySelector('#lsDurChips');
+    const drawChips = () => {
+      chipsBox.innerHTML = '';
+      [30, 45, 60, 90].forEach((m) => {
+        const c = document.createElement('button');
+        c.type = 'button';
+        c.className = 'set-btn' + (parseInt(durInput.value, 10) === m ? ' primary' : '');
+        c.style.cssText = 'flex:1;min-width:52px;padding:8px 4px;';
+        c.textContent = m + ' мин';
+        c.onclick = () => { durInput.value = m; drawChips(); };
+        chipsBox.appendChild(c);
+      });
+    };
+    durInput.oninput = drawChips;
+    drawChips();
+
+    const onChosen = () => { errBox.style.display = 'none'; _populatePackageSelect(packageSelect, chosen ? chosen.telegram_id : null); };
+    if (chosen) onChosen();
+
+    const find = box.querySelector('#lsFind');
+    const list = box.querySelector('#lsList');
+    if (find) {
+      const draw = () => {
+        const q = find.value.trim().toLowerCase();
+        list.innerHTML = '';
+        students.filter((x) => !q || (x.display_name || '').toLowerCase().includes(q)).slice(0, 60).forEach((x) => {
+          const b = document.createElement('button');
+          b.type = 'button';
+          const on = chosen && chosen.telegram_id === x.telegram_id;
+          b.className = 'set-btn' + (on ? ' primary' : '');
+          b.style.cssText = 'text-align:left;';
+          b.textContent = (on ? '✓ ' : '') + (x.display_name || 'Ученик') + tag(x);
+          b.onclick = () => { chosen = x; onChosen(); draw(); };
+          list.appendChild(b);
+        });
+        if (!list.children.length) list.innerHTML = '<div class="set-hint">Никого не нашлось.</div>';
+        const add = document.createElement('button');
+        add.type = 'button';
+        add.className = 'set-btn';
+        add.style.cssText = 'text-align:left;';
+        add.textContent = '+ Новый ученик';
+        add.onclick = () => { closeOverlay(); promptAddIndividualStudent(onDone); };
+        list.appendChild(add);
+      };
+      find.oninput = draw;
+      draw();
+      setTimeout(() => find.focus(), 50);
+    }
+
+    box.querySelector('#lsRegular').onclick = () => {
+      if (!chosen) { errBox.textContent = 'Сначала выберите ученика.'; errBox.style.display = 'block'; return; }
+      closeOverlay();
+      promptScheduleEditor({ kind: 'student', id: chosen.telegram_id, name: chosen.display_name, subjectId: currentSubjectId }, onDone);
+    };
+
     saveBtn.onclick = async () => {
-      if (!resolvedId) {
-        errBox.textContent = 'Сначала дождитесь, пока ученик найдётся.';
-        errBox.style.display = 'block';
-        return;
-      }
-      if (!dateInput.value || !timeInput.value) {
-        errBox.textContent = 'Укажите дату и время.';
-        errBox.style.display = 'block';
-        return;
-      }
+      const when = box.querySelector('#lsWhen').value;
+      const link = box.querySelector('#lsLink').value.trim();
+      const fail = (t) => { errBox.textContent = t; errBox.style.display = 'block'; };
+      if (!chosen) return fail('Выберите ученика из списка.');
+      if (!when) return fail('Укажите дату и время.');
+      if (link && !/^https?:\/\/\S+$/i.test(link)) return fail('Ссылку вставьте целиком, начиная с https://');
       saveBtn.disabled = true;
       saveBtn.textContent = 'Добавляю…';
       try {
-        await apiSend('POST', '/api/teacher/lessons', {
-          telegram_id: resolvedId,
-          scheduled_at: `${dateInput.value} ${timeInput.value}:00`,
-          duration_minutes: parseInt(durationInput.value, 10) || 60,
+        const res = await apiSend('POST', '/api/teacher/lessons', {
+          telegram_id: chosen.telegram_id,
+          scheduled_at: when.replace('T', ' ').slice(0, 16) + ':00',
+          duration_minutes: parseInt(durInput.value, 10) || 60,
           package_id: packageSelect.value || null,
-          is_trial: !!(overlay.querySelector('#lsTrial') || {}).checked,
+          is_trial: !!box.querySelector('#lsTrial').checked,
         });
+        if (link && res && res.id) {
+          try { await apiSend('POST', `/api/teacher/lessons/${res.id}/meeting-link`, { urls: [link] }); } catch (e) {}
+        }
         closeOverlay();
+        if (typeof showToast === 'function') showToast('Занятие добавлено');
         onDone();
       } catch (err) {
         saveBtn.disabled = false;
         saveBtn.textContent = 'Добавить';
-        errBox.textContent = 'Не получилось: ' + err.message;
-        errBox.style.display = 'block';
+        fail('Не получилось: ' + err.message);
       }
     };
   }
@@ -12586,6 +12916,25 @@
           .then(() => { showToast('Сохранено'); refreshThisScreen(); })
           .catch((err) => showToast('Не получилось: ' + err.message));
       };
+      const isOfflineStudent = studentId < 0 && studentId > -5000000000000;
+      const editName = () => {
+        const val = prompt('Имя ученика:', displayName || '');
+        if (val === null || !val.trim()) return;
+        apiSend('POST', `/api/teacher/students/${studentId}/rename`, { name: val.trim() })
+          .then((r) => { showToast('Имя сохранено'); renderStudentSubscriptions(studentId, r.name || val.trim(), groupTitle); })
+          .catch((err) => showToast('Не получилось: ' + err.message));
+      };
+      const deleteStudent = () => scConfirm(
+        `Удалить ученика «${displayName}»? Удалятся его занятия, расписание, оплаты и абонементы в вашем кабинете. Это нельзя отменить.` +
+        (isOfflineStudent ? '' : ' Если ученик просто закончил заниматься — лучше отправить его в архив.'),
+        async () => {
+          try {
+            await apiSend('DELETE', `/api/teacher/students/${studentId}`);
+            showToast('Ученик удалён');
+            // Окно подтверждения закроется сразу после этого — «Назад» чуть позже.
+            setTimeout(() => goBack(), 80);
+          } catch (err) { showToast('Не получилось: ' + err.message); }
+        });
       const toggleArchive = async () => {
         try {
           await apiSend('POST', `/api/teacher/students/${studentId}/archive`, { archived: !info.archived });
@@ -12620,14 +12969,16 @@
         menuBtn.className = 'sc-menu-btn';
         menuBtn.textContent = '\u22ef';
         menuBtn.onclick = () => scMenu([
-          { label: '➕ Разовый урок', onClick: () => promptAddLesson(refreshThisScreen) },
+          { label: '➕ Разовый урок', onClick: () => promptAddLesson(refreshThisScreen, { id: studentId, name: displayName }) },
           { label: '🗓 Расписание (дни, повтор, срок)', onClick: () => promptScheduleEditor({ kind: 'student', id: studentId, name: displayName, subjectId: currentSubjectId }, refreshThisScreen) },
           { label: '📓 Дневник ДЗ', onClick: () => renderHomeworkDiary(studentId, displayName) },
           { label: '🎂 День рождения', onClick: editBirthday },
           { label: `💱 Валюта ученика (сейчас ${info.currency || tutorCurrency})`, onClick: editCurrency },
           { label: '🏷 Теги', onClick: editTags },
           { label: '👥 Тип занятий', onClick: editType },
+          ...(isOfflineStudent ? [{ label: '✏️ Изменить имя', onClick: editName }] : []),
           { label: info.archived ? '↩️ Вернуть из архива' : '🗄 Отправить в архив', onClick: toggleArchive, danger: !info.archived },
+          { label: '🗑 Удалить ученика', onClick: deleteStudent, danger: true },
         ]);
         head.appendChild(menuBtn);
         root.appendChild(head);
@@ -12817,7 +13168,7 @@
           const a1 = document.createElement('button');
           a1.className = 'sc-act primary';
           a1.textContent = '+ Урок';
-          a1.onclick = () => promptAddLesson(refreshThisScreen);
+          a1.onclick = () => promptAddLesson(refreshThisScreen, { id: studentId, name: displayName });
           const a2 = document.createElement('button');
           a2.className = 'sc-act';
           a2.textContent = '🗓 Расписание';
