@@ -374,6 +374,10 @@
   .nf-head { font-size: 12px; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase; color: var(--text-soft); margin: 4px 2px 10px; }
   .nf-page .form-card { margin-bottom: 10px; }
   body.has-sb .nf-page { max-width: 760px; }
+  .tg-ph { white-space:nowrap; display:flex; align-items:center; justify-content:center; gap:10px; height:40px; padding:0 22px; border-radius:12px; background:#54A9EB; color:#fff; font-size:15px; font-weight:600; animation: tgPh 1.2s ease-in-out infinite alternate; }
+  @keyframes tgPh { from { opacity: .65; } to { opacity: 1; } }
+  #tgWidget { position: relative; }
+  #tgWidget .tg-ph + .tg-clip { position:absolute; inset:0; display:flex; justify-content:center; }
 </style>
 <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
 <style>
@@ -577,6 +581,19 @@
   @media (min-width: 700px) {
     body.has-sb .header-logo { display: none; }
     body.has-sb header h1 { padding-left: 0; margin-left: 0; border-left: none; font-size: 19px; }
+  }
+  /* Телефон: в одной строке с логотипом и кнопками название раздела
+     обрезалось до «Домашне…». Теперь сверху — логотип и кнопки (логотип
+     по центру строки, а не ниже неё), а название раздела — отдельной
+     крупной строкой под ними. */
+  @media (max-width: 699px) {
+    header { flex-wrap: wrap; row-gap: 12px; margin-bottom: 14px; min-height: 36px; }
+    header .header-logo { height: 30px; margin-right: auto; align-self: center; }
+    header:has(.header-logo) h1, header h1 {
+      order: 10; flex: 1 0 100%; padding-left: 0; margin-left: 0; border-left: none;
+      font-size: 22px; line-height: 1.2; white-space: normal; overflow: visible;
+    }
+    header h1:empty { display: none; }
   }
 
   .crumbs { display: flex; align-items: flex-start; gap: 8px; margin-bottom: 14px; min-height: 36px; }
@@ -1682,6 +1699,7 @@
     if (document.body) start(); else document.addEventListener('DOMContentLoaded', start);
   })();
   </script>
+<link rel="preconnect" href="https://telegram.org"><link rel="preconnect" href="https://oauth.telegram.org"><link rel="preload" as="script" href="https://telegram.org/js/telegram-widget.js?22">
 </head>
 <body>
 
@@ -1871,30 +1889,59 @@
         location.reload();
       } catch (err) { showErr('Не получилось войти: ' + err.message); }
     };
-    let botName = 'navats_bot';
+    // Кнопку Telegram вставляем СРАЗУ — с именем бота из прошлого входа
+    // (или из адреса сервера), не дожидаясь ответа /api/auth/config. Раньше
+    // кнопка появлялась только после этого запроса, и пока сервер
+    // «просыпался», экран входа несколько секунд был без кнопки.
+    const BOT_KEY = 'navats-bot-name';
+    let botName = window.NAVATS_BOT_NAME || '';
+    try { botName = botName || localStorage.getItem(BOT_KEY) || ''; } catch (err) {}
+    const widgetBox = ov.querySelector('#tgWidget');
+    const mountWidget = (name) => {
+      widgetBox.innerHTML = '';
+      const ph = document.createElement('div');
+      ph.className = 'tg-ph';
+      ph.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="#fff"><path d="M9.8 15.4l-.4 5.3c.6 0 .8-.3 1.1-.6l2.7-2.5 5.5 4c1 .6 1.7.3 2-.9l3.6-17c.3-1.5-.6-2.1-1.6-1.7L1.5 9.9C.1 10.4.1 11.3 1.3 11.6l5.5 1.7L19.5 5.3c.6-.4 1.2-.2.7.2"/></svg><span>Войти через Telegram</span>';
+      widgetBox.appendChild(ph);
+      const s = document.createElement('script');
+      s.async = true;
+      s.src = 'https://telegram.org/js/telegram-widget.js?22';
+      s.setAttribute('data-telegram-login', name);
+      s.setAttribute('data-size', 'large');
+      s.setAttribute('data-radius', '12');
+      s.setAttribute('data-request-access', 'write');
+      s.setAttribute('data-lang', window.NAVATS_LANG === 'en' ? 'en' : 'ru');
+      s.setAttribute('data-onauth', 'onTelegramAuth(user)');
+      s.onerror = () => { ph.remove(); showErr('Не загрузилась кнопка входа Telegram. Проверьте интернет или VPN.'); };
+      const clip = document.createElement('span');
+      clip.className = 'tg-clip';
+      clip.appendChild(s);
+      widgetBox.appendChild(clip);
+      // Как только Telegram вставит свою кнопку (iframe) и она загрузится — убираем заглушку.
+      const watch = new MutationObserver(() => {
+        const fr = clip.querySelector('iframe');
+        if (!fr) return;
+        watch.disconnect();
+        fr.addEventListener('load', () => ph.remove());
+        setTimeout(() => ph.remove(), 4000);
+      });
+      watch.observe(clip, { childList: true, subtree: true });
+    };
+    if (botName) mountWidget(botName);
     try {
       const cfg = await (await fetch(API_BASE_URL + '/api/auth/config')).json();
-      if (cfg && cfg.bot_username) botName = cfg.bot_username;
+      if (cfg && cfg.bot_username && cfg.bot_username !== botName) {
+        botName = cfg.bot_username;
+        try { localStorage.setItem(BOT_KEY, botName); } catch (err) {}
+        mountWidget(botName);
+      }
       if (cfg && cfg.vk_login) ov.querySelector('#wlVkWrap').style.display = '';
       // Ссылки на документы, если они заданы на сервере.
       const link = (url, text) => url ? `<a href="${url.replace(/"/g, '&quot;')}" target="_blank" rel="noopener">${text}</a>` : text;
       const ct = ov.querySelector('#wlConsentText');
       if (ct && cfg) ct.innerHTML = `Принимаю условия ${link(cfg.terms_url, 'пользовательского соглашения')} и даю согласие на ${link(cfg.privacy_url, 'обработку персональных данных')}`;
     } catch (err) { /* останется имя по умолчанию */ }
-    const s = document.createElement('script');
-    s.async = true;
-    s.src = 'https://telegram.org/js/telegram-widget.js?22';
-    s.setAttribute('data-telegram-login', botName);
-    s.setAttribute('data-size', 'large');
-    s.setAttribute('data-radius', '12');
-    s.setAttribute('data-request-access', 'write');
-    s.setAttribute('data-lang', window.NAVATS_LANG === 'en' ? 'en' : 'ru');
-    s.setAttribute('data-onauth', 'onTelegramAuth(user)');
-    s.onerror = () => showErr('Не загрузилась кнопка входа Telegram. Проверьте интернет или VPN.');
-    const clip = document.createElement('span');
-    clip.className = 'tg-clip';
-    clip.appendChild(s);
-    ov.querySelector('#tgWidget').appendChild(clip);
+    if (!widgetBox.querySelector('.tg-clip')) mountWidget(botName || 'navats_bot');
   }
   // Логотип Navarts: буква N «вырезана» (прозрачная), поэтому всегда
   // совпадает с цветом фона — и в светлой, и в тёмной теме.
@@ -4921,6 +4968,12 @@
         const kind = current.purpose === 'homework' ? 'homework' : 'trainer';
         const sections = await apiGet(`/api/subjects/${current.subjectId}/sections?kind=${kind}`);
         const purpose = current.purpose;
+        // Разделы необязательны: если в курсе всего один раздел — сразу его темы.
+        if (purpose === 'tasks' && sections.length === 1 && !sections[0].is_locked) {
+          stack[stack.length - 1] = { level: 'topics', sectionId: sections[0].id, purpose, title: current.title, onlySection: true };
+          render(isBack);
+          return;
+        }
         if (purpose === 'tasks') {
           swapScreen((screen) => {
             const sub = document.createElement('div');
@@ -4995,7 +5048,7 @@
             if (topics.some(t => !t.is_locked && t.task_count > 0)) {
               const wholeBtn = document.createElement('button');
               wholeBtn.className = 'hw-cta-btn';
-              wholeBtn.textContent = '🎯 Решить весь раздел целиком';
+              wholeBtn.textContent = current.onlySection ? '🎯 Решить все темы подряд' : '🎯 Решить весь раздел целиком';
               wholeBtn.onclick = () => {
                 stack.push({ level: 'order_choice', scope: 'section', scopeId: current.sectionId, title: current.title });
                 renderCrumbs();
@@ -6831,7 +6884,7 @@
           hwBtn.onclick = () => openHomeworkScreen(sub.subject_id);
           screen.appendChild(hwBtn);
         }
-        updateHeaderNotifDot(notifSummary.unread_count || 0);
+        updateHeaderNotifDot((notifSummary.unread_count || 0) + (notifSummary.lessons_to_confirm || 0));
 
         const scheduleTitle = document.createElement('div');
         scheduleTitle.className = 'field-hint';
@@ -7526,7 +7579,7 @@
         apiGet('/api/me/notifications'),
         apiGet('/api/me/lessons').catch(() => []),
       ]);
-      updateHeaderNotifDot(data.unread_count || 0);
+      updateHeaderNotifDot((data.unread_count || 0) + (data.lessons_to_confirm || 0));
       swapScreen((screen) => {
         screen.classList.add('nf-page');
         // Ближайшие занятия: подтвердить, перенести или отменить.
@@ -7591,7 +7644,7 @@
               const dot = card.querySelector('span[style*="border-radius:50%"]');
               if (dot) dot.remove();
               localUnread = Math.max(0, localUnread - 1);
-              updateHeaderNotifDot(localUnread);
+              updateHeaderNotifDot(localUnread + (data.lessons_to_confirm || 0));
               await apiPost(`/api/me/notifications/${item.id}/read`, {});
             }
           };
@@ -7880,7 +7933,7 @@
   function buildAccentPicker() {
     const row = document.createElement('div');
     // Отступ, чтобы кольцо вокруг выбранного цвета не обрезалось краем экрана.
-    row.style.cssText = 'display:flex;gap:12px;flex-wrap:wrap;padding:6px;margin:-6px -6px 0;';
+    row.style.cssText = 'display:flex;gap:14px;flex-wrap:wrap;padding:7px 6px;margin:0;overflow:visible;';
     let current = '#238BA7';
     try { current = (localStorage.getItem('miniapp-accent') || '#238BA7').toUpperCase(); } catch (err) {}
     const paint = () => row.querySelectorAll('button').forEach((b) => {
@@ -7891,7 +7944,7 @@
       b.type = 'button';
       b.dataset.c = c.toUpperCase();
       b.title = 'Цвет оформления';
-      b.style.cssText = `width:34px;height:34px;border-radius:50%;border:none;cursor:pointer;background:${c};transition:box-shadow 0.15s ease;`;
+      b.style.cssText = `width:34px;height:34px;min-width:34px;flex:0 0 34px;padding:0;border-radius:50%;border:none;cursor:pointer;background:${c};transition:box-shadow 0.15s ease;`;
       b.onclick = () => {
         current = c.toUpperCase();
         try { localStorage.setItem('miniapp-accent', current); } catch (err) {}
@@ -9230,7 +9283,7 @@
     const vkErr = sessionStorage.getItem('navats-vk-error');
     if (vkErr && authData()) { sessionStorage.removeItem('navats-vk-error'); setTimeout(() => showToast(vkErr), 900); }
   } catch (e) {}
-  if (authData()) apiGet('/api/me/notifications').then((d) => updateHeaderNotifDot(d.unread_count || 0)).catch(() => {});
+  if (authData()) apiGet('/api/me/notifications').then((d) => updateHeaderNotifDot((d.unread_count || 0) + (d.lessons_to_confirm || 0))).catch(() => {});
 
   // Heartbeat «время в приложении» — раз в 30 секунд, только пока страница
   // видима, шлём накопленные секунды на дефолтный предмет пользователя.
