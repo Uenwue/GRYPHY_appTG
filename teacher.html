@@ -998,8 +998,11 @@
   @media (prefers-color-scheme: dark) { html:not([data-theme="light"]) .tb-support { background: rgba(var(--accent-rgb), 0.18); color: #5CC3DE; } }
   .tb-support svg { width: 16px; height: 16px; }
   .tb-icon { width: 36px; height: 36px; margin-left: 0; }
-  body:not(.mode-finance) .tb-support span { display: none; }
-  body:not(.mode-finance) .tb-support { padding: 8px; }
+  /* Поддержка и настройки — круглые кнопки-иконки без текста. Смена темы — в настройках. */
+  .tb-support { padding: 0; width: 38px; height: 38px; justify-content: center; border-radius: 50%; }
+  .tb-support span { display: none; }
+  .tb-support.on { background: var(--accent); color: #fff; border-color: var(--accent); }
+  #themeToggle { display: none !important; }
   .crumbs.crumbs-hidden { display: none; }
   .crumbs.crumbs-root .crumb-title, .crumbs.crumbs-root > div:last-child { font-size: 22px; font-weight: 700; }
   .side-nav-item.mobile-only { display: flex; }
@@ -1238,6 +1241,10 @@
 
   /* ===== Настройки: белые карточки-блоки ===== */
   .set-page-title { font-size: 24px; font-weight: 700; margin: 0 0 14px; }
+  .set-tabs { display: flex; gap: 4px; background: var(--bg-soft); border: 1px solid var(--border); border-radius: 14px; padding: 4px; margin: 0 0 16px; max-width: 520px; }
+  .set-tab { flex: 1; min-width: 0; border: none; background: none; border-radius: 10px; padding: 9px 12px; font-size: 13.5px; font-weight: 700; color: var(--text-soft); cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .set-tab.on { background: var(--bg); color: var(--text); box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+  .set-tab:disabled { opacity: 0.45; cursor: not-allowed; }
   .set-card { background: var(--bg); border: 1px solid var(--border); border-radius: 18px; padding: 16px; margin-bottom: 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.04); }
   .set-title { font-size: 11.5px; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase; color: var(--text); margin-bottom: 10px; }
   .set-hint { font-size: 12.5px; color: var(--text-soft); line-height: 1.4; margin-bottom: 10px; }
@@ -1852,8 +1859,9 @@
       <span class="tb-sep"></span>
       <nav class="tb-nav" id="topNav"></nav>
       <div class="tb-right">
-        <button class="tb-support" id="supportBtn" title="Поддержка — написать нам"><svg viewBox="0 0 20 20" fill="none"><path d="M3 9.5C3 6 6.1 3.5 10 3.5S17 6 17 9.5 13.9 15.5 10 15.5c-.9 0-1.8-.1-2.6-.4L4 16.5l.9-3C3.7 12.4 3 11 3 9.5Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M8.3 8.2a1.8 1.8 0 113 1.3c-.6.4-1.3.8-1.3 1.6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="10" cy="12.9" r=".8" fill="currentColor"/></svg><span>Поддержка</span></button>
-        <button class="theme-toggle tb-icon" id="themeToggle" title="Сменить тему" aria-label="Сменить тему"></button>
+        <button class="tb-support" id="supportBtn" title="Поддержка — написать нам"><svg viewBox="0 0 20 20" fill="none"><path d="M3 9.5C3 6 6.1 3.5 10 3.5S17 6 17 9.5 13.9 15.5 10 15.5c-.9 0-1.8-.1-2.6-.4L4 16.5l.9-3C3.7 12.4 3 11 3 9.5Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M8.3 8.2a1.8 1.8 0 113 1.3c-.6.4-1.3.8-1.3 1.6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="10" cy="12.9" r=".8" fill="currentColor"/></svg></button>
+        <button class="tb-support tb-settings" id="settingsBtn" title="Настройки" aria-label="Настройки"><svg viewBox="0 0 20 20" fill="none"><path d="M8.4 2.5h3.2l.5 2.1c.6.2 1.1.5 1.6.9l2-.7 1.6 2.8-1.6 1.4c.05.3.08.6.08 1s-.03.7-.08 1l1.6 1.4-1.6 2.8-2-.7c-.5.4-1 .7-1.6.9l-.5 2.1H8.4l-.5-2.1a5.6 5.6 0 01-1.6-.9l-2 .7-1.6-2.8 1.6-1.4A6 6 0 013.9 10c0-.34.03-.68.08-1L2.4 7.6 4 4.8l2 .7c.5-.4 1-.7 1.6-.9l.5-2.1Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><circle cx="10" cy="10" r="2.3" stroke="currentColor" stroke-width="1.5"/></svg></button>
+        <button class="theme-toggle tb-icon" id="themeToggle" title="Сменить тему" aria-label="Сменить тему" hidden></button>
       </div>
     </div>
     <!-- Старые элементы шапки: на них ссылается код, поэтому остаются, но скрыты. -->
@@ -2232,8 +2240,6 @@
       icon: '<circle cx="10" cy="10" r="7" stroke="currentColor" stroke-width="1.6"/><path d="M10 7V10.5M10 13.2V13.3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>' },
     { level: 'leaderboard', title: 'Рейтинг участников', navLabel: 'Рейтинг',
       icon: '<path d="M10 3L12.2 7.6L17.3 8.3L13.6 11.9L14.5 17L10 14.5L5.5 17L6.4 11.9L2.7 8.3L7.8 7.6L10 3Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>' },
-    { level: 'subject_blocks', title: 'Настройки предмета', navLabel: 'Настройки',
-      icon: '<circle cx="10" cy="10" r="2.5" stroke="currentColor" stroke-width="1.6"/><path d="M10 2V4M10 16V18M18 10H16M4 10H2M15.5 4.5L14 6M6 14L4.5 15.5M15.5 15.5L14 14M6 6L4.5 4.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>' },
     { level: 'admin_panel', title: 'Админ-панель', navLabel: 'Админка', adminOnly: true, standalone: true,
       icon: '<path d="M10 2L16 5V9C16 13 13.5 16.5 10 18C6.5 16.5 4 13 4 9V5L10 2Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>' },
   ];
@@ -2248,8 +2254,6 @@
       icon: '<circle cx="10" cy="7" r="3" stroke="currentColor" stroke-width="1.6"/><path d="M4 17c0-3 2.7-5 6-5s6 2 6 5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>' },
     { level: 'schedule_grid', title: 'Расписание', primary: true,
       icon: '<rect x="3" y="4" width="14" height="13" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M3 8H17M7 2V5M13 2V5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>' },
-    { title: 'Настройки', action: 'openPersonalSettings', primary: true,
-      icon: '<circle cx="10" cy="10" r="2.5" stroke="currentColor" stroke-width="1.6"/><path d="M10 2V4M10 16V18M18 10H16M4 10H2M15.5 4.5L14 6M6 14L4.5 15.5M15.5 15.5L14 14M6 6L4.5 4.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>' },
   ];
 
   // ===== Верхняя навигация (шапка) =====
@@ -2260,7 +2264,6 @@
     { key: 'dashboard', label: 'Главная' },
     { key: 'all_students', label: 'Ученики' },
     { key: 'schedule_grid', label: 'Расписание' },
-    { key: 'settings', label: 'Настройки' },
   ];
   const TOP_NAV_TITLES = { dashboard: 'Главная', all_students: 'Ученики', schedule_grid: 'Расписание' };
   const CABINET_ONLY_LEVELS = ['payments', 'dashboard', 'lessons', 'packages'];
@@ -4438,6 +4441,8 @@
     const rootKind = navRoot?.sectionsKind;
     document.body.classList.toggle('mode-finance', currentMode === 'finance');
     document.querySelectorAll('#tbMode button').forEach((b) => b.classList.toggle('on', b.dataset.mode === currentMode));
+    const setBtn = document.getElementById('settingsBtn');
+    if (setBtn) setBtn.classList.toggle('on', top === 'personal_settings');
     nav.innerHTML = '';
     if (currentMode === 'finance') {
       const activeKey = (top === 'personal_settings' || root === 'personal_settings') ? 'settings' : root;
@@ -4947,17 +4952,44 @@
   // (z-index панели выше), кнопку «Закрыть» было не видно, а каждое новое
   // нажатие на «Настройки» добавляло ещё одно тёмное окно поверх.
   // Повторное нажатие на «Настройки» теперь закрывает экран.
-  function openPersonalSettings() {
+  function openPersonalSettings(tab) {
     const top = stack[stack.length - 1];
-    if (top && top.level === 'personal_settings') {
+    if (top && top.level === 'personal_settings' && !tab) {
       stack = [currentMode === 'finance' ? { level: 'dashboard', title: 'Главная' } : { level: 'menu', title: 'Меню' }];
       render(true);
       return;
     }
-    // Открываем как отдельный раздел (без «Назад»), закрыть — любым
-    // другим разделом или повторным нажатием «Настройки».
-    stack = [{ level: 'personal_settings', title: 'Настройки' }];
+    // Все настройки в одном месте, две вкладки: «Общие» (профиль, тема,
+    // календарь, валюта…) и «Курс» (разделы, экзамены, описание курса…).
+    // Из режима «Обучение» сразу открывается вкладка курса.
+    const t = tab || (currentMode !== 'finance' && currentSubjectId ? 'course' : 'general');
+    stack = [{ level: 'personal_settings', title: 'Настройки', tab: t }];
     render(false);
+  }
+
+  // Вкладки вверху экрана настроек.
+  function buildSettingsTabs() {
+    const top = stack[stack.length - 1] || {};
+    const active = top.tab === 'course' && currentSubjectId ? 'course' : 'general';
+    const wrap = document.createElement('div');
+    wrap.className = 'set-tabs';
+    const mk = (key, label, disabled) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.dataset.stab = key;
+      b.className = 'set-tab' + (active === key ? ' on' : '');
+      b.textContent = label;
+      if (disabled) { b.disabled = true; b.title = 'Сначала выберите курс в разделе «Обучение»'; }
+      b.onclick = () => {
+        if (active === key) return;
+        stack = [{ level: 'personal_settings', title: 'Настройки', tab: key }];
+        render(false);
+      };
+      wrap.appendChild(b);
+    };
+    mk('general', 'Общие');
+    mk('course', currentSubjectTitle ? 'Курс: ' + currentSubjectTitle : 'Курс', !currentSubjectId);
+    return wrap;
   }
 
   function openExternalLink(url) {
@@ -4979,7 +5011,7 @@
   function buildAccentPicker() {
     const row = document.createElement('div');
     // Отступ, чтобы кольцо вокруг выбранного цвета не обрезалось краем экрана.
-    row.style.cssText = 'display:flex;gap:12px;flex-wrap:wrap;padding:6px;margin:-6px -6px 0;';
+    row.style.cssText = 'display:flex;gap:14px;flex-wrap:wrap;padding:7px 6px;margin:0;overflow:visible;';
     let current = '#238BA7';
     try { current = (localStorage.getItem('miniapp-accent') || '#238BA7').toUpperCase(); } catch (err) {}
     const paint = () => row.querySelectorAll('button').forEach((b) => {
@@ -4990,7 +5022,7 @@
       b.type = 'button';
       b.dataset.c = c.toUpperCase();
       b.title = 'Цвет оформления';
-      b.style.cssText = `width:34px;height:34px;border-radius:50%;border:none;cursor:pointer;background:${c};transition:box-shadow 0.15s ease;`;
+      b.style.cssText = `width:34px;height:34px;min-width:34px;flex:0 0 34px;padding:0;border-radius:50%;border:none;cursor:pointer;background:${c};transition:box-shadow 0.15s ease;`;
       b.onclick = () => {
         current = c.toUpperCase();
         try { localStorage.setItem('miniapp-accent', current); } catch (err) {}
@@ -5642,6 +5674,7 @@
       h.className = 'set-page-title';
       h.textContent = 'Настройки';
       screen.appendChild(h);
+      screen.appendChild(buildSettingsTabs());
 
       // --- Профиль преподавателя: имя, школа/компания, что видят ученики ---
       screen.appendChild(buildTeacherProfileCard(profile));
@@ -5909,6 +5942,7 @@
       return;
     }
     if (current.level === 'personal_settings') {
+      if (current.tab === 'course' && currentSubjectId) { await renderSubjectBlocks(isBack); return; }
       try { await renderPersonalSettingsScreen(isBack); }
       catch (err) { showToast('Не получилось открыть настройки: ' + err.message); }
       return;
@@ -6853,7 +6887,7 @@
           svg: '<circle cx="10" cy="10" r="7" stroke="currentColor" stroke-width="1.6"/><path d="M10 7V10.5M10 13.2V13.3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>' },
         { title: 'Рейтинг', sub: 'Таблица лидеров', color: '#C9A227', fn: () => push('leaderboard', 'Рейтинг участников'),
           svg: '<path d="M10 3L12.2 7.6L17.3 8.3L13.6 11.9L14.5 17L10 14.5L5.5 17L6.4 11.9L2.7 8.3L7.8 7.6L10 3Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>' },
-        { title: 'Настройки курса', sub: 'Разделы, экзамены, рейтинг', color: '#5B6573', fn: () => push('subject_blocks', 'Настройки курса'),
+        { title: 'Настройки курса', sub: 'Разделы, экзамены, рейтинг', color: '#5B6573', fn: () => openPersonalSettings('course'),
           svg: '<circle cx="10" cy="10" r="2.5" stroke="currentColor" stroke-width="1.6"/><path d="M10 2V4M10 16V18M18 10H16M4 10H2M15.5 4.5L14 6M6 14L4.5 15.5M15.5 15.5L14 14M6 6L4.5 4.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>' },
         { title: 'Оформление', sub: 'Обложка и цвет курса', color: '#8A63D2', fn: () => goCourseLook(sub),
           svg: '<path d="M10 2.5a7.5 7.5 0 100 15c1 0 1.5-.7 1.5-1.4 0-.9-.8-1.2-.8-2 0-.8.7-1.3 1.5-1.3h1.6A3.7 3.7 0 0017.5 9C17.5 5.4 14.1 2.5 10 2.5Z" stroke="currentColor" stroke-width="1.6"/><circle cx="6.5" cy="9" r="1" fill="currentColor"/><circle cx="9" cy="6" r="1" fill="currentColor"/><circle cx="12.8" cy="6.8" r="1" fill="currentColor"/>' },
@@ -6899,6 +6933,13 @@
       ]);
       swapScreen((screen) => {
         courseBlocksCache[currentSubjectId] = blocks;
+        if ((stack[stack.length - 1] || {}).level === 'personal_settings') {
+          const h = document.createElement('div');
+          h.className = 'set-page-title';
+          h.textContent = 'Настройки';
+          screen.appendChild(h);
+          screen.appendChild(buildSettingsTabs());
+        }
         screen.appendChild(buildCourseBlocksManager());
 
         const seqCard = document.createElement('div');
@@ -15860,6 +15901,7 @@
     };
   });
   document.getElementById('supportBtn').onclick = openSupport;
+  document.getElementById('settingsBtn').onclick = () => openPersonalSettings();
   document.getElementById('financeToggleBtn').onclick = () => {
     const financeBtn = document.getElementById('financeToggleBtn');
     const subjTitleEl = document.getElementById('subjTitle');
