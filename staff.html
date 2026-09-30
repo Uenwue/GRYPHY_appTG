@@ -374,7 +374,29 @@
   .perm-list { text-align: left; margin: 0 0 18px; padding: 0; list-style: none; }
   .perm-list li { display: flex; gap: 10px; align-items: flex-start; padding: 7px 0; font-size: 14.5px; }
   .perm-list li::before { content: ''; width: 20px; height: 20px; border-radius: 50%; background: var(--green-tint) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath d='M6 10.5l2.5 2.5L14 7.5' stroke='%233FAE5A' stroke-width='2' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/20px no-repeat; flex-shrink: 0; margin-top: 1px; }
+  .vf-dl { display: grid; grid-template-columns: max-content 1fr; gap: 4px 12px; margin: 12px 0 0; font-size: 14px; }
+  .vf-dl dt { color: var(--text-soft); font-weight: 600; }
+  .pill.amber { background: rgba(224,138,60,0.16); color: #a85a14; }
+  .vf-dl dd { margin: 0; word-break: break-word; }
+  .vf-files { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+  .vf-acts { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; }
+  .fio-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  @media (max-width: 640px) { .fio-grid { grid-template-columns: 1fr; } }
+  .fio-card { margin-bottom: 14px; }
 </style>
+<script>
+  // Короткий адрес в строке браузера: /teacher.html → /teacher, /index.html → /.
+  // Параметры и #-часть (данные входа Telegram) сохраняются.
+  (function () {
+    try {
+      var map = { '/index.html': '/', '/teacher.html': '/teacher', '/staff.html': '/staff' };
+      var to = map[location.pathname];
+      if (to && location.protocol !== 'file:' && !/github\.io$/.test(location.hostname)) {
+        history.replaceState(history.state, '', to + location.search + location.hash);
+      }
+    } catch (e) {}
+  })();
+</script>
 </head>
 <body>
   <header class="top">
@@ -501,10 +523,11 @@
   const params = new URLSearchParams(location.search);
 
   function workspaces() {
-    const out = (me.curator || []).map((c) => ({ type: 'curator', key: 'c' + c.staff_id, staffId: c.staff_id, tutorId: c.tutor_id, title: c.tutor_name || 'Кабинет', perms: c.perms, hw: c.hw_waiting, students: c.students }));
+    const out = (me.curator || []).map((c) => ({ type: 'curator', role: c.role || 'curator', key: 'c' + c.staff_id, staffId: c.staff_id, tutorId: c.tutor_id, title: c.tutor_name || 'Кабинет', perms: c.perms, hw: c.hw_waiting, students: c.students }));
     if (me.moderator) out.push({ type: 'moderator', key: 'm', title: 'Модерация платформы', perms: me.moderator });
     return out;
   }
+  function wsRoleName(w) { return w.type === 'curator' ? (w.role === 'teacher' ? 'Преподаватель' : 'Куратор') : 'Модератор'; }
   function navItems() {
     if (!ws) return [];
     if (ws.type === 'curator') {
@@ -512,7 +535,7 @@
         ws.perms.hw && { id: 'hw', label: 'Проверка ДЗ', ic: IC.check, cnt: ws.hw }].filter(Boolean);
     }
     return [ws.perms.reviews && { id: 'reviews', label: 'Отзывы', ic: IC.star }, ws.perms.support && { id: 'support', label: 'Поддержка', ic: IC.chat },
-      ws.perms.catalog && { id: 'catalog', label: 'Каталог', ic: IC.shop }].filter(Boolean);
+      ws.perms.catalog && { id: 'catalog', label: 'Каталог', ic: IC.shop }, ws.perms.verify && { id: 'verify', label: 'Проверка школ', ic: IC.cap, cnt: me.verify_pending }].filter(Boolean);
   }
   function paintNav() {
     const cur = stack[0] && stack[0].name;
@@ -529,7 +552,7 @@
     slot.innerHTML = '';
     const list = workspaces();
     if (ws) {
-      const b = el(`<button class="ws-btn"><span class="ws-ic">${ws.type === 'curator' ? IC.users : IC.shield}</span><span class="ws-t"><b>${esc(ws.type === 'curator' ? 'Куратор' : 'Модератор')}</b><small>${esc(ws.type === 'curator' ? ws.title : 'Navats')}</small></span><span class="chev">${IC.chev}</span></button>`);
+      const b = el(`<button class="ws-btn"><span class="ws-ic">${ws.type === 'curator' ? IC.users : IC.shield}</span><span class="ws-t"><b>${esc(wsRoleName(ws))}</b><small>${esc(ws.type === 'curator' ? ws.title : 'Navats')}</small></span><span class="chev">${IC.chev}</span></button>`);
       b.onclick = openWsMenu;
       slot.appendChild(b);
     }
@@ -542,7 +565,7 @@
   function openWsMenu() {
     const { box, close } = sheet('Где работаем');
     workspaces().forEach((w) => {
-      const b = el(`<button class="menu-item${ws && w.key === ws.key ? ' on' : ''}"><span class="ws-ic">${w.type === 'curator' ? IC.users : IC.shield}</span><span style="flex:1;min-width:0"><b style="display:block">${esc(w.type === 'curator' ? 'Куратор' : 'Модератор')}</b><span class="muted">${esc(w.title)}${w.type === 'curator' ? ` · ${w.students} ${plural(w.students, 'ученик', 'ученика', 'учеников')}` : ''}</span></span>${w.hw ? `<span class="cnt">${w.hw}</span>` : ''}</button>`);
+      const b = el(`<button class="menu-item${ws && w.key === ws.key ? ' on' : ''}"><span class="ws-ic">${w.type === 'curator' ? IC.users : IC.shield}</span><span style="flex:1;min-width:0"><b style="display:block">${esc(wsRoleName(w))}</b><span class="muted">${esc(w.title)}${w.type === 'curator' ? ` · ${w.students} ${plural(w.students, 'ученик', 'ученика', 'учеников')}` : ''}</span></span>${w.hw ? `<span class="cnt">${w.hw}</span>` : ''}</button>`);
       b.onclick = () => { close(); selectWs(w); };
       box.appendChild(b);
     });
@@ -596,9 +619,9 @@
     const lessonsToday = students.filter((s) => s.next_lesson && s.next_lesson.slice(0, 10) === today).length;
     const pcts = students.map((s) => s.correct_pct).filter((x) => x != null);
     const avg = pcts.length ? Math.round(pcts.reduce((a, b) => a + b, 0) / pcts.length) : null;
-    const hour = new Date().getHours();
-    const hello = hour < 5 ? 'Доброй ночи' : hour < 12 ? 'Доброе утро' : hour < 18 ? 'Добрый день' : 'Добрый вечер';
-    $main.innerHTML = `<div class="h1">${hello}${me.name ? ', ' + esc(me.name) : ''}</div><p class="sub">Кабинет куратора · ${esc(ws.title)}</p>`;
+    const fio = me.full_name || me.name || '';
+    $main.innerHTML = `<div class="h1">${esc(ws.title)}</div><p class="sub">${ws.role === 'teacher' ? 'Преподаватель' : 'Куратор'}${fio ? ': <b>' + esc(fio) + '</b>' : ''}</p>`;
+    if (!me.surname || !me.given_name) $main.appendChild(fioCard(async () => { me = await get('/api/staff/me'); show(); }));
     const tiles = el('<div class="tiles"></div>');
     const tile = (ic, cls, val, label, route) => {
       const t = el(`<button class="tile"><span class="ic ${cls}">${ic}</span><b>${val}</b><span>${label}</span></button>`);
@@ -613,7 +636,7 @@
     $main.appendChild(tiles);
 
     if (!students.length) {
-      $main.appendChild(el('<div class="card empty" style="margin-top:16px;"><b>Учеников пока нет</b>Преподаватель ещё не закрепил за вами учеников. Как только закрепит — они появятся здесь.</div>'));
+      $main.appendChild(el(`<div class="card empty" style="margin-top:16px;"><b>Учеников пока нет</b>${ws.role === 'teacher' ? 'Школа ещё не закрепила' : 'Преподаватель ещё не закрепил'} за вами учеников. Как только это случится — они появятся здесь.</div>`));
       return;
     }
     if (ws.perms.hw) {
@@ -654,7 +677,7 @@
   async function viewStudents() {
     const students = await get(cBase() + '/students');
     $main.innerHTML = `<div class="h1">Ученики</div><p class="sub">${students.length} ${plural(students.length, 'ученик закреплён', 'ученика закреплены', 'учеников закреплены')} за вами</p>`;
-    if (!students.length) { $main.appendChild(el('<div class="card empty"><b>Пока никого</b>Преподаватель ещё не закрепил за вами учеников.</div>')); return; }
+    if (!students.length) { $main.appendChild(el(`<div class="card empty"><b>Пока никого</b>${ws.role === 'teacher' ? 'Школа ещё не закрепила' : 'Преподаватель ещё не закрепил'} за вами учеников.</div>`)); return; }
     const tools = el(`<div class="toolbar"><div class="search" style="flex:1;min-width:220px;margin:0">${IC.search}<input class="input" placeholder="Поиск по имени или курсу"></div><div class="seg"><button data-f="all" class="on">Все</button>${ws.perms.hw ? '<button data-f="hw">Есть ДЗ</button>' : ''}<button data-f="idle">Неактивные</button></div></div>`);
     $main.appendChild(tools);
     const box = el('<div></div>');
@@ -863,14 +886,22 @@
 
   // ======================= МОДЕРАТОР =======================
   let rvFilter = 'pending';
+  let rvKind = 'tutor';  // tutor — о преподавателях в каталоге, platform — о самой платформе Navats
   async function viewReviews() {
-    const items = await get('/api/admin/reviews?status=' + rvFilter);
-    $main.innerHTML = '<div class="h1">Отзывы</div><p class="sub">Публикуйте честные отзывы и отклоняйте спам, оскорбления и рекламу.</p>';
+    const isP = rvKind === 'platform';
+    const items = isP ? await get('/api/moderator/platform-reviews?status=' + rvFilter) : await get('/api/admin/reviews?status=' + rvFilter);
+    $main.innerHTML = '<div class="h1">Отзывы</div><p class="sub">Публикуйте честные отзывы и отклоняйте спам, оскорбления и рекламу. Отзывы о платформе после публикации появляются на сайте Navats.</p>';
+    const kind = el('<div class="seg" style="margin-bottom:10px;"><button data-k="tutor">О преподавателях</button><button data-k="platform">О платформе</button></div>');
+    kind.querySelectorAll('button').forEach((b) => { b.classList.toggle('on', b.dataset.k === rvKind); b.onclick = () => { rvKind = b.dataset.k; show(); }; });
+    $main.appendChild(kind);
     const seg = el('<div class="seg" style="margin-bottom:14px;"><button data-f="pending">Новые</button><button data-f="approved">Опубликованные</button><button data-f="rejected">Отклонённые</button></div>');
     seg.querySelectorAll('button').forEach((b) => { b.classList.toggle('on', b.dataset.f === rvFilter); b.onclick = () => { rvFilter = b.dataset.f; show(); }; });
     $main.appendChild(seg);
     if (!items.length) { $main.appendChild(el(`<div class="card empty"><b>${rvFilter === 'pending' ? 'Очередь пуста' : 'Пока ничего'}</b>${rvFilter === 'pending' ? 'Новые отзывы появятся здесь.' : ''}</div>`)); return; }
     items.forEach((rv) => {
+      const ROLE = { student: 'ученик', teacher: 'преподаватель' };
+      const KIND = { tutor: 'репетитор', school: 'школа', expert: 'эксперт' };
+      if (isP) rv.tutor_name = `О платформе · ${ROLE[rv.role] || ''}${rv.kind ? ' (' + (KIND[rv.kind] || rv.kind) + ')' : ''}`;
       const c = el(`<div class="card"><div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;"><div><div style="font-weight:800;">${esc(rv.tutor_name || 'Кабинет #' + rv.tutor_id)}</div><div class="muted">от ${esc(rv.author)} · ${fmtDT(rv.created_at)}</div></div><span class="rv-stars">${'★'.repeat(rv.rating)}<span style="color:var(--border)">${'★'.repeat(5 - rv.rating)}</span></span></div>` +
         `<div style="margin:10px 0;white-space:pre-wrap;">${esc(rv.text) || '<span class="muted">Без текста</span>'}</div>` +
         (rv.reject_reason ? `<div class="pill red" style="white-space:normal;margin-bottom:10px;">Причина: ${esc(rv.reject_reason)}</div>` : '') +
@@ -878,13 +909,13 @@
       const acts = c.lastChild;
       if (rv.status !== 'approved') {
         const ok = el('<button class="btn green sm">Опубликовать</button>');
-        ok.onclick = async () => { ok.disabled = true; try { await post('/api/admin/reviews/' + rv.id, { action: 'approve' }); toast('Опубликован'); show(); } catch (e) { toast(e.message); ok.disabled = false; } };
+        ok.onclick = async () => { ok.disabled = true; try { await post((isP ? '/api/moderator/platform-reviews/' : '/api/admin/reviews/') + rv.id, { action: 'approve' }); toast('Опубликован'); show(); } catch (e) { toast(e.message); ok.disabled = false; } };
         acts.appendChild(ok);
       }
       if (rv.status !== 'rejected') {
         const no = el(`<button class="btn danger sm">${rv.status === 'approved' ? 'Снять с публикации' : 'Отклонить'}</button>`);
         no.onclick = () => confirmBox('Отклонить отзыв? Автор получит сообщение с причиной и сможет исправить отзыв.', 'Отклонить',
-          async (reason) => { await post('/api/admin/reviews/' + rv.id, { action: 'reject', reason }); toast('Отклонён'); show(); }, 'Причина — её увидит автор');
+          async (reason) => { await post((isP ? '/api/moderator/platform-reviews/' : '/api/admin/reviews/') + rv.id, { action: 'reject', reason }); toast('Отклонён'); show(); }, 'Причина — её увидит автор');
         acts.appendChild(no);
       }
       $main.appendChild(c);
@@ -937,7 +968,7 @@
     $main.appendChild(tools);
     const box = el('<div></div>');
     $main.appendChild(box);
-    const KIND = { tutor: 'Репетитор', school: 'Школа / компания', expert: 'Эксперт / блогер' };
+    const KIND = { tutor: 'Репетитор', school: 'Школа / компания', expert: 'Эксперт' };
     const inp = tools.querySelector('input');
     const paint = () => {
       tools.querySelectorAll('.seg button').forEach((b) => b.classList.toggle('on', b.dataset.f === ctFilter));
@@ -965,27 +996,106 @@
     paint();
   }
 
+
+  // ---- Проверка школ и компаний ----
+  let vfFilter = 'pending';
+  const ORG_LBL = { legal_name: 'Название', country: 'Страна', reg_number: 'Рег. номер', tax_id: 'Налоговый номер', address: 'Адрес', website: 'Сайт',
+    contact_name: 'Контакт', contact_role: 'Должность', email: 'E-mail', phone: 'Телефон', note: 'Комментарий' };
+  const DOC_LBL = { registration: 'Регистрация', license: 'Лицензия', other: 'Документ' };
+  const VF_ST = { pending: ['На проверке', 'amber'], verified: ['Подтверждено', 'green'], rejected: ['Отклонено', 'red'], draft: ['Черновик', ''] };
+  async function openFile(path) {
+    try {
+      const res = await fetch(API + path, { headers: { 'X-Telegram-Init-Data': authData() } });
+      if (!res.ok) throw new Error('Не получилось открыть файл');
+      const url = URL.createObjectURL(await res.blob());
+      if (!window.open(url, '_blank')) { const a = document.createElement('a'); a.href = url; a.download = ''; document.body.appendChild(a); a.click(); a.remove(); }
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
+    } catch (e) { toast(e.message); }
+  }
+  async function viewVerify() {
+    const items = await get('/api/moderator/verifications' + (vfFilter === 'all' ? '' : '?status=' + vfFilter));
+    $main.innerHTML = '<div class="h1">Проверка школ</div><p class="sub">Школы и компании присылают данные организации и документы. После подтверждения у них появляется значок в каталоге и возможность добавлять преподавателей.</p>';
+    const tools = el('<div class="toolbar"><div class="seg"><button data-f="pending">Ждут</button><button data-f="verified">Подтверждены</button><button data-f="rejected">Отклонены</button><button data-f="all">Все</button></div></div>');
+    tools.querySelectorAll('button').forEach((b) => { b.classList.toggle('on', b.dataset.f === vfFilter); b.onclick = () => { vfFilter = b.dataset.f; show(); }; });
+    $main.appendChild(tools);
+    if (!items.length) { $main.appendChild(el(`<div class="card empty">${vfFilter === 'pending' ? 'Новых заявок нет' : 'Ничего не нашли'}</div>`)); return; }
+    items.forEach((it) => {
+      const d = it.data || {};
+      const [stl, stc] = VF_ST[it.status] || ['', ''];
+      const rows = Object.keys(ORG_LBL).filter((k) => d[k]).map((k) => `<dt>${ORG_LBL[k]}</dt><dd>${esc(d[k])}</dd>`).join('');
+      const c = el(`<div class="card"><div style="display:flex;gap:12px;align-items:flex-start;">${ava(it.org_name || it.name, it.tutor_id)}<div style="flex:1;min-width:0"><div style="font-weight:800;">${esc(it.org_name || it.name)}</div><div class="muted">${it.org_type === 'company' ? 'Компания' : 'Школа'}${it.submitted_at ? ' · отправлено ' + fmtDT(it.submitted_at) : ''}</div></div><span class="pill ${stc}">${stl}</span></div>` +
+        `<dl class="vf-dl">${rows}</dl>` + (it.status === 'rejected' && it.reject_reason ? `<div class="pill red" style="white-space:normal;margin-top:8px;">Причина: ${esc(it.reject_reason)}</div>` : '') +
+        '<div class="vf-files"></div><div class="vf-acts"></div></div>');
+      const files = c.querySelector('.vf-files');
+      (it.files || []).forEach((f) => {
+        const b = el(`<button class="btn sm">📄 ${esc(DOC_LBL[f.kind] || 'Документ')}: ${esc(f.name)}</button>`);
+        b.onclick = () => openFile(`/api/org-files/${it.tutor_id}/${f.id}`);
+        files.appendChild(b);
+      });
+      if (!(it.files || []).length) files.appendChild(el('<span class="muted">Документов нет</span>'));
+      const acts = c.querySelector('.vf-acts');
+      if (it.status !== 'verified') {
+        const ok = el('<button class="btn sm green">Подтвердить</button>');
+        ok.onclick = () => confirmBox(`Подтвердить «${esc(d.legal_name || it.org_name || it.name)}»? Данные и документы проверены.`, 'Подтвердить', async () => { await post('/api/moderator/verifications/' + it.tutor_id, { action: 'approve' }); toast('Подтверждено'); await refreshCounts(); show(); });
+        acts.appendChild(ok);
+      }
+      if (it.status !== 'rejected') {
+        const no = el(`<button class="btn sm danger">${it.status === 'verified' ? 'Снять подтверждение' : 'Отклонить'}</button>`);
+        no.onclick = () => confirmBox('Отклонить заявку? Владелец получит сообщение с причиной и сможет исправить данные.', 'Отклонить',
+          async (reason) => { if (!reason) throw new Error('Напишите причину'); await post('/api/moderator/verifications/' + it.tutor_id, { action: 'reject', reason }); toast('Отклонено'); await refreshCounts(); show(); }, 'Причина — её увидит владелец кабинета');
+        acts.appendChild(no);
+      }
+      $main.appendChild(c);
+    });
+  }
+
+  // ---- ФИО куратора / преподавателя: его видят ученики и тот, кто пригласил ----
+  function fioFields() {
+    const el_ = el(`<div class="card fio-card" style="text-align:left"><div style="font-weight:800;margin-bottom:2px;">Ваши фамилия, имя и отчество</div><div class="muted" style="margin-bottom:10px;">Их увидят ученики и тот, кто вас пригласил. Отчество — если есть.</div>` +
+      '<div class="fio-grid"><input class="input" data-k="surname" placeholder="Фамилия"><input class="input" data-k="given_name" placeholder="Имя"><input class="input" data-k="patronymic" placeholder="Отчество (если есть)"></div></div>');
+    ['surname', 'given_name', 'patronymic'].forEach((k) => { el_.querySelector(`[data-k=${k}]`).value = (me && me[k]) || ''; });
+    const value = () => { const o = {}; el_.querySelectorAll('[data-k]').forEach((i) => { o[i.dataset.k] = i.value.trim(); }); return o; };
+    return { el: el_, value, error: () => { const v = value(); return !v.surname || !v.given_name ? 'Укажите фамилию и имя' : ''; } };
+  }
+  function fioCard(onSaved) {
+    const f = fioFields();
+    const b = el('<button class="btn primary" style="margin-top:10px;">Сохранить</button>');
+    b.onclick = async () => {
+      const e = f.error(); if (e) { toast(e); return; }
+      b.disabled = true;
+      try { await post('/api/me/profile-details', f.value()); toast('Сохранено'); await onSaved(); } catch (err) { toast(err.message); b.disabled = false; }
+    };
+    f.el.appendChild(b);
+    return f.el;
+  }
+
   // ======================= ПРИГЛАШЕНИЕ =======================
   const PERM_TEXT = {
     hw: 'Проверять домашние задания и отправлять на доработку', progress: 'Видеть успеваемость по курсам', lessons: 'Видеть расписание уроков учеников',
     questionnaire: 'Видеть анкеты учеников', message: 'Писать ученикам сообщения', reviews: 'Модерировать отзывы в каталоге',
-    support: 'Отвечать на обращения в поддержку', catalog: 'Скрывать нарушителей из каталога',
+    support: 'Отвечать на обращения в поддержку', catalog: 'Скрывать нарушителей из каталога', verify: 'Проверять данные школ и компаний',
   };
   async function viewInvite(r) {
     let inv;
     try { inv = await get('/api/staff/invite/' + encodeURIComponent(r.code)); }
     catch (e) { $main.innerHTML = `<div class="hero"><div class="big-ic">${IC.key}</div><h1>Приглашение не найдено</h1><p>${esc(e.message)}</p></div>`; addCodeForm(); return; }
-    const isCur = inv.role === 'curator';
+    const isCur = inv.role === 'curator' || inv.role === 'teacher';
+    const isT = inv.role === 'teacher';
     const perms = Object.keys(inv.perms).filter((k) => inv.perms[k] && PERM_TEXT[k]);
     $main.innerHTML = `<div class="hero"><div class="big-ic">${isCur ? IC.users : IC.shield}</div>` +
-      `<h1>${isCur ? 'Вас приглашают стать куратором' : 'Вас приглашают в модераторы'}</h1>` +
-      `<p>${isCur ? `Кабинет «${esc(inv.tutor_name)}». Куратор помогает преподавателю: следит за учениками и проверяет их работы. Курсы, оплаты и настройки кабинета вам не будут доступны.` : 'Модераторы помогают следить за порядком на платформе Navats.'}</p>` +
+      `<h1>${isT ? 'Вас приглашают преподавать в школе' : isCur ? 'Вас приглашают стать куратором' : 'Вас приглашают в модераторы'}</h1>` +
+      `<p>${isT ? `«${esc(inv.tutor_name)}». Вы будете вести закреплённых за вами учеников: проверять работы, видеть успеваемость и расписание. Курсы, оплаты и настройки школы вам не будут доступны. Свой кабинет репетитора, если он есть, остаётся вашим.` : isCur ? `Кабинет «${esc(inv.tutor_name)}». Куратор помогает преподавателю: следит за учениками и проверяет их работы. Курсы, оплаты и настройки кабинета вам не будут доступны.` : 'Модераторы помогают следить за порядком на платформе Navats.'}</p>` +
       (perms.length ? `<div class="card" style="text-align:left"><div class="muted" style="font-weight:700;margin-bottom:4px;">Что вы сможете</div><ul class="perm-list">${perms.map((k) => `<li>${PERM_TEXT[k]}</li>`).join('')}</ul></div>` : '') +
-      (inv.used ? '<p style="color:var(--red);font-weight:700;">Это приглашение уже использовано.</p>' : '<button class="btn primary block" data-accept>Принять приглашение</button>') + '</div>';
+      (inv.used ? '<p style="color:var(--red);font-weight:700;">Это приглашение уже использовано.</p>' : (isCur ? '<div data-fio></div>' : '') + '<button class="btn primary block" data-accept>Принять приглашение</button>') + '</div>';
+    const fioSlot = $main.querySelector('[data-fio]');
+    let fioForm = null;
+    if (fioSlot) { fioForm = fioFields(); fioSlot.replaceWith(fioForm.el); }
     const b = $main.querySelector('[data-accept]');
     if (b) b.onclick = async () => {
+      if (fioForm) { const e = fioForm.error(); if (e) { toast(e); return; } }
       b.disabled = true;
       try {
+        if (fioForm) await post('/api/me/profile-details', fioForm.value());
         await post('/api/staff/join', { code: r.code });
         try { localStorage.removeItem('navats-pending-invite'); } catch (e) {}
         history.replaceState(null, '', location.pathname);
@@ -1002,7 +1112,7 @@
     $main.appendChild(f);
   }
   async function viewJoin() {
-    $main.innerHTML = `<div class="hero"><div class="big-ic">${IC.key}</div><h1>Кабинет команды</h1><p>Здесь работают кураторы школ и репетиторов и модераторы платформы. Попросите у преподавателя ссылку-приглашение или введите код.</p></div>`;
+    $main.innerHTML = `<div class="hero"><div class="big-ic">${IC.key}</div><h1>Кабинет команды</h1><p>Здесь работают преподаватели школ, кураторы и модераторы платформы. Попросите у преподавателя ссылку-приглашение или введите код.</p></div>`;
     addCodeForm();
   }
   async function viewEmpty() {
@@ -1011,7 +1121,7 @@
 
   const ROUTES = {
     home: viewHome, students: viewStudents, student: viewStudent, hw: viewHw, check: viewCheck,
-    reviews: viewReviews, support: viewSupport, ticket: viewTicket, catalog: viewCatalog,
+    reviews: viewReviews, support: viewSupport, ticket: viewTicket, catalog: viewCatalog, verify: viewVerify,
     invite: viewInvite, join: viewJoin, empty: viewEmpty,
   };
 
