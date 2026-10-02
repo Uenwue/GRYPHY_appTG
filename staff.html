@@ -63,10 +63,56 @@
   try { window.applyAccent(localStorage.getItem('miniapp-accent')); } catch (e) {}
 </script>
 <meta charset="UTF-8">
+<script>
+// Ошибки на странице → владельцу платформы (Админка → «Сбои»).
+(function () {
+  var sent = {}, n = 0;
+  function send(d) {
+    try {
+      if (!d || !d.msg || n >= 5 || sent[d.msg]) return;
+      sent[d.msg] = 1; n++;
+      var auth = '';
+      try { auth = (window.Telegram && Telegram.WebApp && Telegram.WebApp.initData) || localStorage.getItem('navats-web-token') || ''; } catch (e) {}
+      d.page = location.pathname + (document.title ? ' · ' + document.title : '');
+      fetch('/api/client-error', { method: 'POST', keepalive: true, headers: { 'Content-Type': 'application/json', 'X-Telegram-Init-Data': auth }, body: JSON.stringify(d) }).catch(function () {});
+    } catch (e) {}
+  }
+  window.addEventListener('error', function (e) {
+    if (!e || !e.message) return;
+    send({ msg: String(e.message), src: e.filename || '', line: e.lineno, col: e.colno, stack: e.error && e.error.stack ? String(e.error.stack) : '' });
+  });
+  window.addEventListener('unhandledrejection', function (e) {
+    var r = e && e.reason;
+    if (!r || !(r instanceof Error)) return;
+    if (/Failed to fetch|NetworkError|Load failed|aborted|ошибк|Не удалось|Нет доступа|Сервер ответил/i.test(r.message || '')) return;
+    send({ msg: 'Promise: ' + (r.message || String(r)), stack: r.stack ? String(r.stack) : '' });
+  });
+})();
+</script>
+<script>
+// Защита от вредных ссылок: javascript:/data:-ссылки не открываются, даже
+// если такая ссылка как-то попала в текст курса, профиль или сообщение.
+(function () {
+  var BAD = /^\s*(javascript|data|vbscript|file):/i;
+  function bad(u) { try { return BAD.test(String(u || '').replace(/[\u0000-\u0020]/g, '')); } catch (e) { return true; } }
+  document.addEventListener('click', function (e) {
+    var a = e.target && e.target.closest ? e.target.closest('a[href]') : null;
+    if (a && (/^(javascript|data|vbscript|file):$/i.test(a.protocol || '') || bad(a.getAttribute('href')))) {
+      e.preventDefault(); e.stopImmediatePropagation();
+    }
+  }, true);
+  var wo = window.open;
+  window.open = function (u) {
+    if (bad(u)) return null;
+    return wo.apply(window, arguments);
+  };
+  window.__navatsBadUrl = bad;
+})();
+</script>
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
 <title>Navats — команда</title>
 <link rel="icon" type="image/png" href="data:image/png;base64,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">
-<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script src="/vendor/tg/telegram-web-app.js" onerror="var s=document.createElement('script');s.src='https://telegram.org/js/telegram-web-app.js';document.head.appendChild(s);"></script>
 <script>
   // Сайт без входа: сразу прячем приложение, чтобы до экрана «Вход в Navats»
   // не мелькали домашка и другие экраны.
@@ -88,7 +134,10 @@
       if (/(^|&)navats_(web_token|vk_error|vk_linked)=/.test(h)) {
         var hp = new URLSearchParams(h);
         try {
-          if (hp.get('navats_web_token')) {
+          // Вход по ссылке принимаем, только если вход через ВК начат в этой же вкладке —
+          // иначе чужая ссылка могла бы незаметно войти в чужой аккаунт.
+          var vkPend = 0; try { vkPend = +sessionStorage.getItem('navats-vk-pending') || 0; sessionStorage.removeItem('navats-vk-pending'); } catch (e) {}
+          if (hp.get('navats_web_token') && vkPend && Date.now() - vkPend < 20 * 60 * 1000) {
             localStorage.setItem('navats-web-token', hp.get('navats_web_token'));
             if (hp.get('navats_user')) localStorage.setItem('navats-web-user', hp.get('navats_user'));
           }
@@ -104,7 +153,8 @@
       document.documentElement.classList.add('in-vk');
       // VK Bridge: сообщает ВКонтакте, что приложение загрузилось.
       var s = document.createElement('script');
-      s.src = 'https://cdn.jsdelivr.net/npm/@vkontakte/vk-bridge@2/dist/browser.min.js';
+      s.src = '/vendor/vkbridge/browser.min.js';
+      s.onerror = function () { var s2 = document.createElement('script'); s2.src = 'https://cdn.jsdelivr.net/npm/@vkontakte/vk-bridge@2/dist/browser.min.js'; s2.onload = s.onload; document.head.appendChild(s2); };
       s.onload = function () { try { window.vkBridge.send('VKWebAppInit'); } catch (e) {} };
       document.head.appendChild(s);
     }
@@ -267,6 +317,13 @@
   .input:focus { border-color: var(--accent); background: var(--bg); }
   textarea.input { resize: vertical; min-height: 80px; font-family: inherit; }
   .seg { display: inline-flex; background: var(--bg-soft); border-radius: 12px; padding: 3px; gap: 2px; flex-wrap: wrap; }
+  .hwt-row { display: flex; flex-wrap: nowrap; gap: 6px; margin: 0 0 8px; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
+  .hwt-row::-webkit-scrollbar { display: none; }
+  .hwt-chip, .hwt-add { flex-shrink: 0; }
+  .hwt-chip { display: inline-flex; align-items: stretch; max-width: 100%; border: 1px solid var(--border); border-radius: 999px; background: var(--bg-soft, #F5F7F8); overflow: hidden; }
+  .hwt-use { border: none; background: none; padding: 6px 4px 6px 12px; font-family: inherit; font-size: 13px; color: var(--text); cursor: pointer; max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .hwt-x { border: none; background: none; padding: 0 9px 0 4px; color: var(--text-soft); font-size: 11px; cursor: pointer; opacity: .7; }
+  .hwt-add { border: 1px dashed var(--accent); background: none; border-radius: 999px; padding: 6px 12px; font-family: inherit; font-size: 13px; font-weight: 700; color: var(--accent); cursor: pointer; }
   .seg button { border: 0; background: transparent; padding: 8px 14px; border-radius: 10px; font-size: 13px; font-weight: 700; color: var(--text-soft); }
   .seg button.on { background: var(--bg); color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,.08); }
   .pill { display: inline-flex; align-items: center; gap: 4px; border-radius: 999px; padding: 3px 10px; font-size: 12px; font-weight: 700; background: var(--bg-soft); color: var(--text-soft); white-space: nowrap; }
@@ -282,7 +339,7 @@
   .ava { width: 42px; height: 42px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; color: #fff; flex-shrink: 0; font-size: 16px; }
   .ava.lg { width: 60px; height: 60px; font-size: 22px; }
   .back { display: inline-flex; align-items: center; gap: 6px; border: 0; background: none; color: var(--text-soft); font-weight: 700; padding: 4px 0; margin-bottom: 8px; font-size: 14px; }
-  .toast { position: fixed; left: 50%; bottom: calc(100px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: #22272E; color: #fff; padding: 11px 18px; border-radius: 12px; font-size: 14px; font-weight: 600; z-index: 200; box-shadow: 0 8px 24px rgba(0,0,0,.2); max-width: calc(100vw - 32px); }
+  .toast { position: fixed; left: 50%; bottom: calc(100px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: #22272E; color: #fff; border: 1px solid rgba(255,255,255,0.12); padding: 11px 18px; border-radius: 12px; font-size: 14px; font-weight: 600; z-index: 200; box-shadow: 0 8px 24px rgba(0,0,0,.2); max-width: calc(100vw - 32px); }
 
   /* ---- Плитки ---- */
   .tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
@@ -396,6 +453,45 @@
       }
     } catch (e) {}
   })();
+</script>
+<script>
+// Работа при плохой связи: service worker сохраняет страницы и данные;
+// если сети нет — показываем сохранённое и маленькую плашку об этом.
+(function () {
+  try {
+    if (!('serviceWorker' in navigator) || !/^https?:$/.test(location.protocol)) return;
+    window.addEventListener('load', function () { navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(function () {}); });
+    var bar = null, offlineHits = 0;
+    function show(on) {
+      if (on) {
+        if (!bar) {
+          bar = document.createElement('div');
+          bar.className = 'nv-offline';
+          bar.setAttribute('role', 'status');
+          document.body.appendChild(bar);
+        }
+        var t = window.navatsT || function (s) { return s; };
+        bar.textContent = '📡 ' + t(navigator.onLine === false ? 'Нет интернета — показываю сохранённое' : 'Связь плохая — показываю сохранённое');
+        bar.hidden = false;
+      } else if (bar) { bar.hidden = true; }
+    }
+    var of = window.fetch;
+    window.fetch = function () {
+      return of.apply(this, arguments).then(function (r) {
+        try {
+          if (r.headers.get('X-Navats-Offline')) { offlineHits++; show(true); }
+          else if (bar && !bar.hidden && /\/api\//.test(r.url)) { offlineHits = 0; show(false); }
+        } catch (e) {}
+        return r;
+      });
+    };
+    window.addEventListener('offline', function () { show(true); });
+    window.addEventListener('online', function () { show(false); });
+    var st = document.createElement('style');
+    st.textContent = '.nv-offline{position:fixed;left:0;right:0;margin:0 auto;width:max-content;bottom:calc(88px + env(safe-area-inset-bottom,0px));z-index:2147483000;background:#2B3640;color:#fff;font:600 13px/1.3 system-ui,-apple-system,sans-serif;padding:8px 14px;border-radius:999px;box-shadow:0 6px 20px rgba(0,0,0,.25);max-width:calc(100vw - 32px);text-align:center;pointer-events:none}.nv-offline[hidden]{display:none}';
+    document.head.appendChild(st);
+  } catch (e) {}
+})();
 </script>
 </head>
 <body>
@@ -866,8 +962,35 @@
       });
     };
     paintStars();
+    if (rep.grading === false) { starBox.style.display = 'none'; grade = null; }
     const ta = panel.querySelector('textarea');
     if (chk && chk.comment) ta.value = chk.comment;
+    // Шаблоны комментариев (общие с преподавателем)
+    (async () => {
+      const url = `${cBase()}/comment-templates`;
+      const row = el('<div class="hwt-row"></div>');
+      ta.parentNode.insertBefore(row, ta);
+      let items = [];
+      const paint = () => {
+        row.innerHTML = '';
+        items.forEach((t) => {
+          const c = el(`<span class="hwt-chip"><button type="button" class="hwt-use" title="${esc(t)}">${esc(t)}</button><button type="button" class="hwt-x" title="Убрать шаблон">✕</button></span>`);
+          c.querySelector('.hwt-use').onclick = () => { ta.value = ta.value.trim() ? ta.value.trim() + ' ' + t : t; ta.focus(); };
+          c.querySelector('.hwt-x').onclick = async () => { try { items = (await req('DELETE', url, { text: t })).items; paint(); } catch (e) { toast(e.message); } };
+          row.appendChild(c);
+        });
+        const add = el('<button type="button" class="hwt-add">＋ В шаблоны</button>');
+        add.onclick = async () => {
+          const t = ta.value.trim();
+          if (!t) { toast('Сначала напишите комментарий'); ta.focus(); return; }
+          try { items = (await post(url, { text: t })).items; paint(); toast('Шаблон сохранён'); } catch (e) { toast(e.message); }
+        };
+        row.insertBefore(add, row.firstChild);
+        row.scrollLeft = 0;
+      };
+      try { items = (await get(url)).items || []; } catch (e) { items = []; }
+      paint();
+    })();
     const send = panel.querySelector('.btn.primary');
     send.onclick = async () => {
       const err = panel.querySelector('[data-err]');
@@ -929,6 +1052,10 @@
     const seg = el('<div class="seg" style="margin-bottom:14px;"><button data-f="open">Ждут ответа</button><button data-f="answered">Отвечено</button><button data-f="closed">Закрыты</button><button data-f="all">Все</button></div>');
     seg.querySelectorAll('button').forEach((b) => { b.classList.toggle('on', b.dataset.f === spFilter); b.onclick = () => { spFilter = b.dataset.f; show(); }; });
     $main.appendChild(seg);
+    // Сначала отвечает ИИ-помощник; то, что он не решил, приходит сюда с перепиской.
+    const kb = el('<button class="btn" style="margin-bottom:14px;">🤖 База знаний ИИ-поддержки</button>');
+    kb.onclick = openSupportKb;
+    $main.appendChild(kb);
     if (!items.length) { $main.appendChild(el('<div class="card empty"><b>Нет обращений</b></div>')); return; }
     const list = el('<div class="list"></div>');
     const ST = { open: ['Ждёт ответа', 'yellow'], answered: ['Отвечено', 'green'], closed: ['Закрыто', ''] };
@@ -939,6 +1066,19 @@
       list.appendChild(r);
     });
     $main.appendChild(list);
+  }
+
+  async function openSupportKb() {
+    let kb;
+    try { kb = await get('/api/admin/support/kb'); } catch (e) { toast(e.message); return; }
+    const { box: body, close } = sheet('База знаний ИИ-поддержки');
+    body.appendChild(el(`<p class="sub">ИИ отвечает по встроенным статьям (${kb.base.length}) и по вашим дополнениям. Пишите блоками через пустую строку: «Вопрос: …» с новой строки «Ответ: …».</p>`));
+    const ta = el('<textarea class="input" rows="14" placeholder="Вопрос: …&#10;Ответ: …"></textarea>');
+    ta.value = kb.text || '';
+    body.appendChild(ta);
+    const sv = el('<button class="btn primary" style="width:100%;margin-top:10px;">Сохранить</button>');
+    sv.onclick = async () => { sv.disabled = true; try { await post('/api/admin/support/kb', { text: ta.value }); toast('Сохранено'); close(); } catch (e) { sv.disabled = false; toast(e.message); } };
+    body.appendChild(sv);
   }
 
   async function viewTicket(r) {
@@ -1007,7 +1147,10 @@
     try {
       const res = await fetch(API + path, { headers: { 'X-Telegram-Init-Data': authData() } });
       if (!res.ok) throw new Error('Не получилось открыть файл');
-      const url = URL.createObjectURL(await res.blob());
+      let blob = await res.blob();
+      // Открываем «как есть» только картинки, PDF, аудио/видео и текст — HTML/SVG никогда (это мог бы быть вредный код).
+      if (!/^(image\/(png|jpe?g|webp|gif)|application\/pdf|audio\/|video\/|text\/plain)/i.test(blob.type || '')) blob = new Blob([blob], { type: 'application/octet-stream' });
+      const url = URL.createObjectURL(blob);
       if (!window.open(url, '_blank')) { const a = document.createElement('a'); a.href = url; a.download = ''; document.body.appendChild(a); a.click(); a.remove(); }
       setTimeout(() => URL.revokeObjectURL(url), 60000);
     } catch (e) { toast(e.message); }
