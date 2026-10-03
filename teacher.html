@@ -21212,7 +21212,7 @@ es: {"Бесплатный период": "Periodo gratuito", "Все возмо
     d.items.forEach((it) => {
       const c = document.createElement('div');
       c.className = 'sl-order er-item';
-      c.innerHTML = `<div class="sl-top"><div style="min-width:0;flex:1;"><b class="no-tr er-msg">${it.kind === 'server' ? '🔥' : '🧩'} ${escapeHtml(it.message || '')}</b>` +
+      c.innerHTML = `<div class="sl-top"><div style="min-width:0;flex:1;"><b class="no-tr er-msg">${it.kind === 'server' ? '🔥 ' : it.kind === 'slow' ? '' : '🧩 '}${escapeHtml(it.message || '')}</b>` +
         `<small class="no-tr">${escapeHtml(it.path || '')}</small></div><div class="sl-sum" style="font-size:15px;">×${it.count}</div></div>` +
         `<div class="er-meta">Последний раз: ${escapeHtml(it.last_at || '')}${it.count > 1 ? ' · впервые: ' + escapeHtml(it.first_at || '') : ''}${it.uid ? ' · пользователь <span class="no-tr">' + escapeHtml(it.uid) + '</span>' : ''}</div>` +
         `<details class="er-det"><summary>Подробности</summary><pre class="no-tr">${escapeHtml((it.trace || '') + (it.ua ? '\n\n' + it.ua : ''))}</pre></details>`;
